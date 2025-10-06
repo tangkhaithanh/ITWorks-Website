@@ -1,0 +1,383 @@
+// Generator & datasource
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ===============================
+// 1. Accounts
+// ===============================
+model Account {
+  id         BigInt   @id @default(autoincrement())
+  email      String   @unique
+  password   String
+  role       Role
+  status     Status   @default(active)
+  refreshToken String? 
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user          User?
+  company       Company?
+  notifications Notification[]
+  admin_logs    AdminLog[]
+}
+
+enum Role {
+  candidate
+  recruiter
+  admin
+}
+
+enum Status {
+  active
+  banned
+  pending
+}
+
+// ===============================
+// 2. Users
+// ===============================
+model User {
+  id         BigInt    @id @default(autoincrement())
+  account_id BigInt    @unique
+  full_name  String
+  phone      String?
+  dob        DateTime?
+  gender     Gender?
+  address    String?
+  avatar_url String?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  account   Account    @relation(fields: [account_id], references: [id])
+  candidate Candidate?
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+// ===============================
+// 3. Candidates
+// ===============================
+model Candidate {
+  id         BigInt   @id @default(autoincrement())
+  user_id    BigInt   @unique
+  education  String?
+  experience String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user         User             @relation(fields: [user_id], references: [id])
+  cvs          Cv[]
+  applications Application[]
+  saved_jobs   SavedJob[]
+  skills       CandidateSkill[]
+}
+
+// ===============================
+// 4. Companies
+// ===============================
+model Industry {
+  id        BigInt    @id @default(autoincrement())
+  name      String    @unique
+  companies Company[]
+}
+
+model Company {
+  id             BigInt        @id @default(autoincrement())
+  account_id     BigInt        @unique
+  name           String
+  logo_url       String?
+  logo_public_id String // ✅ thêm trường này để xoá/update logo trên Cloudinary
+  website        String?
+  description    String?
+  address        String?                   // Văn phòng giao dịch
+  headquarters   String?                   // Trụ sở chính
+  size           CompanySize?
+  industry_id    BigInt?
+
+  // Pháp lý
+  business_code           String?   @unique // Mã số doanh nghiệp / MST
+  representative_name     String?   // Người đại diện pháp luật
+  representative_position String?   // Chức vụ
+  license_file_url        String?   // Scan giấy phép kinh doanh
+  founded_date            DateTime? // Ngày thành lập
+
+  // Liên hệ
+  contact_email  String?
+  contact_phone  String?
+
+  // Quản trị
+  status         CompanyStatus @default(pending)
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+
+  account        Account              @relation(fields: [account_id], references: [id])
+  jobs           Job[]
+  statistics     RecruiterStatistic[]
+  industry       Industry?            @relation(fields: [industry_id], references: [id])
+}
+
+enum CompanySize {
+  small
+  medium
+  large
+}
+
+enum CompanyStatus {
+  pending
+  approved
+  rejected
+  hidden
+}
+
+// ===============================
+// 5. Jobs
+// ===============================
+model Job {
+  id               BigInt           @id @default(autoincrement())
+  company_id       BigInt
+  category_id      BigInt?
+  title            String
+  salary_min       Float?
+  salary_max       Float?
+  negotiable       Boolean          @default(false)
+  location         String?
+  work_mode        WorkMode?
+  experience_level ExperienceLevel?
+  employment_type  EmploymentType
+  status           JobStatus        @default(active)
+  deadline         DateTime?
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
+
+  company      Company       @relation(fields: [company_id], references: [id])
+  category     JobCategory?  @relation(fields: [category_id], references: [id])
+  details      JobDetail?
+  applications Application[]
+  saved_jobs   SavedJob[]
+  skills       JobSkill[]
+}
+
+model JobDetail {
+  job_id       BigInt  @id
+  description  String?
+  requirements String?
+  job          Job     @relation(fields: [job_id], references: [id])
+}
+
+model Skill {
+  id         BigInt           @id @default(autoincrement())
+  name       String           @unique
+  jobs       JobSkill[]
+  candidates CandidateSkill[]
+}
+
+model JobSkill {
+  id       BigInt @id @default(autoincrement())
+  job_id   BigInt
+  skill_id BigInt
+
+  job   Job   @relation(fields: [job_id], references: [id])
+  skill Skill @relation(fields: [skill_id], references: [id])
+}
+
+enum EmploymentType {
+  fulltime
+  parttime
+  intern
+  contract
+}
+
+enum JobStatus {
+  active
+  hidden
+  closed
+  expired
+}
+
+enum WorkMode {
+  onsite
+  remote
+  hybrid
+}
+
+enum ExperienceLevel {
+  fresher
+  junior
+  mid
+  senior
+  lead
+}
+
+enum SkillLevel {
+  beginner
+  intermediate
+  advanced
+  expert
+}
+
+model CandidateSkill {
+  id           BigInt      @id @default(autoincrement())
+  candidate_id BigInt
+  skill_id     BigInt
+  level        SkillLevel?
+
+  candidate Candidate @relation(fields: [candidate_id], references: [id])
+  skill     Skill     @relation(fields: [skill_id], references: [id])
+}
+
+// ===============================
+// 6. Job Categories
+// ===============================
+model JobCategory {
+  id   BigInt @id @default(autoincrement())
+  name String @unique
+  jobs Job[]
+}
+
+// ===============================
+// 7. CVs
+// ===============================
+model Cv {
+  id           BigInt   @id @default(autoincrement())
+  candidate_id BigInt
+  title        String
+  file_url     String?
+  template_id  BigInt?
+  content      Json?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  candidate    Candidate     @relation(fields: [candidate_id], references: [id])
+  template     CvTemplate?   @relation(fields: [template_id], references: [id])
+  applications Application[]
+}
+
+// ===============================
+// 8. CV Templates
+// ===============================
+model CvTemplate {
+  id          BigInt   @id @default(autoincrement())
+  code        String   @unique
+  name        String
+  description String?
+  preview_url String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  cvs Cv[]
+}
+
+// ===============================
+// 9. Applications
+// ===============================
+model Application {
+  id           BigInt            @id @default(autoincrement())
+  job_id       BigInt
+  candidate_id BigInt
+  cv_id        BigInt
+  status       ApplicationStatus @default(pending)
+  applied_at   DateTime          @default(now())
+  updated_at   DateTime          @updatedAt
+
+  job       Job       @relation(fields: [job_id], references: [id])
+  candidate Candidate @relation(fields: [candidate_id], references: [id])
+  cv        Cv        @relation(fields: [cv_id], references: [id])
+}
+
+enum ApplicationStatus {
+  pending
+  accepted
+  rejected
+  withdrawn
+}
+
+// ===============================
+// 10. Saved Jobs
+// ===============================
+model SavedJob {
+  id           BigInt   @id @default(autoincrement())
+  candidate_id BigInt
+  job_id       BigInt
+  saved_at     DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  candidate Candidate @relation(fields: [candidate_id], references: [id])
+  job       Job       @relation(fields: [job_id], references: [id])
+}
+
+// ===============================
+// 11. Notifications
+// ===============================
+model Notification {
+  id         BigInt           @id @default(autoincrement())
+  account_id BigInt
+  type       NotificationType
+  message    String
+  is_read    Boolean          @default(false)
+  created_at DateTime         @default(now())
+  updated_at DateTime         @updatedAt
+
+  account Account @relation(fields: [account_id], references: [id])
+}
+
+enum NotificationType {
+  system
+  application
+  company
+}
+
+// ===============================
+// 12. Admin Logs
+// ===============================
+model AdminLog {
+  id          BigInt     @id @default(autoincrement())
+  admin_id    BigInt
+  action      String
+  target_type TargetType
+  target_id   BigInt?
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+
+  admin Account @relation(fields: [admin_id], references: [id])
+}
+
+enum TargetType {
+  user
+  company
+  job
+}
+
+// ===============================
+// 13. Site Statistics
+// ===============================
+model SiteStatistic {
+  id         BigInt   @id @default(autoincrement())
+  metric     String
+  value      Int
+  date       DateTime
+  updated_at DateTime @updatedAt
+}
+
+// ===============================
+// 14. Recruiter Statistics
+// ===============================
+model RecruiterStatistic {
+  id         BigInt   @id @default(autoincrement())
+  company_id BigInt
+  metric     String
+  value      Int
+  date       DateTime
+  updated_at DateTime @updatedAt
+
+  company Company @relation(fields: [company_id], references: [id])
+}
