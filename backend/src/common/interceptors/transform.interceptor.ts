@@ -12,9 +12,27 @@ export class TransformInterceptor<T> implements NestInterceptor<T, any> {
     return next.handle().pipe(
       map((data) => ({
         success: true,
-        data,
+        data: this.serializeBigInt(data),
         timestamp: new Date().toISOString(),
       })),
     );
+  }
+
+  private serializeBigInt(obj: any): any {
+    if (obj === null || obj === undefined) return obj;
+
+    if (typeof obj === 'bigint') return obj.toString();
+
+    if (Array.isArray(obj)) return obj.map((i) => this.serializeBigInt(i));
+
+    if (typeof obj === 'object') {
+      const converted: any = {};
+      for (const key of Object.keys(obj)) {
+        converted[key] = this.serializeBigInt(obj[key]);
+      }
+      return converted;
+    }
+
+    return obj;
   }
 }

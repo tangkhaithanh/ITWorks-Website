@@ -1,11 +1,12 @@
-import { IsString, IsEnum, IsEmail, IsDateString } from 'class-validator';
+import { IsString, IsEnum, IsEmail, IsDateString, IsOptional, IsUrl } from 'class-validator';
 import { CompanySize } from '@prisma/client';
+import { Transform, Type } from 'class-transformer';
 
 export class CreateCompanyDto {
   @IsString()
   name: string;
 
-  @IsString()
+  @IsUrl()
   website: string;
 
   @IsString()
@@ -33,8 +34,8 @@ export class CreateCompanyDto {
   @IsString()
   license_file_url: string;
 
-  @IsDateString()
-  founded_date: Date;
+  @IsString()
+  founded_date: string;
 
   // Liên hệ
   @IsEmail()
@@ -43,6 +44,7 @@ export class CreateCompanyDto {
   @IsString()
   contact_phone: string;
 
-  // Liên kết
-  industry_id: bigint;
+  @IsOptional()
+  @Transform(({ value }) => (value ? BigInt(value) : null))
+  industry_id?: bigint;
 }

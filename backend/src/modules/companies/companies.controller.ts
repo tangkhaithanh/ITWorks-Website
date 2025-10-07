@@ -42,7 +42,7 @@ export class CompaniesController {
     }),
   )
   create(
-    @User('id') accountId: bigint,
+    @User('userId') accountId: bigint,
     @Body() dto: CreateCompanyDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
@@ -96,4 +96,15 @@ export class CompaniesController {
     return this.companiesService.findOne(BigInt(id));
   }
 
+  @Patch(':id/approve')
+  @Roles(Role.admin)
+  approve(@Param('id') id: string) {
+    return this.companiesService.approve(BigInt(id));
+  }
+
+  @Patch(':id/reject')
+  @Roles(Role.admin)
+  reject(@Param('id') id: string) {
+    return this.companiesService.reject(BigInt(id));
+  }
 }
