@@ -246,5 +246,4 @@ npm run preview
 
 ---
 
-📚 **Tác giả:** Nhóm Đồ án Tuyển dụng
-💡 **Công nghệ:** NestJS · Prisma · ReactJS · Vite · TailwindCSS · Cloudinary · WebSocket
+
