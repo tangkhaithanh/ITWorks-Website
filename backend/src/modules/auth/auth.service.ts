@@ -301,10 +301,10 @@ async login(dto: LoginDTO, res: Response) {
       }
     }
 
-async getMe(userId: bigint) {
+async getMe(accountId: bigint) {
   try {
     const account = await this.prisma.account.findUnique({
-      where: { id: userId },
+      where: { id: accountId },
       include: { user: true, company: true },
     });
 
@@ -328,9 +328,9 @@ async getMe(userId: bigint) {
   }
 }
 
-async logout(userId: bigint, res: Response) {
+async logout(accountId: bigint, res: Response) {
   await this.prisma.account.update({
-    where: { id: userId },
+    where: { id: accountId },
     data: { refreshToken: null },
   });
 

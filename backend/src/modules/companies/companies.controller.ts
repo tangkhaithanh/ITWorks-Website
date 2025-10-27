@@ -19,6 +19,7 @@ import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { User } from '@/common/decorators/user.decorator';
+import {Public} from "@/common/decorators/public.decorator";
 
 @Controller('companies')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -42,7 +43,7 @@ export class CompaniesController {
     }),
   )
   create(
-    @User('userId') accountId: bigint,
+    @User('accountId') accountId: bigint,
     @Body() dto: CreateCompanyDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
@@ -91,6 +92,7 @@ export class CompaniesController {
     return this.companiesService.unhide(BigInt(id));
   }
 
+  @Public()
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.companiesService.findOne(BigInt(id));
@@ -107,4 +109,11 @@ export class CompaniesController {
   reject(@Param('id') id: string) {
     return this.companiesService.reject(BigInt(id));
   }
+
+  @Get(':id/edit')
+  @Roles(Role.recruiter, Role.admin)
+  getForEdit(@Param('id') id: string) {
+    return this.companiesService.findOne(BigInt(id), 'edit');
+  }
+
 }

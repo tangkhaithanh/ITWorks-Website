@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsOptional, IsDateString, IsEnum, MinLength } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsDateString, IsEnum, MinLength, ValidateIf } from 'class-validator';
 import { Gender } from '@prisma/client';
 export class RegisterUserDto {
   @IsEmail({}, { message: 'Invalid email format' })
@@ -15,9 +15,9 @@ export class RegisterUserDto {
   @IsString()
   phone?: string;
 
-  @IsOptional()
+  @ValidateIf((_, value) => value !== null && value !== undefined && value !== '')
   @IsDateString({}, { message: 'Date of birth must be a valid date string' })
-  dob?: Date;
+  dob?: string;
 
   @IsOptional()
   @IsEnum(Gender)

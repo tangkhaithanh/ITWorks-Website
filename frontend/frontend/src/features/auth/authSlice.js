@@ -9,7 +9,7 @@ export const login = createAsyncThunk(
     try {
       await AuthAPI.login(dto.email, dto.password);
       const res = await AuthAPI.me();
-      return res.data;
+      return res.data.data;
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
@@ -48,7 +48,7 @@ const authSlice = createSlice({
       })
       .addCase(login.fulfilled, (state, action) => {
         state.loading = false;
-        state.user = action.payload.data;
+        state.user = action.payload;
         state.initialized = true;    
       })
       .addCase(login.rejected, (state, action) => {

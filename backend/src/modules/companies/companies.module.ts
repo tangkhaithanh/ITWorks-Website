@@ -3,14 +3,16 @@ import { CompaniesController } from './companies.controller';
 import { CompaniesService } from './companies.service';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { CloudinaryModule } from '@/modules/cloudinary/cloudinary.module';
+import { ElasticsearchCustomModule } from '../elasticsearch/elasticsearch.module';
 
 @Module({
   imports: [
-    PrismaModule,      // PrismaService
-    CloudinaryModule,  // CloudinaryService
+    PrismaModule,
+    CloudinaryModule,
+    ElasticsearchCustomModule,
   ],
   controllers: [CompaniesController],
   providers: [CompaniesService],
-  exports: [CompaniesService], // để module khác dùng (nếu cần)
+  exports: [CompaniesService],
 })
 export class CompaniesModule {}

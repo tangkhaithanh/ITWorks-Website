@@ -6,3 +6,6 @@
     left: 120%;
   }
 }
+.prose li::marker {
+  color: #000 !important; /* 👈 bullet màu đen rõ ràng */
+}

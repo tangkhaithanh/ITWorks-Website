@@ -14,25 +14,6 @@ const LoginForm = () => {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  // Điều hướng khi login xong
-  useEffect(() => {
-    if (user) {
-      switch (user.role) {
-        case "candidate":
-          navigate("/");
-          break;
-        case "recruiter":
-          navigate("/recruiter/dashboard");
-          break;
-        case "admin":
-          navigate("/admin/dashboard");
-          break;
-        default:
-          navigate("/");
-      }
-    }
-  }, [user, navigate]);
-
   // Clear lỗi khi người dùng gõ lại
   useEffect(() => {
     if (error) {
@@ -41,10 +22,33 @@ const LoginForm = () => {
     }
   }, [email, password]); // khi input đổi, clear error
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    dispatch(login({ email, password }));
-  };
+
+    const resultAction = await dispatch(login({ email, password }));
+
+    // nếu login thành công
+    if (login.fulfilled.match(resultAction)) {
+      const user = resultAction.payload;
+      console.log("🎯 Login thành công:", user);
+
+      switch (user.role) {
+        case "candidate":
+          navigate("/");
+          break;
+        case "recruiter":
+          navigate("/recruiter");
+          break;
+        case "admin":
+          navigate("/admin/dashboard");
+          break;
+        default:
+          navigate("/");
+      }
+    } else {
+      console.error("❌ Login thất bại:", resultAction.payload?.message);
+    }
+};
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded-lg shadow-md max-w-md w-full">

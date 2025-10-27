@@ -11,15 +11,23 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.9.0",
+    "@tailwindcss/typography": "^0.5.19",
     "axios": "^1.12.2",
     "clsx": "^2.1.1",
+    "dayjs": "^1.11.18",
+    "dompurify": "^3.3.0",
+    "framer-motion": "^12.23.24",
     "lucide-react": "^0.544.0",
+    "pdfjs-dist": "^5.4.296",
     "react": "^19.1.1",
     "react-datepicker": "^8.7.0",
     "react-dom": "^19.1.1",
+    "react-hot-toast": "^2.6.0",
+    "react-pdf": "^10.2.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.9.1",
-    "sweetalert2": "^11.23.0"
+    "sweetalert2": "^11.26.3",
+    "sweetalert2-react-content": "^5.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",

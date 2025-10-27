@@ -88,42 +88,62 @@ model Candidate {
 model Industry {
   id        BigInt    @id @default(autoincrement())
   name      String    @unique
-  companies Company[]
+  companies CompanyIndustry[]
 }
 
 model Company {
-  id             BigInt        @id @default(autoincrement())
-  account_id     BigInt        @unique
+  id             BigInt             @id @default(autoincrement())
+  account_id     BigInt             @unique
   name           String
   logo_url       String?
-  logo_public_id String // ✅ thêm trường này để xoá/update logo trên Cloudinary
+  logo_public_id String
   website        String?
   description    String?
-  address        String?                   // Văn phòng giao dịch
-  headquarters   String?                   // Trụ sở chính
+
+  headquarters   String?            // 🏢 Thành phố trụ sở chính
+  address        String?            // 📍 Địa chỉ chi tiết của văn phòng chính
   size           CompanySize?
-  industry_id    BigInt?
+  industry_info  CompanyIndustry[]  // 🏭 nhiều lĩnh vực
+  skills         CompanySkill[]     // 💡 tech stack của công ty
 
-  // Pháp lý
-  business_code           String?   @unique // Mã số doanh nghiệp / MST
-  representative_name     String?   // Người đại diện pháp luật
-  representative_position String?   // Chức vụ
-  license_file_url        String?   // Scan giấy phép kinh doanh
-  founded_date            DateTime? // Ngày thành lập
+  business_code           String?   @unique
+  representative_name     String?
+  representative_position String?
+  license_file_url        String?
+  founded_date            DateTime?
 
-  // Liên hệ
   contact_email  String?
   contact_phone  String?
 
-  // Quản trị
   status         CompanyStatus @default(pending)
   created_at     DateTime      @default(now())
   updated_at     DateTime      @updatedAt
 
-  account        Account              @relation(fields: [account_id], references: [id])
-  jobs           Job[]
-  statistics     RecruiterStatistic[]
-  industry       Industry?            @relation(fields: [industry_id], references: [id])
+  account    Account             @relation(fields: [account_id], references: [id])
+  jobs       Job[]
+  statistics RecruiterStatistic[]
+}
+
+model CompanySkill {
+  id          BigInt @id @default(autoincrement())
+  company_id  BigInt
+  skill_id    BigInt
+
+  company Company @relation(fields: [company_id], references: [id])
+  skill   Skill   @relation(fields: [skill_id], references: [id])
+
+  @@unique([company_id, skill_id])
+}
+
+model CompanyIndustry {
+  id          BigInt   @id @default(autoincrement())
+  company_id  BigInt
+  industry_id BigInt
+
+  company  Company  @relation(fields: [company_id], references: [id])
+  industry Industry @relation(fields: [industry_id], references: [id])
+
+  @@unique([company_id, industry_id])
 }
 
 enum CompanySize {
@@ -143,22 +163,39 @@ enum CompanyStatus {
 // 5. Jobs
 // ===============================
 model Job {
-  id               BigInt           @id @default(autoincrement())
-  company_id       BigInt
-  category_id      BigInt?
-  title            String
-  salary_min       Float?
-  salary_max       Float?
-  negotiable       Boolean          @default(false)
-  location         String?
-  work_mode        WorkMode?
-  experience_level ExperienceLevel?
-  employment_type  EmploymentType
-  status           JobStatus        @default(active)
-  deadline         DateTime?
-  created_at       DateTime         @default(now())
-  updated_at       DateTime         @updatedAt
+  id                 BigInt           @id @default(autoincrement())
+  company_id         BigInt
+  category_id        BigInt
+  title              String
+  salary_min         Float
+  salary_max         Float
+  negotiable         Boolean          @default(false)
 
+  // 🗺️ Thông tin địa điểm
+  location_city      String           // TP.HCM
+  location_district  String?          // Quận 1
+  location_ward      String?          // Phường Đa Kao
+  location_street    String?          // 29 Nguyễn Đình Chiểu
+  location_full      String?          // Ghép tự động: "29 Nguyễn Đình Chiểu, Phường Đa Kao, Quận 1, TP.HCM"
+  latitude           Float?           // 10.7769
+  longitude          Float?           // 106.7009
+
+  // 💼 Hình thức & cấp độ làm việc
+  work_modes         Json            // Ví dụ: ["onsite", "remote"]
+  experience_levels  Json            // Ví dụ: ["junior", "mid"]
+
+  // 🧾 Loại việc & trạng thái
+  employment_type    EmploymentType
+  status             JobStatus        @default(active)
+  deadline           DateTime?
+  created_at         DateTime         @default(now())
+  updated_at         DateTime         @updatedAt
+
+  // Thông tin thống kê
+  number_of_openings Int               @default(1)   // Số lượng cần tuyển
+  views_count        Int               @default(0)   // Tổng lượt xem job
+
+  // 🔗 Quan hệ
   company      Company       @relation(fields: [company_id], references: [id])
   category     JobCategory?  @relation(fields: [category_id], references: [id])
   details      JobDetail?
@@ -168,10 +205,10 @@ model Job {
 }
 
 model JobDetail {
-  job_id       BigInt  @id
-  description  String?
-  requirements String?
-  job          Job     @relation(fields: [job_id], references: [id])
+  job_id       BigInt   @id
+  description  String?  @db.LongText
+  requirements String?  @db.LongText
+  job          Job      @relation(fields: [job_id], references: [id])
 }
 
 model Skill {
@@ -179,6 +216,7 @@ model Skill {
   name       String           @unique
   jobs       JobSkill[]
   candidates CandidateSkill[]
+  company_skills CompanySkill[]   // thêm dòng này
 }
 
 model JobSkill {
@@ -216,6 +254,7 @@ enum ExperienceLevel {
   mid
   senior
   lead
+  intern
 }
 
 enum SkillLevel {
@@ -252,8 +291,11 @@ model Cv {
   candidate_id BigInt
   title        String
   file_url     String?
+  file_public_id  String?
   template_id  BigInt?
   content      Json?
+  type         CvType   @default(ONLINE)
+  is_deleted   Boolean  @default(false)  
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
@@ -261,6 +303,11 @@ model Cv {
   template     CvTemplate?   @relation(fields: [template_id], references: [id])
   applications Application[]
 }
+enum CvType {
+  FILE
+  ONLINE
+}
+
 
 // ===============================
 // 8. CV Templates

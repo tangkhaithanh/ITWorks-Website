@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsEmail, IsDateString, IsOptional, IsUrl } from 'class-validator';
+import { IsString, IsEnum, IsEmail, IsDateString, IsOptional, IsUrl, ArrayNotEmpty, IsArray } from 'class-validator';
 import { CompanySize } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 
@@ -44,7 +44,16 @@ export class CreateCompanyDto {
   @IsString()
   contact_phone: string;
 
+   // 🏭 Lĩnh vực hoạt động (nhiều ngành)
   @IsOptional()
-  @Transform(({ value }) => (value ? BigInt(value) : null))
-  industry_id?: bigint;
+  @IsArray()
+  @ArrayNotEmpty()
+  @Transform(({ value }) => value.map((v: string) => BigInt(v)))
+  industry_ids?: bigint[];
+
+  // 💡 Kỹ năng / công nghệ
+  @IsOptional()
+  @IsArray()
+  @Transform(({ value }) => value.map((v: string) => BigInt(v)))
+  skill_ids?: bigint[];
 }

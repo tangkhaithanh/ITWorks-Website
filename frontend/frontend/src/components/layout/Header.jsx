@@ -31,7 +31,7 @@ const Header = ({ user }) => {
           <nav className="flex items-center space-x-6 text-slate-700 font-medium">
             <Link to="/jobs" className="px-3 py-1.5 rounded-lg hover:text-blue-600">Việc làm</Link>
             <Link to="/companies" className="px-3 py-1.5 rounded-lg hover:text-blue-600">Công ty</Link>
-            <Link to="/cv-builder" className="px-3 py-1.5 rounded-lg hover:text-blue-600">Tạo CV</Link>
+            <Link to="/manage-cv" className="px-3 py-1.5 rounded-lg hover:text-blue-600">CV của tôi</Link>
           </nav>
         </div>
 

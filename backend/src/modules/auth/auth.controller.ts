@@ -42,15 +42,15 @@ export class AuthController {
 
     @Get('me')
     @UseGuards(JwtAuthGuard)
-    async getMe(@User('userId') userId: bigint) {
-    console.log('👉 Controller getMe với userId:', userId);
-    return this.authService.getMe(userId);
+    async getMe(@User('accountId') accountId: bigint) {
+    console.log('👉 Controller getMe với accountId:', accountId);
+    return this.authService.getMe(accountId);
     }
     
     @Post('logout')
     @UseGuards(JwtAuthGuard) // dùng access token còn sống, hoặc gọi ngay sau refresh
-    async logout(@User('userId') userId: bigint, @Res({ passthrough: true }) res: Response) {
-        return this.authService.logout(userId, res);
+    async logout(@User('accountId') accountId: bigint, @Res({ passthrough: true }) res: Response) {
+        return this.authService.logout(accountId, res);
     }
 
     @Post('verify-reset-token')

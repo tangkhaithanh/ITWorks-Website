@@ -2,46 +2,48 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
-
-// Import business modules
+import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from './modules/auth/auth.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
-// import { AccountsModule } from './modules/accounts/accounts.module';
-// import { UsersModule } from './modules/users/users.module';
-// import { CandidatesModule } from './modules/candidates/candidates.module';
-// import { CompaniesModule } from './modules/companies/companies.module';
-// import { JobsModule } from './modules/jobs/jobs.module';
-// import { ApplicationsModule } from './modules/applications/applications.module';
-// import { NotificationsModule } from './modules/notifications/notifications.module';
-// import { AdminModule } from './modules/admin/admin.module';
-// import { StatisticsModule } from './modules/statistics/statistics.module';
+import { CompaniesModule } from '@/modules/companies/companies.module';
+import { ElasticsearchCustomModule } from './modules/elasticsearch/elasticsearch.module';
+import { LocationModule } from './modules/location/location.module';
+import { JobsModule } from './modules/jobs/jobs.module';
+import { CvsModule } from './modules/cvs/cvs.module';
+import { ApplicationModule } from './modules/application/application.module';
+import { CandidatesModule } from './modules/candidates/candidates.module';
+import { SkillsModule } from './modules/skills/skills.module';
+import { JobCategoriesModule } from './modules/job-categories/job-categories.module';
 import databaseConfig from '@/config/database.config';
 import jwtConfig from '@/config/jwt.config';
 import mailerConfig from '@/config/mailer.config';
-import { CompaniesModule } from '@/modules/companies/companies.module';
+
 @Module({
   imports: [
-    // load .env
-     ConfigModule.forRoot({
+    // 🟢 1. Load .env toàn cục trước
+    ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, jwtConfig, mailerConfig], // 👈 thêm chỗ này
+      load: [databaseConfig, jwtConfig, mailerConfig],
     }),
-    // Prisma ORM
 
-    // Business modules
+    // 🟢 2. Load Prisma ORM
+    PrismaModule,
+
+    // 🟢 3. Load Elasticsearch sớm (phải đứng TRƯỚC các module khác dùng nó)
+    ElasticsearchCustomModule,
+    ScheduleModule.forRoot(), // Cho phép chạy cron jobs
+
+    // 🟢 4. Các business modules còn lại
     AuthModule,
     CloudinaryModule,
-    PrismaModule,
     CompaniesModule,
-    // AccountsModule,
-    // UsersModule,
-    // CandidatesModule,
-    // CompaniesModule,
-    // JobsModule,
-    // ApplicationsModule,
-    // NotificationsModule,
-    // AdminModule,
-    // StatisticsModule,
+    JobsModule,
+    LocationModule,
+    CvsModule,
+    ApplicationModule,
+    CandidatesModule,
+    SkillsModule,
+    JobCategoriesModule,
   ],
 })
 export class AppModule {}

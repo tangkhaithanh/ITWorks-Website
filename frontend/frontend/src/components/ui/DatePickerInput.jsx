@@ -10,7 +10,7 @@ const DatePickerInput = ({ label, name, value, onChange, required, error, classN
   const handleChange = (date) => {
     setSelectedDate(date);
     // gửi ngược string yyyy-MM-dd về cho backend
-    const formatted = date ? date.toISOString().split("T")[0] : "";
+    const formatted = date ? date.toISOString().split("T")[0] : null;
     onChange({ target: { name, value: formatted } });
   };
 
