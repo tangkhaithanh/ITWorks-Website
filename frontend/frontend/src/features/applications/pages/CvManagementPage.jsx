@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import TextInput from "@/components/ui/TextInput";
 import SelectInput from "@/components/ui/SelectInput";
 import Button from "@/components/ui/Button";
 import ApplicationAPI from "@/features/applications/ApplicationAPI";
+import InterviewAPI from "@/features/interviews/InterviewAPI";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
+import toast from "react-hot-toast";
 
 const MySwal = withReactContent(Swal);
 
@@ -19,6 +21,23 @@ export default function CvManagementPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(null); // id đang xử lý accept/reject
+  const [isInterviewModalOpen, setInterviewModalOpen] = useState(false);
+  const [interviewSubmitting, setInterviewSubmitting] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState(null);
+  const [interviewForm, setInterviewForm] = useState({
+    datetime: "",
+    mode: "online",
+    note: "",
+  });
+
+  const applicantName = useMemo(() => {
+    if (!selectedApplication) return "";
+    return (
+      selectedApplication.candidate?.user?.full_name ||
+      selectedApplication.candidate?.user?.account?.email ||
+      "Ứng viên"
+    );
+  }, [selectedApplication]);
 
   // 🧩 Hàm gọi API lấy danh sách ứng viên
   const fetchData = async (params = {}) => {
@@ -108,6 +127,50 @@ export default function CvManagementPage() {
     }
   };
 
+  const openInterviewModal = (application) => {
+    setSelectedApplication(application);
+    setInterviewForm({
+      datetime: "",
+      mode: "online",
+      note: "",
+    });
+    setInterviewModalOpen(true);
+  };
+
+  const closeInterviewModal = () => {
+    setInterviewModalOpen(false);
+    setSelectedApplication(null);
+    setInterviewSubmitting(false);
+  };
+
+  const handleInterviewFormChange = (event) => {
+    const { name, value } = event.target;
+    setInterviewForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCreateInterview = async (event) => {
+    event.preventDefault();
+    if (!selectedApplication) return;
+
+    try {
+      setInterviewSubmitting(true);
+      await InterviewAPI.create({
+        application_id: selectedApplication.id,
+        scheduled_at: interviewForm.datetime,
+        mode: interviewForm.mode,
+        note: interviewForm.note,
+      });
+      toast.success("Đã tạo lịch phỏng vấn thành công");
+      closeInterviewModal();
+      fetchData();
+    } catch (error) {
+      const message =
+        error?.response?.data?.message || "Không thể tạo lịch phỏng vấn";
+      toast.error(message);
+      setInterviewSubmitting(false);
+    }
+  };
+
   // 🔹 Load lần đầu
   useEffect(() => {
     fetchData();
@@ -185,6 +248,7 @@ export default function CvManagementPage() {
                 <th className="p-3 text-left">Tên job</th>
                 <th className="p-3 text-left">Thông tin liên hệ</th>
                 <th className="p-3 text-center">Trạng thái</th>
+                <th className="p-3 text-center">Phỏng vấn</th>
                 <th className="p-3 text-center rounded-r-lg">Thao tác</th>
               </tr>
             </thead>
@@ -192,13 +256,13 @@ export default function CvManagementPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-6 text-slate-500">
+                  <td colSpan="6" className="text-center py-6 text-slate-500">
                     Đang tải dữ liệu...
                   </td>
                 </tr>
               ) : applications.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-6 text-slate-500">
+                  <td colSpan="6" className="text-center py-6 text-slate-500">
                     Không có dữ liệu
                   </td>
                 </tr>
@@ -261,6 +325,17 @@ export default function CvManagementPage() {
                         </span>
                       </td>
 
+                      {/* Thông tin phỏng vấn */}
+                      <td className="p-3 text-center">
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          onClick={() => openInterviewModal(item)}
+                        >
+                          Lên lịch
+                        </Button>
+                      </td>
+
                       {/* Thao tác */}
                       <td className="p-3 text-center space-x-2">
                         <Button
@@ -301,6 +376,100 @@ export default function CvManagementPage() {
           </table>
         </div>
       </div>
+
+      {isInterviewModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-slate-800">
+                Lên lịch phỏng vấn
+              </h3>
+              <button
+                type="button"
+                className="text-slate-400 transition hover:text-slate-600"
+                onClick={closeInterviewModal}
+                aria-label="Đóng"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="mb-6 text-sm text-slate-600">
+              Gửi lịch phỏng vấn cho <span className="font-semibold">{applicantName}</span>.
+            </p>
+
+            <form onSubmit={handleCreateInterview} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Thời gian phỏng vấn
+                </label>
+                <input
+                  type="datetime-local"
+                  name="datetime"
+                  value={interviewForm.datetime}
+                  onChange={handleInterviewFormChange}
+                  required
+                  className={
+                    "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm " +
+                    "focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Hình thức
+                </label>
+                <select
+                  name="mode"
+                  value={interviewForm.mode}
+                  onChange={handleInterviewFormChange}
+                  className={
+                    "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm " +
+                    "focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  }
+                >
+                  <option value="online">Online</option>
+                  <option value="offline">Offline</option>
+                  <option value="call">Gọi điện</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Ghi chú
+                </label>
+                <textarea
+                  name="note"
+                  value={interviewForm.note}
+                  onChange={handleInterviewFormChange}
+                  rows={4}
+                  placeholder="Thông tin địa điểm, link meeting..."
+                  className={
+                    "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm " +
+                    "focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={closeInterviewModal}
+                  disabled={interviewSubmitting}
+                >
+                  Huỷ
+                </Button>
+                <Button type="submit" variant="primary" size="sm" disabled={interviewSubmitting}>
+                  {interviewSubmitting ? "Đang gửi..." : "Gửi lịch"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

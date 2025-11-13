@@ -10,6 +10,7 @@ import ResetPasswordPage from "@/features/auth/pages/ResetPasswordPage";
 import JobSearchPage from "@/features/jobs/pages/JobSearchPage";
 import JobDetailPage from "@/features/jobs/pages/JobDetailPage";
 import MyCvPage from "@/features/candidates/pages/MyCvPage";
+import CandidateInterviewsPage from "@/features/interviews/pages/CandidateInterviewsPage";
 import ProtectedRoute from "./ProtectedRoute";
 import RecruiterLayout from "@/components/layout/RecruiterLayout";
 import CvManagementPage from "../features/applications/pages/CvManagementPage";
@@ -27,6 +28,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={["candidate"]}>
             <MyCvPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "interviews",
+        element: (
+          <ProtectedRoute roles={["candidate"]}>
+            <CandidateInterviewsPage />
           </ProtectedRoute>
         ),
       },
@@ -49,8 +58,8 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-    { path: "cv", element: <CvManagementPage /> },
-  ],
+      { path: "cv", element: <CvManagementPage /> },
+    ],
   },
 ]);
 
