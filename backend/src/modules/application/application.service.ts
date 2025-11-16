@@ -195,75 +195,37 @@ export class ApplicationService {
       `📩 [getApplicationsByCompany] accountId=${accountId?.toString?.()} page=${page} limit=${limit} status=${status} jobId=${jobId} search="${search || ''}"`
     );
 
-    // 🔸 1️⃣ Kiểm tra recruiter có công ty chưa
+    // 🔹 1️⃣ Kiểm tra recruiter có công ty chưa
     const company = await this.prisma.company.findUnique({
       where: { account_id: accountId },
       select: { id: true, name: true },
     });
     if (!company) {
-      console.warn(`⚠️ Không tìm thấy công ty cho accountId=${accountId}`);
       throw new ForbiddenException('Bạn chưa có công ty.');
     }
 
-    // 🔹 2️⃣ Xây dựng whereClause an toàn với Prisma 6
+    // 🔹 2️⃣ Tạo whereClause
     const whereClause: any = {
-      AND: [
-        { job: { company_id: company.id } }, // công ty của recruiter
-      ],
+      AND: [{ job: { company_id: company.id } }],
     };
-
     if (status) whereClause.AND.push({ status });
     if (jobId) whereClause.AND.push({ job: { id: jobId } });
 
-    // 🔍 3️⃣ Filter theo từ khóa tìm kiếm
+    // 🔍 3️⃣ Filter theo từ khóa
     if (search && search.trim()) {
-    whereClause.AND.push({
-      OR: [
-        {
-          candidate: {
-            is: {
-              user: {
-                is: {
-                  full_name: { contains: search },
-                },
-              },
-            },
-          },
-        },
-        {
-          candidate: {
-            is: {
-              user: {
-                is: {
-                  account: {
-                    is: {
-                      email: { contains: search },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-        {
-          candidate: {
-            is: {
-              user: {
-                is: {
-                  phone: { contains: search },
-                },
-              },
-            },
-          },
-        },
-      ],
-    });
-  }
+      whereClause.AND.push({
+        OR: [
+          { candidate: { user: { full_name: { contains: search } } } },
+          { candidate: { user: { account: { email: { contains: search } } } } },
+          { candidate: { user: { phone: { contains: search } } } },
+        ],
+      });
+    }
 
     // 🔹 4️⃣ Pagination
     const skip = (page - 1) * limit;
 
-    // 🔍 5️⃣ Thực thi query (transaction: list + count)
+    // 🔹 5️⃣ Truy vấn
     const [items, total] = await this.prisma.$transaction([
       this.prisma.application.findMany({
         where: whereClause,
@@ -282,6 +244,19 @@ export class ApplicationService {
               },
             },
           },
+          cv: {
+            select: {
+              id: true,
+              title: true,
+              type: true,
+              file_url: true,
+              file_public_id: true,
+              template_id: true,
+              content: true,
+              created_at: true,
+              updated_at: true,
+            },
+          },
         },
         orderBy: { applied_at: 'desc' },
         skip,
@@ -290,21 +265,39 @@ export class ApplicationService {
       this.prisma.application.count({ where: whereClause }),
     ]);
 
-    console.log(
-      `✅ Lấy ${items.length} đơn | total=${total} | ${Date.now() - start}ms`
-    );
+    // 🔹 6️⃣ Chuẩn hóa dữ liệu để FE dễ dùng
+    const mapped = items.map((app) => {
+      const cv = app.cv;
+      let cv_url: string | null = null;
+
+      if (cv?.type === 'FILE' && cv.file_url) {
+        // 📁 Nếu là file upload → dùng đường dẫn xem
+        cv_url = `/cvs/view/${cv.file_public_id?.replace(/^cvs\//, '') || cv.id}`;
+      } else if (cv?.type === 'ONLINE') {
+        // 🧾 Nếu là CV online → hiển thị qua content/template_id
+        cv_url = null; // FE có thể render qua template
+      }
+
+      return {
+        ...app,
+        cv_url,
+        cv_type: cv?.type || null,
+        cv_content: cv?.type === 'ONLINE' ? cv.content : null,
+      };
+    });
+
+    console.log(`✅ Lấy ${items.length} đơn | total=${total} | ${Date.now() - start}ms`);
 
     return {
-      items,
+      items: mapped,
       total,
       page,
       pages: Math.ceil(total / limit),
     };
   } catch (error) {
     console.error('❌ Lỗi trong getApplicationsByCompany:', error.message);
-    console.error(error.stack?.split('\n')[0]);
     throw new InternalServerErrorException(
-      error.message || 'Lỗi khi lấy danh sách ứng tuyển công ty.'
+      error.message || 'Lỗi khi lấy danh sách ứng tuyển công ty.',
     );
   }
 }

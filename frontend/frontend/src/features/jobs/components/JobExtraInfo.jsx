@@ -31,7 +31,7 @@ const JobExtraInfo = ({ job }) => {
 
   // 🧠 Cấu hình các mục hiển thị
   const infoItems = [
-    { label: "Địa chỉ làm việc", value: job.location_full || "Không rõ", icon: MapPin },
+    { label: "Địa chỉ làm việc", value: job.location.full || "Không rõ", icon: MapPin },
     { label: "Số lượng tuyển", value: job.number_of_openings || "1", icon: Users },
     { label: "Hình thức làm việc", value: workModes, icon: Briefcase },
     { label: "Loại công việc", value: employmentTypeLabel, icon: FileBadge },

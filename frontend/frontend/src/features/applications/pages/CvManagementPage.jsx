@@ -5,22 +5,26 @@ import Button from "@/components/ui/Button";
 import ApplicationAPI from "@/features/applications/ApplicationAPI";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
-
+import CandidateAPI from "@/features/candidates/CandidateAPI";
 const MySwal = withReactContent(Swal);
 
 export default function CvManagementPage() {
+  // ───────────────────────────────────────
+  // 🔹 State quản lý
+  // ───────────────────────────────────────
   const [filters, setFilters] = useState({
     search: "",
     jobId: "",
     status: "",
   });
-
   const [applications, setApplications] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState(null); // id đang xử lý accept/reject
+  const [actionLoading, setActionLoading] = useState(null); // id đang xử lý
 
-  // 🧩 Hàm gọi API lấy danh sách ứng viên
+  // ───────────────────────────────────────
+  // 🔹 Lấy danh sách đơn ứng tuyển
+  // ───────────────────────────────────────
   const fetchData = async (params = {}) => {
     try {
       setLoading(true);
@@ -43,27 +47,29 @@ export default function CvManagementPage() {
     }
   };
 
-  // 🧠 Khi dropdown (jobId, status) thay đổi → auto gọi API
   useEffect(() => {
-    if (filters.jobId !== "" || filters.status !== "") {
-      fetchData();
-    }
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (filters.jobId !== "" || filters.status !== "") fetchData();
   }, [filters.jobId, filters.status]);
 
-  // 📦 Hàm xử lý thay đổi input
+  // ───────────────────────────────────────
+  // 🔹 Xử lý thay đổi input / filter
+  // ───────────────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 🎯 Khi nhấn nút Tìm kiếm hoặc Enter trong textbox
   const handleSearch = (e) => {
-    if (!e || e.key === "Enter") {
-      fetchData();
-    }
+    if (!e || e.key === "Enter") fetchData();
   };
 
-  // 🧩 Khi nhấn chấp nhận / từ chối
+  // ───────────────────────────────────────
+  // 🔹 Hành động chấp nhận / từ chối
+  // ───────────────────────────────────────
   const handleAction = async (id, action) => {
     const actionText = action === "accept" ? "chấp nhận" : "từ chối";
     try {
@@ -80,11 +86,8 @@ export default function CvManagementPage() {
 
       setActionLoading(id);
 
-      if (action === "accept") {
-        await ApplicationAPI.accept(id);
-      } else {
-        await ApplicationAPI.reject(id);
-      }
+      if (action === "accept") await ApplicationAPI.accept(id);
+      else await ApplicationAPI.reject(id);
 
       await MySwal.fire({
         title: "Thành công!",
@@ -108,11 +111,36 @@ export default function CvManagementPage() {
     }
   };
 
-  // 🔹 Load lần đầu
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // ───────────────────────────────────────
+  // 🔹 Mở CV ở tab mới
+  // ───────────────────────────────────────
+  const handleViewCv = async (item) => {
+  try {
+    const filename = item.cv?.file_public_id?.replace(/^cvs\//, "") || item.cv?.id;
+    if (!filename) {
+      return MySwal.fire({
+        title: "Không tìm thấy CV",
+        icon: "warning",
+      });
+    }
 
+    const res = await CandidateAPI.viewCv(filename);
+    const blob = new Blob([res.data], { type: "application/pdf" });
+    const blobUrl = window.URL.createObjectURL(blob);
+    window.open(blobUrl, "_blank");
+  } catch (err) {
+    console.error("❌ Lỗi khi xem CV:", err);
+    MySwal.fire({
+      title: "Lỗi khi xem CV",
+      text: "Không thể tải file CV. Vui lòng thử lại.",
+      icon: "error",
+    });
+  }
+};
+
+  // ───────────────────────────────────────
+  // 🔹 Render
+  // ───────────────────────────────────────
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -169,7 +197,7 @@ export default function CvManagementPage() {
         </div>
       </div>
 
-      {/* Kết quả */}
+      {/* Danh sách CV */}
       <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-100">
         <p className="font-medium text-slate-700 mb-4">
           Tìm thấy{" "}
@@ -177,44 +205,48 @@ export default function CvManagementPage() {
           ứng viên
         </p>
 
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-slate-100 text-slate-700 text-sm font-semibold">
-                <th className="p-3 text-left rounded-l-lg">Ứng viên</th>
-                <th className="p-3 text-left">Tên job</th>
-                <th className="p-3 text-left">Thông tin liên hệ</th>
-                <th className="p-3 text-center">Trạng thái</th>
-                <th className="p-3 text-center rounded-r-lg">Thao tác</th>
+        <div className="w-full overflow-hidden rounded-lg border border-slate-200">
+          <div className="w-full overflow-hidden rounded-lg border border-slate-200">
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-slate-100 text-slate-700 text-sm font-semibold">
+              <th className="p-3 text-left w-60 min-w-[180px]">Ứng viên</th>
+              <th className="p-3 text-left w-40 min-w-[120px]">Tên job</th>
+              <th className="p-3 text-left w-36 min-w-[100px]">Tên CV</th>
+              <th className="p-3 text-left w-44 min-w-[120px]">Liên hệ</th>
+              <th className="p-3 text-center w-32 min-w-[110px]">Trạng thái</th>
+              <th className="p-3 text-center w-48 min-w-[170px]">Thao tác</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="text-center py-6 text-slate-500">
+                  Đang tải dữ liệu...
+                </td>
               </tr>
-            </thead>
+            ) : applications.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-center py-6 text-slate-500">
+                  Không có dữ liệu
+                </td>
+              </tr>
+            ) : (
+              applications.map((item) => {
+                const isActionDisabled =
+                  item.status !== "pending" || actionLoading === item.id;
 
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-6 text-slate-500">
-                    Đang tải dữ liệu...
-                  </td>
-                </tr>
-              ) : applications.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-6 text-slate-500">
-                    Không có dữ liệu
-                  </td>
-                </tr>
-              ) : (
-                applications.map((item) => {
-                  const isActionDisabled =
-                    item.status !== "pending" || actionLoading === item.id;
-
-                  return (
-                    <tr
-                      key={item.id}
-                      className="border-b border-slate-100 hover:bg-slate-50 transition"
-                    >
-                      {/* Ứng viên */}
-                      <td className="p-3">
-                        <div className="flex items-center gap-3">
+                return (
+                  <tr
+                    key={item.id}
+                    className="border-b border-slate-100 hover:bg-slate-50 transition"
+                  >
+                    {/* Ứng viên - Hiển thị đầy đủ tên */}
+                    <td className="p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-shrink-0">
                           <img
                             src={
                               item.candidate?.user?.avatar_url ||
@@ -223,56 +255,85 @@ export default function CvManagementPage() {
                             alt="avatar"
                             className="w-10 h-10 rounded-full object-cover"
                           />
-                          <span className="font-medium text-slate-800">
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-800">
                             {item.candidate?.user?.full_name || "Chưa có tên"}
-                          </span>
+                          </p>
                         </div>
-                      </td>
+                      </div>
+                    </td>
 
-                      {/* Tên job */}
-                      <td className="p-3 text-slate-700">
-                        {item.job?.title || "—"}
-                      </td>
+                    {/* Tên job */}
+                    <td className="p-3">
+                      <div className="min-w-0">
+                        <p className="text-slate-700 truncate">
+                          {item.job?.title || "—"}
+                        </p>
+                      </div>
+                    </td>
 
-                      {/* Liên hệ */}
-                      <td className="p-3 text-slate-700">
-                        <div className="flex flex-col">
-                          <span>{item.candidate?.user?.account?.email}</span>
-                          <span>{item.candidate?.user?.phone}</span>
-                        </div>
-                      </td>
+                    {/* Tên CV (click để mở) - Thu gọn lại */}
+                    <td className="p-3">
+                      <div className="min-w-0">
+                        {item.cv ? (
+                          <button
+                            onClick={() => handleViewCv(item)}
+                            className="text-left truncate text-blue-600 font-medium hover:text-blue-800 cursor-pointer transition-colors"
+                            title={item.cv?.title || "Xem CV"}
+                          >
+                            {item.cv?.title 
+                              ? (item.cv.title.length > 15 
+                                ? item.cv.title.substring(0, 15) + "..." 
+                                : item.cv.title)
+                              : "Xem CV"}
+                          </button>
+                        ) : (
+                          <span className="text-slate-500">—</span>
+                        )}
+                      </div>
+                    </td>
 
-                      {/* Trạng thái */}
-                      <td className="p-3 text-center">
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm font-semibold capitalize ${
-                            item.status === "accepted"
-                              ? "bg-green-100 text-green-700"
-                              : item.status === "rejected"
-                              ? "bg-rose-100 text-rose-700"
-                              : "bg-yellow-100 text-yellow-700"
-                          }`}
-                        >
-                          {item.status === "accepted"
-                            ? "Đã chấp nhận"
+                    {/* Liên hệ */}
+                    <td className="p-3">
+                      <div className="flex flex-col min-w-0">
+                        <p className="text-slate-700 truncate">
+                          {item.candidate?.user?.account?.email || "—"}
+                        </p>
+                        <p className="text-slate-700 truncate">
+                          {item.candidate?.user?.phone || "—"}
+                        </p>
+                      </div>
+                    </td>
+
+                    {/* Trạng thái - Giữ nguyên kích thước */}
+                    <td className="p-3 text-center">
+                      <span
+                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                          item.status === "accepted"
+                            ? "bg-green-100 text-green-700"
                             : item.status === "rejected"
-                            ? "Đã từ chối"
-                            : "Đang chờ"}
-                        </span>
-                      </td>
+                            ? "bg-rose-100 text-rose-700"
+                            : "bg-yellow-100 text-yellow-700"
+                        }`}
+                      >
+                        {item.status === "accepted"
+                          ? "Đã chấp nhận"
+                          : item.status === "rejected"
+                          ? "Đã từ chối"
+                          : "Đang chờ"}
+                      </span>
+                    </td>
 
-                      {/* Thao tác */}
-                      <td className="p-3 text-center space-x-2">
+                    {/* Thao tác - Đảm bảo đủ không gian */}
+                    <td className="p-3">
+                      <div className="flex items-center justify-center gap-2">
                         <Button
                           size="sm"
                           variant="green"
                           onClick={() => handleAction(item.id, "accept")}
                           disabled={isActionDisabled}
-                          className={
-                            item.status !== "pending"
-                              ? "opacity-60 cursor-not-allowed"
-                              : ""
-                          }
+                          className="px-3 py-1 h-8"
                         >
                           {actionLoading === item.id
                             ? "Đang xử lý..."
@@ -284,22 +345,21 @@ export default function CvManagementPage() {
                           variant="outline"
                           onClick={() => handleAction(item.id, "reject")}
                           disabled={isActionDisabled}
-                          className={
-                            item.status !== "pending"
-                              ? "opacity-60 cursor-not-allowed"
-                              : ""
-                          }
+                          className="px-3 py-1 h-8"
                         >
                           {actionLoading === item.id ? "..." : "Từ chối"}
                         </Button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    </div>
       </div>
     </div>
   );
