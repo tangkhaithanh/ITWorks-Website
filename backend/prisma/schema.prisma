@@ -51,6 +51,7 @@ model User {
   gender     Gender?
   address    String?
   avatar_url String?
+  avatar_public_id String?
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
 
@@ -70,8 +71,13 @@ enum Gender {
 model Candidate {
   id         BigInt   @id @default(autoincrement())
   user_id    BigInt   @unique
-  education  String?
-  experience String?
+  
+  // Preferences for matching (optional nhưng rất có ích)
+  preferred_city      String?
+  preferred_work_mode WorkMode?
+  preferred_category  BigInt?
+  preferred_salary    Float?
+
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
@@ -268,18 +274,11 @@ enum ExperienceLevel {
   intern
 }
 
-enum SkillLevel {
-  beginner
-  intermediate
-  advanced
-  expert
-}
 
 model CandidateSkill {
   id           BigInt      @id @default(autoincrement())
   candidate_id BigInt
   skill_id     BigInt
-  level        SkillLevel?
 
   candidate Candidate @relation(fields: [candidate_id], references: [id])
   skill     Skill     @relation(fields: [skill_id], references: [id])
