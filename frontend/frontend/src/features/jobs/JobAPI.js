@@ -20,5 +20,7 @@ const JobAPI = {
   getByCompany: (params) => apiClient.get("/jobs/company", { params }),
   getJobToEdit: (id) => apiClient.get(`/jobs/${id}/edit`),
   resetDeadline: (id, data) =>  apiClient.patch(`/jobs/${id}/deadline`, data),
+  getDashboard: (id, params) =>
+  apiClient.get(`/jobs/${id}/dashboard`, { params }),
 };
 export default JobAPI;

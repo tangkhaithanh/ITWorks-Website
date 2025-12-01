@@ -19,6 +19,7 @@ import CreateCompanyPage from "../features/companies/pages/CreateCompanyPage";
 import ManageJobPage from "../features/jobs/pages/ManageJobPage";
 import JobDetailForHRPage from "../features/jobs/pages/JobDetailForHRPage";
 import CreateJobPage from "../features/jobs/pages/CreateJobPage";
+import JobDashboardForHRPage from "../features/jobs/pages/JobDashboardForHRPage";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -64,6 +65,7 @@ const router = createBrowserRouter([
       { path: "jobs/:id", element: <JobDetailForHRPage /> },
       { path: "jobs/create", element: <CreateJobPage /> },
       { path: "jobs/:id/edit", element: <CreateJobPage /> },
+      { path: "jobs/:id/dashboard", element: <JobDashboardForHRPage /> }
     ],
   },
 ]);

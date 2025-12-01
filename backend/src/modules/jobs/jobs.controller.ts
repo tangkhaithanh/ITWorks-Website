@@ -20,6 +20,7 @@ import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { ResetDeadlineDto } from './dto/reset-deadline.dto';
 import { JobOwnershipGuard } from '@/common/guards/job-ownership.guard';
+import { JobDashboardQueryDto } from './dto/job-dashboard-query.dto';
 @Controller('jobs')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class JobsController {
@@ -130,7 +131,18 @@ export class JobsController {
     return this.jobsService.resetDeadline(req.job.id, body.newDeadline);
   }
 
-  // ============================
+  @Get(':id/dashboard')
+  @Roles(Role.recruiter)
+  @UseGuards(JobOwnershipGuard)
+  getJobDashboard(
+    @Req() req: any,
+    @Query() query: JobDashboardQueryDto,
+  ) {
+    // JobOwnershipGuard đã gắn req.job.id (BigInt)
+    return this.jobsService.getJobDashboard(req.job.id, query);
+  }
+
+   // ============================
   // 📌 GET JOB BY ID (PUBLIC)
   // ============================
   @Public()

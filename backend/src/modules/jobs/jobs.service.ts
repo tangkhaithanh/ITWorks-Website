@@ -11,6 +11,8 @@ import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import {Cron, CronExpression} from "@nestjs/schedule";
 import { JobStatus } from '@prisma/client';
+import { ApplicationStatus } from "@prisma/client"
+import { JobDashboardQueryDto } from './dto/job-dashboard-query.dto';
 @Injectable()
 export class JobsService {
   constructor(
@@ -572,6 +574,230 @@ async reindexJobsByCompany(companyId: bigint) {
     await this.esJob.updateJob(fullJob);
   }
 }
+// Hàm phục vụ cho trang thống kê:
+async getJobDashboard(jobId: bigint, query: JobDashboardQueryDto) {
+    // 1) Lấy job + _count cơ bản
+    const job = await this.prisma.job.findUnique({
+      where: { id: jobId },
+      include: {
+        _count: {
+          select: {
+            applications: true,
+            saved_jobs: true,
+          },
+        },
+      },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Không tìm thấy công việc');
+    }
+
+    const now = new Date();
+
+    // --------------- 1. SUMMARY CARDS ----------------
+    let days_left: number | null = null;
+    if (job.deadline) {
+      const diffMs = job.deadline.getTime() - now.getTime();
+      // có thể âm nếu đã hết hạn
+      days_left = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    }
+
+    const summary = {
+      views_count: job.views_count,              // 👀
+      applications_count: job._count.applications, // 📩
+      saved_count: job._count.saved_jobs,        // 💾
+      openings: job.number_of_openings,          // 🎯
+      created_at: job.created_at,                // 📅
+      deadline: job.deadline,
+      days_left,
+      status: job.status,                        // 🔥 active/hidden/expired/closed
+    };
+
+    // --------------- 2. HIRING FUNNEL ----------------
+    const funnelRaw = await this.prisma.application.groupBy({
+      by: ['status'],
+      where: { job_id: jobId },
+      _count: { _all: true },
+    });
+
+    const allStatuses: ApplicationStatus[] = [
+      'pending',
+      'interviewing',
+      'accepted',
+      'rejected',
+      'withdrawn',
+    ];
+
+    const by_status = allStatuses.map((status) => {
+      const row = funnelRaw.find((r) => r.status === status);
+      return {
+        status,
+        count: row ? row._count._all : 0,
+      };
+    });
+
+    const funnel = {
+      total: by_status.reduce((sum, s) => sum + s.count, 0),
+      by_status, // [{ status: 'pending', count: ... }, ...]
+    };
+
+    // --------------- 3. LINE CHART (ỨNG VIÊN THEO THỜI GIAN) ---------------
+    let fromDate: Date;
+let toDate: Date = now;
+
+if (query.from && query.to) {
+  // Custom range (ngày mang format "yyyy-MM-dd")
+  fromDate = this.parseLocalDate(query.from);
+  toDate = this.parseLocalDate(query.to);
+  } else {
+    const range = query.range || "30d";
+    const mapRangeToDays: Record<string, number> = {
+      "7d": 7,
+      "14d": 14,
+      "30d": 30,
+    };
+
+    if (range === "all") {
+      fromDate = new Date(job.created_at);
+      toDate = now;
+    } else {
+      const days = mapRangeToDays[range] ?? 30;
+      fromDate = new Date(now);
+      fromDate.setHours(0, 0, 0, 0);
+      fromDate.setDate(fromDate.getDate() - (days - 1));
+
+      toDate = new Date(now);
+      toDate.setHours(23, 59, 59, 999);
+    }
+  }
+
+  // Đảm bảo fromDate <= toDate
+  if (fromDate > toDate) {
+    const tmp = fromDate;
+    fromDate = toDate;
+    toDate = tmp;
+  }
+
+  // Lấy dữ liệu ứng tuyển
+  const appsInRange = await this.prisma.application.findMany({
+    where: {
+      job_id: jobId,
+      applied_at: {
+        gte: fromDate,
+        lte: toDate,
+      },
+    },
+    select: {
+      applied_at: true,
+    },
+  });
+
+  // ------------------ Buckets theo ngày ------------------
+  const buckets: Record<string, number> = {};
+
+  const cursor = new Date(
+    fromDate.getFullYear(),
+    fromDate.getMonth(),
+    fromDate.getDate()
+  );
+
+  const endDate = new Date(
+    toDate.getFullYear(),
+    toDate.getMonth(),
+    toDate.getDate()
+  );
+
+  // Tạo bucket rỗng cho từng ngày
+  while (cursor <= endDate) {
+    const key = this.formatLocalDate(cursor);
+    buckets[key] = 0;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  // Đếm số ứng tuyển theo ngày
+  for (const app of appsInRange) {
+    const localKey = this.formatLocalDate(app.applied_at);
+    if (buckets[localKey] !== undefined) {
+      buckets[localKey]++;
+    }
+  }
+
+  const timeline = {
+    range: {
+      from: fromDate,
+      to: toDate,
+    },
+    points: Object.entries(buckets).map(([date, count]) => ({
+      date,
+      applications_count: count,
+    })),
+  };
+
+    // --------------- 4. LATEST CANDIDATES ---------------
+    const latest_limit = query.latest_limit ?? 10;
+    const latest_page = query.latest_page ?? 1;
+
+    const skip = (latest_page - 1) * latest_limit;
+
+    // tổng số đơn ứng tuyển (để tính total_pages)
+    const totalLatest = await this.prisma.application.count({
+      where: { job_id: jobId },
+    });
+
+    const latestApplications = await this.prisma.application.findMany({
+      where: { job_id: jobId },
+      orderBy: { applied_at: 'desc' },
+      skip,
+      take: latest_limit,
+      include: {
+        candidate: {
+          include: {
+            user: true,
+          },
+        },
+        cv: true,
+      },
+    });
+
+    const latest_candidates = latestApplications.map((app) => ({
+      application_id: app.id,
+      status: app.status,
+      applied_at: app.applied_at,
+      candidate: {
+        id: app.candidate_id,
+        full_name: app.candidate.user.full_name,
+        avatar_url: app.candidate.user.avatar_url,
+      },
+      cv: {
+        id: app.cv_id,
+        title: app.cv.title,
+        file_url: app.cv.file_url,
+        type: app.cv.type,
+      },
+    }));
+
+    const latest_pagination = {
+      page: latest_page,
+      limit: latest_limit,
+      total_items: totalLatest,
+      total_pages: Math.ceil(totalLatest / latest_limit),
+    };
+
+    // --------------- RESPONSE TỔNG HỢP ---------------
+    return {
+      job: {
+        id: job.id,
+        title: job.title,
+        status: job.status,
+      },
+      summary,          // block 1
+      funnel,           // block 2
+      timeline,         // block 3
+      latest_candidates, // block 4
+      latest_pagination,
+    };
+  }
 
 
   // -----------------------------
@@ -613,5 +839,18 @@ async reindexJobsByCompany(companyId: bigint) {
       return [value];
     }
     return undefined;
+  }
+  // Helpers xử lý thời gian:
+  private parseLocalDate(dateStr: string): Date {
+    // input: "yyyy-MM-dd"
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d); // local date
+  }
+
+  private formatLocalDate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
   }
 }

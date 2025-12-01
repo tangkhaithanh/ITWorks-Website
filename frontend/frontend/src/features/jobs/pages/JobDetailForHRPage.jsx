@@ -4,7 +4,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import JobAPI from "@/features/jobs/JobAPI";
-
 import { Card, CardHeader, CardBody } from "@/components/common/Card";
 import TagList from "@/components/common/TagList";
 import EmptyState from "@/components/common/EmptyState";
@@ -416,7 +415,7 @@ const handleSubmitExtend = async () => {
                   </Button>
                 )}
 
-                <Button variant="primary" size="sm" onClick={handleExtend} className="gap-1">
+                <Button variant="primary" size="sm" onClick={() => navigate(`/recruiter/jobs/${job.id}/dashboard`)} className="gap-1">
                   <BarChart3 className="h-4 w-4" />
                   Thống kê
                 </Button>
