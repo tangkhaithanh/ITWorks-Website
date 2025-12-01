@@ -408,7 +408,7 @@ const getInterviewStatusClassPremium = (status) => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div className="space-y-1.5">
-            <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Vị trí</p>
+            <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Tiêu đề công việc</p>
             <p className="font-semibold text-slate-800 text-base">{job?.title}</p>
           </div>
 

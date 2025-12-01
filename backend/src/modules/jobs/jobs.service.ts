@@ -23,79 +23,96 @@ export class JobsService {
   // CREATE JOB (Recruiter)
   // -----------------------------
   async create(accountId: bigint, dto: CreateJobDto) {
-    try {
-      const { skill_ids, description, requirements, ...data } = dto;
+  try {
+    const { skill_ids, description, requirements, ...rest } = dto;
 
-      // ✅ Lấy công ty của recruiter
-      const company = await this.prisma.company.findUnique({
-        where: { account_id: accountId },
-      });
-      if (!company) {
-        throw new NotFoundException('Nhà tuyển dụng chưa có công ty hợp lệ');
-      }
+    // ⭐ Tách category_id ra để không bị spread vào Prisma
+    const { category_id, ...data } = rest;
 
-      // ✅ Ghép địa chỉ đầy đủ
-      const parts = [
-        data.location_street,
-        data.location_ward,
-        data.location_district,
-        data.location_city,
-      ].filter(Boolean);
-      const location_full = parts.join(', ');
-
-      // ✅ Tự động lấy toạ độ (nếu có địa chỉ)
-      let latitude = data.latitude ?? null;
-      let longitude = data.longitude ?? null;
-      if (!latitude && !longitude && location_full) {
-        const geo = await this.locationService.geocodeAddress(location_full);
-        latitude = geo.latitude;
-        longitude = geo.longitude;
-      }
-      
-
-      // ✅ Tạo job chính
-      const job = await this.prisma.job.create({
-        data: {
-            company_id: company.id,
-            ...data,
-            ...(data.category_id ? { category_id: BigInt(data.category_id) } : {}),
-            location_full,
-            latitude,
-            longitude,
-            number_of_openings: data.number_of_openings ?? 1,
-            details: {
-            create: {
-                description,
-                requirements,
-            },
-            },
-            deadline: data.deadline ? new Date(data.deadline) : null,
-        } as any, // tạm thời bỏ qua lỗi kiểu dữ liệu bigint
-        include: { company: true },
-        });
-
-      // ✅ Gắn kỹ năng nếu có
-      if (skill_ids?.length) {
-        await this.prisma.jobSkill.createMany({
-          data: skill_ids.map((id) => ({
-            job_id: job.id,
-            skill_id: id,
-          })),
-        });
-      }
-
-      // ✅ Lấy lại dữ liệu đầy đủ để index
-      const fullJob = await this.getFullJob(job.id);
-
-      // ✅ Index vào Elasticsearch
-      await this.esJob.indexJob(fullJob);
-
-      return fullJob;
-    } catch (error) {
-      console.error('🔥 Lỗi tạo job:', error);
-      throw new InternalServerErrorException('Không thể tạo job: ' + error.message);
+    // ✅ Lấy công ty của recruiter
+    const company = await this.prisma.company.findUnique({
+      where: { account_id: accountId },
+    });
+    if (!company) {
+      throw new NotFoundException('Nhà tuyển dụng chưa có công ty hợp lệ');
     }
+
+    // ✅ Ghép địa chỉ đầy đủ
+    const parts = [
+      data.location_street,
+      data.location_ward,
+      data.location_district,
+      data.location_city,
+    ].filter(Boolean);
+    const location_full = parts.join(', ');
+
+    // ✅ Tự động lấy toạ độ (nếu có)
+    let latitude = data.latitude ?? null;
+    let longitude = data.longitude ?? null;
+
+    if (!latitude && !longitude && location_full) {
+      const geo = await this.locationService.geocodeAddress(location_full);
+      latitude = geo.latitude;
+      longitude = geo.longitude;
+    }
+
+    // ✅ Tạo job chính
+    const job = await this.prisma.job.create({
+      data: {
+        company: { connect: { id: company.id } },
+
+        // ⭐ Chỉ spread data KHÔNG chứa category_id
+        ...data,
+
+        // ⭐ Gắn category bằng quan hệ — CÁCH DUY NHẤT PRISMA CHO PHÉP
+        ...(category_id
+          ? {
+              category: {
+                connect: { id: BigInt(category_id) },
+              },
+            }
+          : {}),
+
+        location_full,
+        latitude,
+        longitude,
+
+        number_of_openings: data.number_of_openings ?? 1,
+
+        details: {
+          create: {
+            description,
+            requirements,
+          },
+        },
+
+        deadline: data.deadline ? new Date(data.deadline) : null,
+      },
+      include: { company: true },
+    });
+
+    // ✅ Gắn kỹ năng nếu có
+    if (skill_ids?.length) {
+      await this.prisma.jobSkill.createMany({
+        data: skill_ids.map((id) => ({
+          job_id: job.id,
+          skill_id: id,
+        })),
+      });
+    }
+
+    // Lấy lại dữ liệu đầy đủ để index
+    const fullJob = await this.getFullJob(job.id);
+
+    // Index Elasticsearch
+    await this.esJob.indexJob(fullJob);
+
+    return fullJob;
+  } catch (error) {
+    console.error('🔥 Lỗi tạo job:', error);
+    throw new InternalServerErrorException('Không thể tạo job: ' + error.message);
   }
+}
 
    // UPDATE JOB (Recruiter)
   // -----------------------------

@@ -13,7 +13,7 @@ import MultiSelect from "@/components/common/MultiSelect";
 
 import JobAPI from "@/features/jobs/JobAPI";
 import SkillAPI from "@/features/skills/SkillAPI";
-
+import JobCategoryAPI from "../../jobCategories/JobCategoryAPI";
 const MySwal = withReactContent(Swal);
 
 // Hình thức làm việc (enum WorkMode) → hiển thị tiếng Việt
@@ -51,6 +51,7 @@ export default function CreateJobPage() {
   const [form, setForm] = useState({
     title: "",
     employment_type: "",
+    category_id: "",
     // lương
     salary_min: "",
     salary_max: "",
@@ -81,6 +82,7 @@ export default function CreateJobPage() {
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [initialLoading, setInitialLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+  const [categories, setCategories] = useState([]);
 
   const editorConfig = {
     readonly: false,
@@ -130,6 +132,30 @@ export default function CreateJobPage() {
     loadOptions();
   }, []);
 
+  // Load danh mục nghề nghiệp:
+  useEffect(() => {
+  const loadCategories = async () => {
+    try {
+      const res = await JobCategoryAPI.getAll();
+      setCategories(
+        (res.data?.data || []).map((cat) => ({
+          value: String(cat.id),
+          label: cat.name,
+        }))
+      );
+    } catch (err) {
+      console.error("❌ Lỗi tải danh mục nghề nghiệp:", err);
+      MySwal.fire({
+        title: "Lỗi",
+        text: "Không thể tải danh mục nghề nghiệp.",
+        icon: "error",
+      });
+    }
+  };
+
+  loadCategories();
+}, []);
+
   // Load dữ liệu job khi edit
   useEffect(() => {
     if (!isEdit) {
@@ -145,6 +171,7 @@ export default function CreateJobPage() {
         setForm((prev) => ({
           ...prev,
           title: data.title || "",
+          category_id: data.category_id ? String(data.category_id) : "",
           employment_type: data.employment_type || "",
           salary_min:
             data.salary_min !== null && data.salary_min !== undefined
@@ -330,7 +357,7 @@ export default function CreateJobPage() {
             <Card>
               <CardHeader icon="📄" title="Thông tin cơ bản" />
               <CardBody>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <TextInput
                     label="Tiêu đề công việc"
                     name="title"
@@ -358,6 +385,15 @@ export default function CreateJobPage() {
                     value={form.number_of_openings}
                     onChange={handleChange}
                     placeholder="VD: 3"
+                  />
+                  <SelectInput
+                    label="Danh mục nghề nghiệp"
+                    name="category_id"
+                    value={form.category_id}
+                    onChange={handleChange}
+                    options={categories}
+                    placeholder="Chọn danh mục"
+                    required
                   />
                 </div>
               </CardBody>
@@ -493,7 +529,7 @@ export default function CreateJobPage() {
                     placeholder="VD: Phường Bến Nghé"
                   />
                   <TextInput
-                    label="Địa chỉ chi tiết"
+                    label="Số nhà, Đường"
                     name="location_street"
                     value={form.location_street}
                     onChange={handleChange}

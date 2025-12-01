@@ -10,6 +10,7 @@ import TagList from "@/components/common/TagList";
 import EmptyState from "@/components/common/EmptyState";
 import Swal from "sweetalert2";
 import DatePickerInput from "@/components/ui/DatePickerInput";
+import { BarChart3 } from "lucide-react";
 // =======================
 //  Helpers mapping
 // =======================
@@ -414,7 +415,12 @@ const handleSubmitExtend = async () => {
                     ⏳ Gia hạn
                   </Button>
                 )}
-            </div>
+
+                <Button variant="primary" size="sm" onClick={handleExtend} className="gap-1">
+                  <BarChart3 className="h-4 w-4" />
+                  Thống kê
+                </Button>
+              </div>
 
           </div>
           <div className="hidden lg:block"></div>
