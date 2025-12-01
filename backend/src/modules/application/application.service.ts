@@ -8,10 +8,11 @@ import {
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { ApplicationStatus } from '@prisma/client';
+import { MailService } from '@/common/services/mail.service';
 
 @Injectable()
 export class ApplicationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly mailService: MailService) {}
 // === Chức năng dành cho candidate==========
   // Lấy candidate_id từ userId
   private async getCandidateIdByUserId(userId: bigint): Promise<bigint> {
@@ -191,9 +192,6 @@ export class ApplicationService {
   const start = Date.now();
 
   try {
-    console.log(
-      `📩 [getApplicationsByCompany] accountId=${accountId?.toString?.()} page=${page} limit=${limit} status=${status} jobId=${jobId} search="${search || ''}"`
-    );
 
     // 🔹 1️⃣ Kiểm tra recruiter có công ty chưa
     const company = await this.prisma.company.findUnique({
@@ -301,83 +299,120 @@ export class ApplicationService {
     );
   }
 }
-  async getApplicationDetailByCompany(recruiterId: bigint, appId: bigint) {
-    const company = await this.prisma.company.findUnique({
-      where: { account_id: recruiterId },
-    });
-    if (!company) throw new ForbiddenException('Bạn chưa có công ty.');
+async getApplicationDetailByCompany(accountId: bigint, appId: bigint) {
+  console.log("Getting application detail for appId:", appId);
+  console.log("AccountId:", accountId);
 
-    const app = await this.prisma.application.findFirst({
-      where: {
-        id: appId,
-        job: { company_id: company.id },
-      },
-      include: {
-        job: {
-          select: {
-            id: true,
-            title: true,
-            company: { select: { id: true, name: true, logo_url: true } },
-          },
+  // Kiểm tra recruiter thuộc công ty nào
+  const company = await this.prisma.company.findUnique({
+    where: { account_id: accountId },
+  });
+  if (!company) throw new ForbiddenException('Bạn chưa có công ty.');
+
+  // Lấy application + join đủ thông tin cần thiết
+  const app = await this.prisma.application.findFirst({
+    where: {
+      id: appId,
+      job: { company_id: company.id },
+    },
+    include: {
+      job: {
+        select: {
+          id: true,
+          title: true,
+          experience_levels: true,
+          work_modes: true,
         },
-        candidate: {
-          include: {
-            user: {
-              select: {
-                full_name: true,
-                phone: true,
-                avatar_url: true,
-                dob: true,
-                gender: true,
-                account: { select: { email: true } },
-              },
+      },
+      candidate: {
+        select: {
+          id: true,
+          user: {
+            select: {
+              full_name: true,
+              phone: true,
+              avatar_url: true,
+              account: { select: { email: true } },
             },
           },
         },
-        cv: {
-          select: {
-            id: true,
-            title: true,
-            file_url: true,
-            content: true,
-            template_id: true,
-          },
+      },
+      cv: {
+        select: {
+          id: true,
+          title: true,
+          file_url: true,
+          content: true,
+          template_id: true,
+          file_public_id: true,
         },
       },
-    });
 
-    if (!app) throw new NotFoundException('Đơn ứng tuyển không tồn tại.');
+      // 👉 Lấy lịch phỏng vấn mới nhất
+      interviews: {
+        orderBy: { created_at: 'desc' },
+        select: {
+          id: true,
+          scheduled_at: true,
+          mode: true,
+          location: true,
+          meeting_link: true,
+          status: true,
+          notes: true,
+        },
+      },
+    },
+  });
 
-    const cvType = app.cv?.file_url
-      ? 'file'
-      : app.cv?.content
-      ? 'online'
-      : 'unknown';
+  if (!app) throw new NotFoundException('Đơn ứng tuyển không tồn tại.');
 
-    const formattedCv =
-      cvType === 'file'
-        ? {
-            type: 'file',
-            title: app.cv.title,
-            file_url: app.cv.file_url,
-          }
-        : cvType === 'online'
-        ? {
-            type: 'online',
-            title: app.cv.title,
-            template_id: app.cv.template_id,
-            content: app.cv.content,
-          }
-        : null;
+  // Xác định loại CV
+  const cvType = app.cv?.file_url
+    ? 'file'
+    : app.cv?.content
+    ? 'online'
+    : 'unknown';
 
-    return {
-      id: app.id,
-      status: app.status,
-      applied_at: app.applied_at,
-      job: app.job,
-      candidate: app.candidate,
-      cv: formattedCv,
-    };
+  const formattedCv =
+    cvType === 'file'
+      ? {
+          type: 'file',
+          title: app.cv.title,
+          file_url: app.cv.file_url,
+          file_public_id: app.cv.file_public_id,
+        }
+      : cvType === 'online'
+      ? {
+          type: 'online',
+          title: app.cv.title,
+          template_id: app.cv.template_id,
+          content: app.cv.content,
+        }
+      : null;
+
+  return {
+    id: app.id,
+    status: app.status,
+    applied_at: app.applied_at,
+
+    job: {
+      id: app.job.id,
+      title: app.job.title,
+      experience_levels: app.job.experience_levels,
+      work_modes: app.job.work_modes,
+    },
+    candidate: {
+      id: app.candidate.id,
+      full_name: app.candidate.user.full_name,
+      email: app.candidate.user.account.email,
+      phone: app.candidate.user.phone,
+      avatar_url: app.candidate.user.avatar_url,
+    },
+
+    cv: formattedCv,
+
+    interviews: app.interviews, 
+  };
 }
 
 async acceptApplication(accountId: bigint, appId: bigint) {
@@ -388,17 +423,38 @@ async acceptApplication(accountId: bigint, appId: bigint) {
 
   const app = await this.prisma.application.findFirst({
     where: { id: appId, job: { company_id: company.id } },
+    include: {
+      job: { select: { title: true } },
+      candidate: {
+        select: {
+          user: {
+            select: {
+              full_name: true,
+              account: { select: { email: true } },
+            },
+          },
+        },
+      },
+    },
   });
+
   if (!app) throw new NotFoundException('Đơn ứng tuyển không tồn tại.');
-  if (app.status !== ApplicationStatus.pending)
-    throw new BadRequestException('Chỉ có thể duyệt đơn đang ở trạng thái pending.');
+  if (app.status !== ApplicationStatus.interviewing)
+    throw new BadRequestException('Chỉ có thể duyệt đơn đang ở trạng thái interviewing.');
 
   const updated = await this.prisma.application.update({
     where: { id: app.id },
     data: { status: ApplicationStatus.accepted },
   });
 
-  // TODO: gửi thông báo realtime hoặc email cho ứng viên ở đây
+  // === GỬI EMAIL CHO ỨNG VIÊN ===
+  await this.mailService.sendApplicationAcceptedMail({
+    to: app.candidate.user.account.email,
+    fullName: app.candidate.user.full_name,
+    jobTitle: app.job.title,
+    companyName: company.name,
+  });
+
   return { message: 'Đã duyệt đơn ứng tuyển.', application: updated };
 }
 
@@ -410,17 +466,38 @@ async rejectApplication(accountId: bigint, appId: bigint) {
 
   const app = await this.prisma.application.findFirst({
     where: { id: appId, job: { company_id: company.id } },
+    include: {
+      job: { select: { title: true } },
+      candidate: {
+        select: {
+          user: {
+            select: {
+              full_name: true,
+              account: { select: { email: true } },
+            },
+          },
+        },
+      },
+    },
   });
+
   if (!app) throw new NotFoundException('Đơn ứng tuyển không tồn tại.');
-  if (app.status !== ApplicationStatus.pending)
-    throw new BadRequestException('Chỉ có thể từ chối đơn đang ở trạng thái pending.');
+  if (app.status !== ApplicationStatus.interviewing)
+    throw new BadRequestException('Chỉ có thể từ chối đơn đang ở trạng thái interviewing.');
 
   const updated = await this.prisma.application.update({
     where: { id: app.id },
     data: { status: ApplicationStatus.rejected },
   });
 
-  // TODO: gửi notification cho ứng viên
+  // === GỬI EMAIL BÁO TỪ CHỐI ===
+  await this.mailService.sendApplicationRejectedMail({
+    to: app.candidate.user.account.email,
+    fullName: app.candidate.user.full_name,
+    jobTitle: app.job.title,
+    companyName: company.name,
+  });
+
   return { message: 'Đã từ chối đơn ứng tuyển.', application: updated };
 }
 }

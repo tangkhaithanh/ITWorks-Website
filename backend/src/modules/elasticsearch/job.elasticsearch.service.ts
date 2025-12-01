@@ -170,16 +170,25 @@ export class ElasticsearchJobService {
 }
 
   async updateJob(job: any) {
-  await this.safeExec('update', job.id, async () =>
-    this.es.update({
+  try {
+    // Convert BigInt → string giống indexJob()
+    const plainJob = JSON.parse(JSON.stringify(job, (_key, value) =>
+      typeof value === 'bigint' ? value.toString() : value,
+    ));
+
+    const doc = this.mapJob(plainJob);
+
+    await this.es.update({
       index: this.index,
-      id: job.id.toString(),
+      id: doc.id.toString(),
       body: {
-        doc: this.mapJob(job),
-        doc_as_upsert: true, // tạo mới nếu chưa tồn tại
+        doc,
+        doc_as_upsert: true, // Nếu chưa tồn tại thì tạo mới
       },
-    }),
-  );
+    });
+  } catch (error) {
+    console.warn(`⚠️ [update] thất bại (${job.id}):`, error.message);
+  }
 }
 
 

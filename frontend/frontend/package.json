@@ -17,6 +17,8 @@
     "dayjs": "^1.11.18",
     "dompurify": "^3.3.0",
     "framer-motion": "^12.23.24",
+    "jodit": "^4.7.9",
+    "jodit-react": "^5.2.38",
     "lucide-react": "^0.544.0",
     "pdfjs-dist": "^5.4.296",
     "react": "^19.1.1",

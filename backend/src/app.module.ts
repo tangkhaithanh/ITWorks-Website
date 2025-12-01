@@ -14,6 +14,8 @@ import { ApplicationModule } from './modules/application/application.module';
 import { CandidatesModule } from './modules/candidates/candidates.module';
 import { SkillsModule } from './modules/skills/skills.module';
 import { JobCategoriesModule } from './modules/job-categories/job-categories.module';
+import { InterviewModule } from './modules/interviews/interview.module';
+import { IndustryModule } from './modules/industries/industry.module';
 import databaseConfig from '@/config/database.config';
 import jwtConfig from '@/config/jwt.config';
 import mailerConfig from '@/config/mailer.config';
@@ -44,6 +46,8 @@ import mailerConfig from '@/config/mailer.config';
     CandidatesModule,
     SkillsModule,
     JobCategoriesModule,
+    InterviewModule,
+    IndustryModule,
   ],
 })
 export class AppModule {}

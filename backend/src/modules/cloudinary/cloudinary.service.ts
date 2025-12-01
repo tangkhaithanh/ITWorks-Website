@@ -54,8 +54,9 @@ export class CloudinaryService {
         resource_type: 'raw',   // ✅ định dạng file tài liệu
         type: 'upload',         // ✅ bắt buộc để file là PUBLIC raw
         use_filename: true,
-        unique_filename: false,
-        public_id: file.originalname.replace(/\.[^/.]+$/, ""),
+        unique_filename: true,// tránh đè file nếu trùng tên
+        access_mode: 'public',
+        public_id: file.originalname
       },
       (error, result) => {
         if (error) return reject(error);

@@ -50,10 +50,6 @@ export class CreateJobDto {
   location_street?: string;
 
   @IsOptional()
-  @IsString()
-  location_full?: string;
-
-  @IsOptional()
   @Type(() => Number)
   latitude?: number;
 

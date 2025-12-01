@@ -1,6 +1,6 @@
 import { Outlet, NavLink } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { LogOut, FileText } from "lucide-react";
+import { LogOut, FileText,BriefcaseBusiness } from "lucide-react";
 import logo from "@/assets/images/logo.png";
 import Button from "@/components/ui/Button";
 import { logout } from "@/features/auth/authSlice";
@@ -68,6 +68,34 @@ export default function RecruiterLayout() {
               <FileText className="w-5 h-5 text-blue-600" />
               Quản lý CV
             </NavLink>
+
+            <NavLink
+            to="/recruiter/company"
+            className={({ isActive }) =>
+              `flex items-center gap-2 w-full px-5 py-2 rounded-xl transition-all font-medium ${
+                isActive
+                  ? "bg-blue-50 text-blue-700"
+                  : "hover:bg-slate-100 text-slate-700"
+              }`
+            }
+          >
+            <FileText className="w-5 h-5 text-blue-600" />
+            Quản lý công ty
+          </NavLink>
+
+          <NavLink
+          to="/recruiter/jobs"
+          className={({ isActive }) =>
+            `flex items-center gap-2 w-full px-5 py-2 rounded-xl transition-all font-medium ${
+              isActive
+                ? "bg-blue-50 text-blue-700"
+                : "hover:bg-slate-100 text-slate-700"
+            }`
+          }
+        >
+          <BriefcaseBusiness className="w-5 h-5 text-blue-600" />
+          Quản lý tin tuyển dụng
+        </NavLink>
           </nav>
         </aside>
 

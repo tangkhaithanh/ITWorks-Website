@@ -92,37 +92,48 @@ model Industry {
 }
 
 model Company {
-  id             BigInt             @id @default(autoincrement())
-  account_id     BigInt             @unique
+  id             BigInt   @id @default(autoincrement())
+  account_id     BigInt   @unique
+
+  // Profile
   name           String
   logo_url       String?
-  logo_public_id String
+  logo_public_id String?
   website        String?
-  description    String?
+  description    String? @db.LongText
 
-  headquarters   String?            // 🏢 Thành phố trụ sở chính
-  address        String?            // 📍 Địa chỉ chi tiết của văn phòng chính
+  // Location & Size
+  headquarters   String?
+  address        String?
   size           CompanySize?
-  industry_info  CompanyIndustry[]  // 🏭 nhiều lĩnh vực
-  skills         CompanySkill[]     // 💡 tech stack của công ty
 
-  business_code           String?   @unique
+  // Skills & Industries
+  industry_info  CompanyIndustry[]
+  skills         CompanySkill[]
+
+  // Legal
+  business_code           String? @unique
   representative_name     String?
   representative_position String?
   license_file_url        String?
-  founded_date            DateTime?
+  license_file_public_id  String?
 
+  // Contact
   contact_email  String?
   contact_phone  String?
 
+  // Other
+  founded_date   DateTime?
   status         CompanyStatus @default(pending)
   created_at     DateTime      @default(now())
   updated_at     DateTime      @updatedAt
 
-  account    Account             @relation(fields: [account_id], references: [id])
+  // Relations
+  account    Account  @relation(fields: [account_id], references: [id])
   jobs       Job[]
   statistics RecruiterStatistic[]
 }
+
 
 model CompanySkill {
   id          BigInt @id @default(autoincrement())
@@ -167,8 +178,8 @@ model Job {
   company_id         BigInt
   category_id        BigInt
   title              String
-  salary_min         Float
-  salary_max         Float
+  salary_min         Float?
+  salary_max         Float?
   negotiable         Boolean          @default(false)
 
   // 🗺️ Thông tin địa điểm
@@ -339,10 +350,12 @@ model Application {
   job       Job       @relation(fields: [job_id], references: [id])
   candidate Candidate @relation(fields: [candidate_id], references: [id])
   cv        Cv        @relation(fields: [cv_id], references: [id])
+  interviews Interview[]
 }
 
 enum ApplicationStatus {
   pending
+  interviewing
   accepted
   rejected
   withdrawn
@@ -428,3 +441,34 @@ model RecruiterStatistic {
 
   company Company @relation(fields: [company_id], references: [id])
 }
+// ===============================
+// 15. Interviews
+// ===============================
+model Interview {
+  id              BigInt           @id @default(autoincrement())
+  application_id  BigInt
+  scheduled_at    DateTime
+  mode            InterviewMode
+  location        String?
+  meeting_link    String?
+  status          InterviewStatus  @default(scheduled)
+  notes           String?
+  created_at      DateTime         @default(now())
+  updated_at      DateTime         @updatedAt
+
+  application Application @relation(fields: [application_id], references: [id])
+}
+
+enum InterviewStatus {
+  scheduled
+  rescheduled
+  cancelled
+  completed
+}
+
+enum InterviewMode {
+  online
+  offline
+}
+
+

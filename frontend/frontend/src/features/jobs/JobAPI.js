@@ -16,7 +16,9 @@ const JobAPI = {
   hide: (id) => apiClient.patch(`/jobs/${id}/hide`),
   unhide: (id) => apiClient.patch(`/jobs/${id}/unhide`),
   close: (id) => apiClient.patch(`/jobs/${id}/close`),
-  
+  getJobsForDropdown: () => apiClient.get("/jobs/company/dropdown"),
+  getByCompany: (params) => apiClient.get("/jobs/company", { params }),
+  getJobToEdit: (id) => apiClient.get(`/jobs/${id}/edit`),
+  resetDeadline: (id, data) =>  apiClient.patch(`/jobs/${id}/deadline`, data),
 };
-
 export default JobAPI;

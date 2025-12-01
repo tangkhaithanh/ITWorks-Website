@@ -32,9 +32,6 @@ export class CreateCompanyDto {
   representative_position: string;
 
   @IsString()
-  license_file_url: string;
-
-  @IsString()
   founded_date: string;
 
   // Liên hệ
@@ -44,16 +41,20 @@ export class CreateCompanyDto {
   @IsString()
   contact_phone: string;
 
-   // 🏭 Lĩnh vực hoạt động (nhiều ngành)
+    // 🏭 Lĩnh vực hoạt động (nhiều ngành)
   @IsOptional()
-  @IsArray()
-  @ArrayNotEmpty()
-  @Transform(({ value }) => value.map((v: string) => BigInt(v)))
+  @Transform(({ value }) => {
+    if (!value) return [];
+    const list = Array.isArray(value) ? value : [value];
+    return list.map((v: string) => BigInt(v));
+  })
   industry_ids?: bigint[];
 
-  // 💡 Kỹ năng / công nghệ
   @IsOptional()
-  @IsArray()
-  @Transform(({ value }) => value.map((v: string) => BigInt(v)))
+  @Transform(({ value }) => {
+    if (!value) return [];
+    const list = Array.isArray(value) ? value : [value];
+    return list.map((v: string) => BigInt(v));
+  })
   skill_ids?: bigint[];
 }

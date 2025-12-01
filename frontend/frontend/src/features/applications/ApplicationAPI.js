@@ -19,6 +19,7 @@ const ApplicationAPI = {
   getByCompany: (params) => apiClient.get("/applications/company", { params }),
   accept: (id) => apiClient.patch(`/applications/${id}/accept`),
   reject: (id) => apiClient.patch(`/applications/${id}/reject`),
+  getDetail: (id) => apiClient.get(`/applications/company/${id}`),
 };
 
 export default ApplicationAPI;

@@ -1,8 +1,37 @@
 import { Injectable } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
+import { InterviewMode } from '@prisma/client';
+interface InterviewMailBase {
+  to: string;
+  fullName: string;
+  jobTitle: string;
+  companyName: string;
+}
+
+interface InterviewScheduleMailPayload extends InterviewMailBase {
+  scheduledAt: Date;
+  mode: InterviewMode;
+  location?: string;
+  meetingLink?: string;
+  notes?: string;
+  googleCalendarLink: string;
+  icsContent: string;
+}
 @Injectable()
 export class MailService {
   constructor(private readonly mailer: MailerService) {}
+  private buildHrSignature(hr: { full_name: string; email: string; phone?: string }) {
+  return `
+    <br/><br/>
+    <p><strong>Thông tin liên hệ:</strong></p>
+    <p>
+      <strong>${hr.full_name}</strong><br/>
+      Chuyên viên tuyển dụng<br/>
+      Email: <a href="mailto:${hr.email}">${hr.email}</a><br/>
+      ${hr.phone ? `SĐT: ${hr.phone}<br/>` : ""}
+    </p>
+  `;
+}
 
   async sendVerificationMail(to: string, link: string, fullName: string) {
     return this.mailer.sendMail({
@@ -27,4 +56,284 @@ export class MailService {
       `,
     });
   }
+
+  // Gửi mail tạo lịch phỏng vấn:
+  async sendInterviewScheduleMail(payload: InterviewScheduleMailPayload & { hr: any }) {
+  const {
+    to,
+    fullName,
+    jobTitle,
+    companyName,
+    scheduledAt,
+    mode,
+    location,
+    meetingLink,
+    googleCalendarLink,
+    icsContent,
+    hr,
+  } = payload;
+
+  const dateStr = scheduledAt.toLocaleString("vi-VN", {
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const modeLabel = mode === "online" ? "Online" : "Trực tiếp";
+  const hrSignature = this.buildHrSignature(hr);
+
+  return this.mailer.sendMail({
+    to,
+    subject: `Lịch phỏng vấn – ${jobTitle} – ${companyName}`,
+    html: `
+      <h2>Xin chào ${fullName},</h2>
+
+      <p>Bạn có một lịch phỏng vấn mới cho vị trí <strong>${jobTitle}</strong> tại <strong>${companyName}</strong>.</p>
+
+      <p><strong>Thông tin buổi phỏng vấn:</strong></p>
+      <ul>
+        <li><strong>Thời gian:</strong> ${dateStr}</li>
+        <li><strong>Hình thức:</strong> ${modeLabel}</li>
+        ${
+          mode === "online"
+            ? `<li><strong>Link phỏng vấn:</strong> <a href="${meetingLink}">${meetingLink}</a></li>`
+            : `<li><strong>Địa điểm:</strong> ${location}</li>`
+        }
+      </ul>
+
+      <p>Bạn có thể thêm lịch vào Google Calendar:</p>
+      <p><a href="${googleCalendarLink}">➡ Thêm vào Google Calendar</a></p>
+
+      <p>Ngoài ra, bạn có thể mở file .ics đính kèm để thêm vào ứng dụng lịch khác.</p>
+
+      ${hrSignature}
+
+      <br/>
+      <p>Trân trọng,<br/>${companyName}</p>
+    `,
+    attachments: [
+      {
+        filename: "interview.ics",
+        content: icsContent,
+        contentType: "text/calendar; charset=utf-8",
+      },
+    ],
+  });
+}
+
+  
+  // Gửi lại email khi sửa lịch phỏng vấn:
+
+   async sendInterviewUpdatedMail(payload: InterviewScheduleMailPayload & { hr: any }) {
+  const {
+    to,
+    fullName,
+    jobTitle,
+    companyName,
+    scheduledAt,
+    mode,
+    location,
+    meetingLink,
+    googleCalendarLink,
+    icsContent,
+    hr,
+  } = payload;
+
+  const dateStr = scheduledAt.toLocaleString("vi-VN", {
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const modeLabel = mode === "online" ? "Online" : "Trực tiếp";
+  const hrSignature = this.buildHrSignature(hr);
+
+  return this.mailer.sendMail({
+    to,
+    subject: `Cập nhật lịch phỏng vấn – ${jobTitle} – ${companyName}`,
+    html: `
+      <h2>Xin chào ${fullName},</h2>
+
+      <p>Lịch phỏng vấn của bạn cho vị trí <strong>${jobTitle}</strong> tại <strong>${companyName}</strong> đã được <strong>cập nhật</strong>.</p>
+
+      <p><strong>Thông tin mới:</strong></p>
+      <ul>
+        <li><strong>Thời gian mới:</strong> ${dateStr}</li>
+        <li><strong>Hình thức:</strong> ${modeLabel}</li>
+        ${
+          mode === "online"
+            ? `<li><strong>Link mới:</strong> <a href="${meetingLink}">${meetingLink}</a></li>`
+            : `<li><strong>Địa điểm mới:</strong> ${location}</li>`
+        }
+      </ul>
+
+      <p>Vui lòng cập nhật lại lịch của bạn.</p>
+      <p><a href="${googleCalendarLink}">➡ Cập nhật Google Calendar</a></p>
+
+      ${hrSignature}
+
+      <br/>
+      <p>Trân trọng,<br/>${companyName}</p>
+    `,
+    attachments: [
+      {
+        filename: "interview.ics",
+        content: icsContent,
+        contentType: "text/calendar; charset=utf-8",
+      },
+    ],
+  });
+}
+
+
+  // Gửi email khi hủy lịch phỏng vấn:
+  async sendInterviewCancelledMail(payload: InterviewMailBase & { scheduledAt: Date; hr: any }) {
+  const { to, fullName, jobTitle, companyName, scheduledAt, hr } = payload;
+
+  const dateStr = scheduledAt.toLocaleString("vi-VN", {
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const hrSignature = this.buildHrSignature(hr);
+
+  return this.mailer.sendMail({
+    to,
+    subject: `Hủy lịch phỏng vấn – ${jobTitle} – ${companyName}`,
+    html: `
+      <h2>Xin chào ${fullName},</h2>
+
+      <p>Buổi phỏng vấn của bạn cho vị trí <strong>${jobTitle}</strong> vào lúc <strong>${dateStr}</strong> đã được <strong>hủy</strong>.</p>
+
+      <p>Nếu có lịch phỏng vấn mới, chúng tôi sẽ thông báo cho bạn sau.</p>
+
+      ${hrSignature}
+
+      <br/>
+      <p>Trân trọng,<br/>${companyName}</p>
+    `,
+  });
+}
+
+// Gửi email khi ứng viên được chọn:
+async sendApplicationAcceptedMail(payload: {
+  to: string;
+  fullName: string;
+  jobTitle: string;
+  companyName: string;
+}) {
+  return this.mailer.sendMail({
+  to: payload.to,
+  subject: `🎉 Chúc mừng! Bạn đã trúng tuyển vị trí ${payload.jobTitle}`,
+  html: `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+      
+      <h2 style="color: #0d6efd;">Xin chào ${payload.fullName},</h2>
+
+      <p>
+        Chúng tôi rất vui mừng thông báo rằng sau quá trình đánh giá và phỏng vấn, 
+        bạn đã <strong style="color: #16a34a;">vượt qua tất cả các vòng tuyển dụng</strong>.
+      </p>
+
+      <p>
+        Bạn chính thức được nhận vào vị trí 
+        <strong style="color:#0d6efd;">${payload.jobTitle}</strong> tại 
+        <strong>${payload.companyName}</strong>.
+      </p>
+
+      <p>
+        Đại diện công ty sẽ sớm liên hệ với bạn để thông tin về 
+        <strong>mức lương, ngày bắt đầu làm việc và các thủ tục tiếp theo</strong>.  
+        Vui lòng kiểm tra email hoặc điện thoại trong thời gian tới nhé!
+      </p>
+
+      <div style="
+        background: #f0f9ff;
+        padding: 12px 16px;
+        border-left: 4px solid #0d6efd;
+        margin: 20px 0;
+        border-radius: 6px;">
+        <p style="margin:0;">
+          🎯 <strong>Lưu ý:</strong> Hãy đảm bảo bạn luôn giữ liên lạc — 
+          đây là giai đoạn quan trọng trước khi chính thức onboarding.
+        </p>
+      </div>
+
+      <p>
+        Chúc mừng bạn một lần nữa và hoan nghênh bạn đến với đội ngũ của 
+        <strong>${payload.companyName}</strong>!
+      </p>
+
+      <p style="margin-top: 24px;">
+        Trân trọng,<br/>
+        <strong>${payload.companyName}</strong>
+      </p>
+
+    </div>
+  `,
+});
+}
+
+async sendApplicationRejectedMail(payload: {
+  to: string;
+  fullName: string;
+  jobTitle: string;
+  companyName: string;
+}) {
+  return this.mailer.sendMail({
+  to: payload.to,
+  subject: `Kết quả ứng tuyển – ${payload.jobTitle}`,
+  html: `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+      
+      <h2 style="color: #dc2626;">Xin chào ${payload.fullName},</h2>
+
+      <p>
+        Cảm ơn bạn đã dành thời gian ứng tuyển vị trí 
+        <strong style="color:#0d6efd;">${payload.jobTitle}</strong> tại 
+        <strong>${payload.companyName}</strong>.
+      </p>
+
+      <p>
+        Sau khi xem xét kỹ lưỡng, rất tiếc chúng tôi chưa thể tiếp tục 
+        hồ sơ của bạn cho vị trí này. 
+        Tuy nhiên, chúng tôi đánh giá cao những nỗ lực và hành trình nghề nghiệp của bạn.
+      </p>
+
+      <div style="
+        background: #fff7f7;
+        padding: 12px 16px;
+        border-left: 4px solid #dc2626;
+        margin: 20px 0;
+        border-radius: 6px;">
+        <p style="margin:0;">
+          ❤️ <strong>Lời nhắn từ chúng tôi:</strong>  
+          Dù kết quả chưa như mong muốn, năng lực của bạn là điều rất đáng trân trọng.  
+          Đừng ngần ngại ứng tuyển lại khi có vị trí phù hợp hơn trong tương lai.
+        </p>
+      </div>
+
+      <p>
+        Chúc bạn thật nhiều thành công và may mắn trên hành trình sự nghiệp sắp tới!
+      </p>
+
+      <p style="margin-top: 24px;">
+        Trân trọng,<br/>
+        <strong>${payload.companyName}</strong>
+      </p>
+
+    </div>
+  `,
+});
+}
 }

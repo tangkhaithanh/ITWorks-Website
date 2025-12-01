@@ -10,6 +10,7 @@ import { LocationService } from '../location/location.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import {Cron, CronExpression} from "@nestjs/schedule";
+import { JobStatus } from '@prisma/client';
 @Injectable()
 export class JobsService {
   constructor(
@@ -419,8 +420,142 @@ async autoExpireJobs() {
   };
 }
 
+async getCompanyJobs(
+  accountId: bigint,
+  page = 1,
+  limit = 10,
+  search?: string,
+  status?: JobStatus,
+) {
+  try {
+    const company = await this.prisma.company.findUnique({
+      where: { account_id: accountId },
+    });
 
-  
+    if (!company) {
+      throw new NotFoundException('Company not found');
+    }
+
+    const where: any = { company_id: company.id };
+
+    // ❗ Prisma count() KHÔNG hỗ trợ mode: 'insensitive'
+    if (search) {
+      where.title = { contains: search }; // MySQL mặc định không phân biệt hoa/thường
+    }
+
+    if (status) {
+      where.status = status;
+    }
+    const [items, total] = await Promise.all([
+      this.prisma.job.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+        include: {
+          _count: {
+            select: { applications: true },
+          },
+        },
+      }),
+      // ❗ Không dùng mode tại đây
+      this.prisma.job.count({ where }),
+    ]);
+
+    return {
+      success: true,
+      page,
+      limit,
+      total,
+      items,
+    };
+  } catch (error) {
+    console.error('❌ [getCompanyJobs] Lỗi xảy ra:', error);
+    throw error;
+  }
+}
+
+async getJobsDropdownByCompany(accountId: bigint) {
+  try {
+    console.log('➡️ accountId nhận được:', accountId);
+
+    const company = await this.prisma.company.findUnique({
+      where: { account_id: accountId },
+    });
+
+    console.log('➡️ Company tìm được:', company);
+
+    if (!company) {
+      throw new NotFoundException('Company not found for this account');
+    }
+
+    const jobs = await this.prisma.job.findMany({
+      where: { company_id: company.id },
+      select: {
+        id: true,
+        title: true,
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    return jobs;
+  } catch (error) {
+    console.error('❌ Lỗi trong getJobsByCompany:', error);
+
+    // ném lỗi lại để Nest xử lý và trả Response đúng format
+    throw error;
+  }
+}
+async resetDeadline(id: bigint, newDeadlineStr: string) {
+  try {
+    const job = await this.prisma.job.findUnique({ where: { id } });
+
+    if (!job) {
+      throw new NotFoundException('Không tìm thấy công việc');
+    }
+
+    // Job chưa hết hạn thì không cho reset
+    if (job.deadline && job.deadline > new Date()) {
+      throw new BadRequestException('Job chưa hết hạn, không thể đặt lại deadline');
+    }
+
+    const newDeadline = new Date(newDeadlineStr);
+
+    if (isNaN(newDeadline.getTime())) {
+      throw new BadRequestException('Ngày deadline không hợp lệ');
+    }
+
+    const updatedJob = await this.prisma.job.update({
+      where: { id },
+      data: {
+        deadline: newDeadline,
+        status: 'active',
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Cập nhật deadline thành công',
+      data: updatedJob,
+    };
+
+  } catch (error) {
+    console.error('❌ [resetDeadline] Lỗi xảy ra:', error);
+    throw error;
+  }
+}
+
+
+async reindexJobsByCompany(companyId: bigint) {
+  const jobs = await this.prisma.job.findMany({ where: { company_id: companyId } });
+  console.log("🔥 JOB LIST NEED REINDEX:", jobs.map(j => j.id));
+
+  for (const j of jobs) {
+    const fullJob = await this.getFullJob(j.id);
+    await this.esJob.updateJob(fullJob);
+  }
+}
+
 
   // -----------------------------
   // Helper: Lấy full job

@@ -10,9 +10,15 @@ import ResetPasswordPage from "@/features/auth/pages/ResetPasswordPage";
 import JobSearchPage from "@/features/jobs/pages/JobSearchPage";
 import JobDetailPage from "@/features/jobs/pages/JobDetailPage";
 import MyCvPage from "@/features/candidates/pages/MyCvPage";
-import ProtectedRoute from "./ProtectedRoute";
+import ProtectedRoute from "./protectedRoute";
 import RecruiterLayout from "@/components/layout/RecruiterLayout";
 import CvManagementPage from "../features/applications/pages/CvManagementPage";
+import ApplicationDetailsPage from "../features/applications/pages/ApplicationDetailsPage";
+import CompanyManagementPage from "../features/companies/pages/CompanyManagementPage";
+import CreateCompanyPage from "../features/companies/pages/CreateCompanyPage";
+import ManageJobPage from "../features/jobs/pages/ManageJobPage";
+import JobDetailForHRPage from "../features/jobs/pages/JobDetailForHRPage";
+import CreateJobPage from "../features/jobs/pages/CreateJobPage";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -49,9 +55,16 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-    { path: "cv", element: <CvManagementPage /> },
-  ],
+      { path: "cv", element: <CvManagementPage /> },
+      { path: "applications/:id", element: <ApplicationDetailsPage /> },
+      { path: "company", element: <CompanyManagementPage /> },
+      { path: "company/create", element: <CreateCompanyPage /> },
+      { path: "company/:id/edit", element: <CreateCompanyPage /> },
+      { path: "jobs", element: <ManageJobPage /> },
+      { path: "jobs/:id", element: <JobDetailForHRPage /> },
+      { path: "jobs/create", element: <CreateJobPage /> },
+      { path: "jobs/:id/edit", element: <CreateJobPage /> },
+    ],
   },
 ]);
-
 export default router;

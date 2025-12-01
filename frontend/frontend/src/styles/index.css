@@ -9,3 +9,26 @@
 .prose li::marker {
   color: #000 !important; /* 👈 bullet màu đen rõ ràng */
 }
+@keyframes modalOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalContent {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-modalOverlay {
+  animation: modalOverlay 0.25s ease-out;
+}
+
+.animate-modalContent {
+  animation: modalContent 0.25s ease-out;
+}
