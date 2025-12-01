@@ -400,5 +400,4 @@ private async getFullCompany(id: bigint) {
     },
   });
 }
-
 }

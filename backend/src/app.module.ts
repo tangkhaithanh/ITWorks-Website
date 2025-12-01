@@ -16,6 +16,7 @@ import { SkillsModule } from './modules/skills/skills.module';
 import { JobCategoriesModule } from './modules/job-categories/job-categories.module';
 import { InterviewModule } from './modules/interviews/interview.module';
 import { IndustryModule } from './modules/industries/industry.module';
+import { UsersModule } from './modules/user/user.module';
 import databaseConfig from '@/config/database.config';
 import jwtConfig from '@/config/jwt.config';
 import mailerConfig from '@/config/mailer.config';
@@ -48,6 +49,7 @@ import mailerConfig from '@/config/mailer.config';
     JobCategoriesModule,
     InterviewModule,
     IndustryModule,
+    UsersModule,
   ],
 })
 export class AppModule {}

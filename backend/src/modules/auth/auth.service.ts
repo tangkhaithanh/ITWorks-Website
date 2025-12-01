@@ -13,6 +13,7 @@ import {LoginDTO } from './dto/login.dto';
 import { MailService } from 'src/common/services/mail.service';
 import {RegisterUserDto} from './dto/register.dto';
 import { Request } from 'express';
+import { env } from 'process';
 const ACCESS_EXPIRES_MS = 15 * 60 * 1000;         // 15m
 const REFRESH_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000; // 7d
 @Injectable()
@@ -166,7 +167,8 @@ async login(dto: LoginDTO, res: Response) {
             dob: dto.dob ? new Date(dto.dob) : undefined,
             gender: dto.gender,
             address: dto.address,
-            avatar_url: dto.avatarUrl,
+            avatar_url: env.DEFAULT_AVATAR_URL,
+            avatar_public_id: env.DEFAULT_AVATAR_PUBLIC_ID,
         },
         });
 

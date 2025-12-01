@@ -37,10 +37,6 @@ export class RegisterCandidateDto {
 
   @IsOptional()
   @IsString()
-  avatarUrl?: string;
-
-  @IsOptional()
-  @IsString()
   education?: string;
 
   @IsOptional()
