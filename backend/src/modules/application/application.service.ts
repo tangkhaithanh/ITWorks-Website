@@ -9,7 +9,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { ApplicationStatus } from '@prisma/client';
 import { MailService } from '@/common/services/mail.service';
-
+import { CvHelper } from '@/common/helpers/cv.helper';
 @Injectable()
 export class ApplicationService {
   constructor(private readonly prisma: PrismaService, private readonly mailService: MailService) {}
@@ -337,16 +337,7 @@ async getApplicationDetailByCompany(accountId: bigint, appId: bigint) {
           },
         },
       },
-      cv: {
-        select: {
-          id: true,
-          title: true,
-          file_url: true,
-          content: true,
-          template_id: true,
-          file_public_id: true,
-        },
-      },
+      cv: true,
 
       // 👉 Lấy lịch phỏng vấn mới nhất
       interviews: {
@@ -366,29 +357,8 @@ async getApplicationDetailByCompany(accountId: bigint, appId: bigint) {
 
   if (!app) throw new NotFoundException('Đơn ứng tuyển không tồn tại.');
 
-  // Xác định loại CV
-  const cvType = app.cv?.file_url
-    ? 'file'
-    : app.cv?.content
-    ? 'online'
-    : 'unknown';
 
-  const formattedCv =
-    cvType === 'file'
-      ? {
-          type: 'file',
-          title: app.cv.title,
-          file_url: app.cv.file_url,
-          file_public_id: app.cv.file_public_id,
-        }
-      : cvType === 'online'
-      ? {
-          type: 'online',
-          title: app.cv.title,
-          template_id: app.cv.template_id,
-          content: app.cv.content,
-        }
-      : null;
+  const formattedCv = CvHelper.format(app.cv);
 
   return {
     id: app.id,
@@ -482,8 +452,6 @@ async rejectApplication(accountId: bigint, appId: bigint) {
   });
 
   if (!app) throw new NotFoundException('Đơn ứng tuyển không tồn tại.');
-  if (app.status !== ApplicationStatus.interviewing)
-    throw new BadRequestException('Chỉ có thể từ chối đơn đang ở trạng thái interviewing.');
 
   const updated = await this.prisma.application.update({
     where: { id: app.id },

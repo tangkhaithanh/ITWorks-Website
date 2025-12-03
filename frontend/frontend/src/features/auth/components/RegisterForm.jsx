@@ -166,13 +166,6 @@ return (
         onChange={handleChange}
         error={errors.address}
       />
-      <TextInput
-        label="Ảnh đại diện (URL)"
-        name="avatarUrl"
-        value={formData.avatarUrl}
-        onChange={handleChange}
-        error={errors.avatarUrl}
-      />
 
       <Button type="submit" className="w-full">
         Đăng ký

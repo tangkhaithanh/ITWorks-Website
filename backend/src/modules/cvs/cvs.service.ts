@@ -11,6 +11,7 @@ import { CloudinaryService } from '@/modules/cloudinary/cloudinary.service';
 import { CreateCvDto } from './dto/create-cv.dto';
 import { UpdateCvDto } from './dto/update-cv.dto';
 import { CvType } from '@prisma/client';
+import { CvHelper } from '@/common/helpers/cv.helper';
 @Injectable()
 export class CvsService {
   private readonly logger = new Logger(CvsService.name);
@@ -30,50 +31,6 @@ export class CvsService {
     return candidate.id;
   }
 
-  private formatCvData(cv: any) {
-    if (!cv) return null;
-
-    // Ưu tiên đọc field type từ DB (CvType)
-    const type =
-      cv.type === CvType.FILE || cv.file_url ? 'file' :
-      cv.type === CvType.ONLINE || cv.content ? 'online' : 'unknown';
-
-    if (type === 'file') {
-      return {
-        type: 'file',
-        id: cv.id,
-        title: cv.title,
-        file_url: cv.file_url,
-        created_at: cv.created_at,
-        updated_at: cv.updated_at,
-      };
-    }
-
-    if (type === 'online') {
-      return {
-        type: 'online',
-        id: cv.id,
-        title: cv.title,
-        template_id: cv.template_id,
-        template: cv.template
-          ? {
-              id: cv.template.id,
-              name: cv.template.name,
-              preview_url: cv.template.preview_url,
-            }
-          : null,
-        content: cv.content,
-        created_at: cv.created_at,
-        updated_at: cv.updated_at,
-      };
-    }
-
-    return {
-      type: 'unknown',
-      id: cv.id,
-      title: cv.title,
-    };
-  }
 
   async createCV(userId: bigint, dto: CreateCvDto) {
     try {
@@ -134,7 +91,7 @@ export class CvsService {
           skip,
           take: limit,
           include:
-            type === CvType.ONLINE
+            type === CvType.ONLINE // lấy dữ liệu từ bảng CVTemplate nếu là CV online
               ? { template: { select: { id: true, name: true, preview_url: true } } }
               : undefined,
         }),
@@ -148,7 +105,7 @@ export class CvsService {
       ]);
 
       // Chuẩn hóa toàn bộ danh sách
-      const formattedItems = items.map((cv) => this.formatCvData(cv));
+      const formattedItems = items.map((cv) => CvHelper.format(cv));
 
       return {
         items: formattedItems,
@@ -180,7 +137,7 @@ export class CvsService {
 
     if (!cv) throw new NotFoundException('CV không tồn tại.');
 
-    return this.formatCvData(cv);
+    return CvHelper.format(cv);
   }
     // Cập nhật CV
     async updateMyCv(cvId: bigint, dto: UpdateCvDto) {
@@ -299,6 +256,4 @@ export class CvsService {
       throw new Error(`Lỗi khi tải file từ Cloudinary: ${error.message}`);
     }
   }
-
-
 }

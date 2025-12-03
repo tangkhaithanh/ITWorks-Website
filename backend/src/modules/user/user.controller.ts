@@ -19,7 +19,6 @@ import { Role } from '@prisma/client';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
     constructor(private readonly usersService: UsersService) {}
-    @Roles(Role.candidate)
     @Patch()
     @Roles(Role.candidate)
     @UseInterceptors(
