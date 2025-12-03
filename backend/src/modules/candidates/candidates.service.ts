@@ -166,5 +166,31 @@ export class CandidatesService {
 }
 
 // Lấy thông tin của một user hoàn chỉnh:
+async getFullUserProfile(accountId: bigint) {
+  const user = await this.prisma.user.findUnique({
+    where: { account_id: accountId },
+    include: {
+      account: {
+        select: { email: true },    // Lấy email
+      },
+      candidate: {
+        include: {
+          skills: {
+            include: { skill: true },
+          },
+        },
+      },
+    },
+  });
 
+  if (!user) throw new NotFoundException("Không tìm thấy user");
+
+  // Tách email và bỏ field account
+  const { account, ...rest } = user;
+
+  return {
+    ...rest,
+    email: account.email,
+  };
+}
 }

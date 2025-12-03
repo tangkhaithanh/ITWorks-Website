@@ -13,5 +13,12 @@ const CandidateAPI = {
     });
     return res;
   },
+   getProfile: () => apiClient.get("/candidates"),
+   updateUser: (formData) =>
+    apiClient.patch("/users", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }),
 };
 export default CandidateAPI;

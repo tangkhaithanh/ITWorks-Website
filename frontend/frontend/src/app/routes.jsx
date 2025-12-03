@@ -20,6 +20,7 @@ import ManageJobPage from "../features/jobs/pages/ManageJobPage";
 import JobDetailForHRPage from "../features/jobs/pages/JobDetailForHRPage";
 import CreateJobPage from "../features/jobs/pages/CreateJobPage";
 import JobDashboardForHRPage from "../features/jobs/pages/JobDashboardForHRPage";
+import CandidateProfilePage from "../features/candidates/pages/CandidateProfilePage";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -34,6 +35,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={["candidate"]}>
             <MyCvPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "profile",
+        element: (
+          <ProtectedRoute roles={["candidate"]}>
+            <CandidateProfilePage />
           </ProtectedRoute>
         ),
       },

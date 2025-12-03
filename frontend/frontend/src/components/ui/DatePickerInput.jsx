@@ -15,24 +15,27 @@ const DatePickerInput = ({
   maxDate,
 }) => {
 
-  // State để kiểm soát DatePicker
-  const [selectedDate, setSelectedDate] = useState(
-    value ? new Date(value + "T00:00:00") : null
-  );
+  const parseDate = (val) => {
+    if (!val) return null;
 
-  // Khi props.value thay đổi → đồng bộ vào DatePicker
+    if (val instanceof Date && !isNaN(val)) return val;
+
+    if (typeof val === "string") return new Date(val + "T00:00:00");
+
+    return null;
+  };
+
+  const [selectedDate, setSelectedDate] = useState(parseDate(value));
+
   useEffect(() => {
-    setSelectedDate(value ? new Date(value + "T00:00:00") : null);
+    setSelectedDate(parseDate(value));
   }, [value]);
 
   const handleChange = (date) => {
     setSelectedDate(date);
-    const formatted = date
-  ? date.getFullYear() + "-" +
-    String(date.getMonth() + 1).padStart(2, "0") + "-" +
-    String(date.getDate()).padStart(2, "0")
-  : "";
-    onChange({ target: { name, value: formatted } });
+
+    // 🔥 Gửi DATE object ra ngoài, không phải event
+    onChange(date);
   };
 
   return (
@@ -53,11 +56,13 @@ const DatePickerInput = ({
           onChange={handleChange}
           dateFormat="yyyy-MM-dd"
           placeholderText={placeholderText}
-          className={`w-full px-3 py-2.5 border rounded-2xl transition-all duration-300 ease-out bg-white/50 backdrop-blur-sm focus:bg-white focus:scale-[1.02] outline-none placeholder-slate-400 text-slate-800 font-medium shadow-sm hover:shadow-md ${
-            error
+          className={`w-full px-3 py-2.5 border rounded-2xl transition-all duration-300 ease-out 
+            bg-white/50 backdrop-blur-sm focus:bg-white focus:scale-[1.02] outline-none 
+            placeholder-slate-400 text-slate-800 font-medium shadow-sm hover:shadow-md
+            ${error
               ? "border-rose-300 focus:ring-4 focus:ring-rose-100 focus:border-rose-400 shadow-rose-100"
               : "border-slate-200 focus:ring-4 focus:ring-blue-100 focus:border-blue-400 hover:border-slate-300 group-hover:shadow-lg"
-          } ${className}`}
+            } ${className}`}
           required={required}
           showMonthDropdown
           showYearDropdown

@@ -1,6 +1,12 @@
+import { useState, useRef } from "react";
 
-import { useState, useRef} from "react";
-export default function FileUpload({ label, accept, onFileChange, previewType = "image" }) {
+export default function FileUpload({
+  label,
+  accept,
+  onFileChange,
+  previewType = "image",
+  showPreview = true,   // ⭐ CHO PHÉP TẮT PREVIEW
+}) {
   const [fileName, setFileName] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
   const inputRef = useRef(null);
@@ -24,6 +30,7 @@ export default function FileUpload({ label, accept, onFileChange, previewType = 
     setFileName("");
     setPreviewUrl("");
     onFileChange(null);
+
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -35,10 +42,11 @@ export default function FileUpload({ label, accept, onFileChange, previewType = 
         </label>
       )}
 
-      {/* CHỈ hiển thị khung upload nếu CHƯA chọn file */}
+      {/* UPLOAD INPUT */}
       {!fileName && (
         <label className="flex flex-col items-center justify-center w-full px-4 py-3 border-2 border-dashed border-slate-300 rounded-2xl cursor-pointer bg-slate-50 hover:bg-blue-50 hover:border-blue-400 transition-colors">
           <span className="text-sm text-slate-600">Chọn file từ máy</span>
+
           <input
             ref={inputRef}
             type="file"
@@ -50,7 +58,7 @@ export default function FileUpload({ label, accept, onFileChange, previewType = 
       )}
 
       {/* PREVIEW IMAGE */}
-      {previewType === "image" && previewUrl && (
+      {showPreview && previewType === "image" && previewUrl && (
         <div className="mt-2 relative w-fit">
           <img
             src={previewUrl}
@@ -58,7 +66,7 @@ export default function FileUpload({ label, accept, onFileChange, previewType = 
             className="w-24 h-24 rounded-xl object-cover border border-slate-200 shadow-sm"
           />
 
-          {/* X */}
+          {/* Nút X */}
           <button
             type="button"
             onClick={handleClear}
@@ -74,8 +82,9 @@ export default function FileUpload({ label, accept, onFileChange, previewType = 
       )}
 
       {/* PREVIEW FILE PDF */}
-      {previewType === "file" && fileName && (
+      {showPreview && previewType === "file" && fileName && (
         <div className="mt-2 relative flex items-center gap-2 px-3 py-2 bg-slate-100 rounded-xl border border-slate-200 w-fit">
+
           <svg
             className="w-5 h-5 text-red-500"
             fill="none"
@@ -92,7 +101,6 @@ export default function FileUpload({ label, accept, onFileChange, previewType = 
 
           <span className="text-xs text-slate-700 truncate">{fileName}</span>
 
-          {/* X */}
           <button
             type="button"
             onClick={handleClear}

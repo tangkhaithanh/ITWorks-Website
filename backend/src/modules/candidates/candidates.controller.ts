@@ -1,4 +1,4 @@
-import { Controller, Post, Delete, Get, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Post, Delete, Get, Body, Param, UseGuards, Patch } from '@nestjs/common';
 import { CandidatesService } from './candidates.service';
 import { SaveJobDto } from './dto/saved-job.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -6,6 +6,8 @@ import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { User } from '@/common/decorators/user.decorator';
+import { CreateCandidateDto } from './dto/create-candidate.dto';
+import { UpdateCandidateDto } from './dto/update-candidate.dto';
 @Controller('candidates')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.candidate)
@@ -31,5 +33,24 @@ export class CandidatesController {
   @Get('saved-jobs/:jobId/check')
   async checkSavedJob(@User('userId') userId: bigint, @Param('jobId') jobId: string) {
     return this.candidatesService.checkSavedJob(userId, BigInt(jobId));
+  }
+
+  @Post()
+  async create(@User('userId') userId: bigint, @Body() dto: CreateCandidateDto) {
+    return this.candidatesService.create(userId, dto);
+  }
+
+  @Patch()
+  async update(
+    @User('userId') userId: bigint,
+    @Body() dto: UpdateCandidateDto,
+  ) {
+    return this.candidatesService.update(userId, dto);
+  }
+
+  // Lấy thông tin của candidate hiện tại:
+  @Get()
+  async findOne(@User('accountId') accountId: bigint) {
+    return this.candidatesService.getFullUserProfile(accountId);
   }
 }

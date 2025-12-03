@@ -1,7 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { User, Settings, LogOut, Crown, Mail, Calendar, ChevronRight } from "lucide-react";
-import Button from "@/components/ui/Button";
+import { 
+  User, 
+  Settings, 
+  LogOut, 
+  FileText, 
+  ChevronRight,
+  Sparkles 
+} from "lucide-react";
 
 const UserAvatarMenu = ({ user, onLogout }) => {
   const [open, setOpen] = useState(false);
@@ -18,191 +24,132 @@ const UserAvatarMenu = ({ user, onLogout }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  console.log("👉 user data:", user);
+  // Menu items config để dễ quản lý và render
+  const menuItems = [
+    {
+      to: "/profile",
+      icon: User,
+      label: "Hồ sơ cá nhân",
+      desc: "Quản lý thông tin & CV"
+    },
+    {
+      to: "/my-applications",
+      icon: FileText,
+      label: "Đơn ứng tuyển",
+      desc: "Lịch sử & trạng thái"
+    },
+    {
+      to: "/settings",
+      icon: Settings,
+      label: "Cài đặt",
+      desc: "Bảo mật & tuỳ chỉnh"
+    }
+  ];
 
   return (
     <div className="relative" ref={menuRef}>
-      {/* Avatar trigger with enhanced styling */}
+      {/* --- Trigger Avatar --- */}
       <button
         onClick={() => setOpen(!open)}
-        className="relative group focus:outline-none focus:ring-2 focus:ring-blue-500/20 rounded-full transition-all duration-200"
+        className={`group relative outline-none transition-all duration-200 ${open ? 'scale-105' : ''}`}
       >
         <div className="relative">
           <img
-            src={
-              user?.user?.avatar_url ||
-              "https://api.dicebear.com/7.x/avataaars/svg?seed=User"
-            }
+            src={user?.user?.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=User"}
             alt="User Avatar"
-            className="w-10 h-10 rounded-full border-2 border-white shadow-lg object-cover transition-all duration-300 group-hover:shadow-xl group-hover:scale-105"
+            className={`w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm transition-all duration-300 group-hover:shadow-md 
+              ${open ? 'ring-2 ring-blue-500/20 ring-offset-2' : ''}`}
             onError={(e) => {
               e.target.onerror = null;
               e.target.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=User";
             }}
           />
-          {/* Online status indicator */}
-          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></div>
-          
-          {/* Hover ring effect */}
-          <div className="absolute inset-0 rounded-full ring-2 ring-blue-500/0 group-hover:ring-blue-500/30 transition-all duration-300"></div>
+          {/* Status Dot */}
+          <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
         </div>
       </button>
 
-      {/* Enhanced Dropdown */}
+      {/* --- Dropdown Content --- */}
       <div
-        className={`absolute right-0 mt-4 w-80 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl ring-1 ring-slate-200/50 border border-white/20
-                    transform transition-all duration-300 origin-top-right z-50 overflow-hidden
-                    ${open ? "scale-100 opacity-100 translate-y-0" : "scale-95 opacity-0 -translate-y-2 pointer-events-none"}`}
+        className={`
+          absolute right-0 mt-3 w-72 
+          bg-white rounded-2xl shadow-xl border border-slate-100 
+          transform transition-all duration-200 origin-top-right z-50
+          ${open 
+            ? "scale-100 opacity-100 translate-y-0 visible" 
+            : "scale-95 opacity-0 -translate-y-2 invisible"
+          }
+        `}
       >
-        {/* Gradient background overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-white to-purple-50/30 pointer-events-none"></div>
-        
-        {/* User info section with enhanced design */}
-        <div className="relative px-6 py-5 border-b border-slate-100/80">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <img
-                src={
-                  user?.user?.avatar_url ||
-                  "https://api.dicebear.com/7.x/avataaars/svg?seed=User"
-                }
-                alt="User Avatar"
-                className="w-16 h-16 rounded-2xl border-2 border-white shadow-lg object-cover"
-              />
-              {/* Premium badge (if applicable) */}
-            
-            </div>
-            
+        {/* 1. User Header Section */}
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <img
+              src={user?.user?.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=User"}
+              alt="Avatar"
+              className="w-12 h-12 rounded-full border border-white shadow-sm object-cover"
+            />
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-lg font-bold text-slate-800 truncate">
-                  {user?.user?.full_name || "User Name"}
-                </h3>
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              </div>
+              <h4 className="text-sm font-bold text-slate-900 truncate">
+                {user?.user?.full_name || "Người dùng"}
+              </h4>
+              <p className="text-xs text-slate-500 truncate mt-0.5">
+                {user?.email || "user@example.com"}
+              </p>
               
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <Mail className="w-3 h-3" />
-                  <span className="truncate">{user?.email || "user@example.com"}</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <Calendar className="w-3 h-3" />
-                  <span>ID: {user?.user?.id || "000000"}</span>
-                </div>
+              {/* Badge ví dụ (Optional) */}
+              <div className="flex items-center gap-1 mt-1.5">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-medium border border-blue-100">
+                  <Sparkles size={10} />
+                  Ứng viên
+                </span>
               </div>
             </div>
           </div>
-          
-          {/* User stats or badges */}
-          <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100/50">
-            <div className="text-center">
-              <div className="text-sm font-semibold text-slate-800">12</div>
-              <div className="text-xs text-slate-500">Ứng tuyển</div>
-            </div>
-            <div className="text-center">
-              <div className="text-sm font-semibold text-slate-800">5</div>
-              <div className="text-xs text-slate-500">Đã lưu</div>
-            </div>
-            <div className="text-center">
-              <div className="text-sm font-semibold text-slate-800">98%</div>
-              <div className="text-xs text-slate-500">Hồ sơ</div>
-            </div>
-          </div>
         </div>
 
-        {/* Menu items with enhanced styling */}
-        <div className="relative py-2">
-          <Link
-            to="/profile"
-            className="group flex items-center justify-between px-6 py-3.5 text-slate-700 
-                       hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 
-                       hover:text-blue-700 transition-all duration-200"
-            onClick={() => setOpen(false)}
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-blue-100/50 group-hover:bg-blue-200/70 transition-colors duration-200">
-                <User className="w-4 h-4 text-blue-600" />
+        {/* 2. Navigation Links */}
+        <div className="p-2 space-y-1">
+          {menuItems.map((item, index) => (
+            <Link
+              key={index}
+              to={item.to}
+              onClick={() => setOpen(false)}
+              className="flex items-center justify-between p-2.5 rounded-xl group hover:bg-slate-50 transition-colors duration-200"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white border border-slate-100 text-slate-500 group-hover:text-blue-600 group-hover:border-blue-100 transition-colors shadow-sm">
+                  <item.icon size={16} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-700 group-hover:text-slate-900">
+                    {item.label}
+                  </p>
+                  <p className="text-[11px] text-slate-400 group-hover:text-slate-500">
+                    {item.desc}
+                  </p>
+                </div>
               </div>
-              <div>
-                <span className="text-sm font-semibold">Hồ sơ cá nhân</span>
-                <div className="text-xs text-slate-500">Quản lý thông tin của bạn</div>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors duration-200" />
-          </Link>
-
-          <Link
-            to="/settings"
-            className="group flex items-center justify-between px-6 py-3.5 text-slate-700 
-                       hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 
-                       hover:text-purple-700 transition-all duration-200"
-            onClick={() => setOpen(false)}
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-purple-100/50 group-hover:bg-purple-200/70 transition-colors duration-200">
-                <Settings className="w-4 h-4 text-purple-600" />
-              </div>
-              <div>
-                <span className="text-sm font-semibold">Cài đặt</span>
-                <div className="text-xs text-slate-500">Tùy chỉnh tài khoản</div>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-purple-600 transition-colors duration-200" />
-          </Link>
-
-          {/* Additional menu items */}
-          <Link
-            to="/my-applications"
-            className="group flex items-center justify-between px-6 py-3.5 text-slate-700 
-                       hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 
-                       hover:text-green-700 transition-all duration-200"
-            onClick={() => setOpen(false)}
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-green-100/50 group-hover:bg-green-200/70 transition-colors duration-200">
-                <Calendar className="w-4 h-4 text-green-600" />
-              </div>
-              <div>
-                <span className="text-sm font-semibold">Đơn ứng tuyển</span>
-                <div className="text-xs text-slate-500">Theo dõi trạng thái</div>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-green-600 transition-colors duration-200" />
-          </Link>
+              <ChevronRight size={14} className="text-slate-300 group-hover:text-slate-500 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          ))}
         </div>
 
-        {/* Elegant divider */}
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-200 to-transparent h-px"></div>
-          <div className="relative bg-white h-2"></div>
-        </div>
-
-        {/* Enhanced logout section */}
-        <div className="relative px-6 py-4">
-          <Button
-            variant="outline"
-            size="md"
-            className="w-full flex items-center justify-center gap-3 
-                       text-red-600 border-red-200/80 bg-red-50/30
-                       hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 
-                       hover:border-red-300 hover:shadow-lg
-                       transition-all duration-300 transform hover:scale-[1.02]
-                       rounded-2xl py-3 font-semibold"
+        {/* 3. Footer / Logout */}
+        <div className="p-2 mt-1 border-t border-slate-100">
+          <button
             onClick={() => {
               setOpen(false);
               onLogout();
             }}
+            className="w-full flex items-center gap-3 p-2.5 rounded-xl text-red-600 hover:bg-red-50 transition-colors duration-200 group"
           >
-            <div className="p-1.5 rounded-lg bg-red-100/80">
-              <LogOut className="w-4 h-4" />
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-500 group-hover:bg-red-100 transition-colors">
+              <LogOut size={16} />
             </div>
-            <span>Đăng xuất</span>
-          </Button>
+            <span className="text-sm font-medium">Đăng xuất</span>
+          </button>
         </div>
-
-        {/* Decorative bottom gradient */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-60"></div>
       </div>
     </div>
   );
