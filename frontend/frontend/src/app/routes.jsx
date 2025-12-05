@@ -21,6 +21,8 @@ import JobDetailForHRPage from "../features/jobs/pages/JobDetailForHRPage";
 import CreateJobPage from "../features/jobs/pages/CreateJobPage";
 import JobDashboardForHRPage from "../features/jobs/pages/JobDashboardForHRPage";
 import CandidateProfilePage from "../features/candidates/pages/CandidateProfilePage";
+import MyApplicationsPage from "../features/applications/pages/MyApplicationsPage";
+import MyApplicationDetailPage from "../features/applications/pages/MyApplicationDetailPage";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -43,6 +45,22 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={["candidate"]}>
             <CandidateProfilePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "my-applications",
+        element: (
+          <ProtectedRoute roles={["candidate"]}>
+            <MyApplicationsPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "my-applications/:id",
+        element: (
+          <ProtectedRoute roles={["candidate"]}>
+            <MyApplicationDetailPage />
           </ProtectedRoute>
         ),
       },

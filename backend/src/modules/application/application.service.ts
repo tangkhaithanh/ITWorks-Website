@@ -67,12 +67,24 @@ export class ApplicationService {
   }
 
   // Lấy toàn bộ việc làm đã ứng tuyển (ở mức tóm tắt từng job)
-  async getMyApplications(userId: bigint, page = 1, limit = 10, status?: ApplicationStatus) {
+   async getMyApplications(
+    userId: bigint,
+    page = 1,
+    limit = 10,
+    status?: ApplicationStatus,
+    search?: string,
+  ) {
     const candidateId = await this.getCandidateIdByUserId(userId);
     const skip = (page - 1) * limit;
 
     const whereClause: any = { candidate_id: candidateId };
     if (status) whereClause.status = status;
+    if (search && search.trim()) {
+    whereClause.OR = [
+      { job: { title: { contains: search } } },
+      { job: { company: { name: { contains: search } } } },
+    ];
+  }
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.application.findMany({
@@ -85,7 +97,6 @@ export class ApplicationService {
               company: { select: { id: true, name: true, logo_url: true } },
             },
           },
-          cv: { select: { id: true, title: true, file_url: true } },
         },
         orderBy: { applied_at: 'desc' },
         skip,
@@ -95,7 +106,7 @@ export class ApplicationService {
     ]);
 
     return {
-      items,
+      items: items,
       pagination: {
         page,
         limit,

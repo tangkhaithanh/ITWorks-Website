@@ -29,20 +29,20 @@ const UserAvatarMenu = ({ user, onLogout }) => {
     {
       to: "/profile",
       icon: User,
-      label: "Hồ sơ cá nhân",
-      desc: "Quản lý thông tin & CV"
+      label: "Hồ sơ của tôi",
+      desc: "Quản lý thông tin cá nhân"
     },
     {
       to: "/my-applications",
       icon: FileText,
-      label: "Đơn ứng tuyển",
-      desc: "Lịch sử & trạng thái"
+      label: "Quản lý đơn ứng tuyển",
+      desc: "Theo dõi trạng thái đơn ứng tuyển"
     },
     {
       to: "/settings",
       icon: Settings,
       label: "Cài đặt",
-      desc: "Bảo mật & tuỳ chỉnh"
+      desc: "Tùy chỉnh và cài đặt tài khoản"
     }
   ];
 

@@ -53,12 +53,14 @@ export class ApplicationController {
     @Query('page') page = 1,
     @Query('limit') limit = 10,
     @Query('status') status?: ApplicationStatus,
+    @Query('search') search?: string,
   ) {
     return this.applicationService.getMyApplications(
       userId,
       Number(page),
       Number(limit),
       status as ApplicationStatus,
+      search
     );
   }
 

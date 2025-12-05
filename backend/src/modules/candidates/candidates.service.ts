@@ -170,14 +170,10 @@ async getFullUserProfile(accountId: bigint) {
   const user = await this.prisma.user.findUnique({
     where: { account_id: accountId },
     include: {
-      account: {
-        select: { email: true },    // Lấy email
-      },
+      account: { select: { email: true } },
       candidate: {
         include: {
-          skills: {
-            include: { skill: true },
-          },
+          skills: { include: { skill: true } },
         },
       },
     },
@@ -185,12 +181,28 @@ async getFullUserProfile(accountId: bigint) {
 
   if (!user) throw new NotFoundException("Không tìm thấy user");
 
-  // Tách email và bỏ field account
   const { account, ...rest } = user;
+
+  // --- Sửa type ở đây 👇 ---
+  let preferredCategoryName: string | null = null;
+
+  if (user.candidate?.preferred_category) {
+    const category = await this.prisma.jobCategory.findUnique({
+      where: { id: BigInt(user.candidate.preferred_category) },
+    });
+
+    preferredCategoryName = category?.name ?? null;
+  }
 
   return {
     ...rest,
     email: account.email,
+    candidate: {
+      ...rest.candidate,
+      preferred_category_name: preferredCategoryName,
+    },
   };
 }
+
+
 }

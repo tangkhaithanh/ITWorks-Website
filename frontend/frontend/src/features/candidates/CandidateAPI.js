@@ -20,5 +20,8 @@ const CandidateAPI = {
         "Content-Type": "multipart/form-data",
       },
     }),
+
+    createCandidate: (data) => apiClient.post("/candidates", data),
+    updateCandidate: (data) => apiClient.patch("/candidates", data),
 };
 export default CandidateAPI;

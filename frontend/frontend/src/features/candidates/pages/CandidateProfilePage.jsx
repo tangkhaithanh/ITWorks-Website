@@ -24,11 +24,12 @@ import TagList from "@/components/common/TagList";
 import EmptyState from "@/components/common/EmptyState";
 import Button from "@/components/ui/Button";
 import EditPersonalInfoModal from "../components/EditPersonalInfoModal";
-
+import EditCareerInfoModal from "../components/EditCareerInfoModal";
+import JobCategoryAPI from "@/features/jobCategories/JobCategoryAPI";
 // 🆕 Modal avatar
 import AvatarPreviewModal from "../components/AvatarPreviewModal";
 import AvatarUploadModal from "../components/AvatarUploadModal";
-
+import SkillAPI from "@/features/skills/SkillAPI";
 // --- UTILS ---
 const formatDate = (value) => {
   if (!value) return "Chưa cập nhật";
@@ -39,16 +40,16 @@ const formatDate = (value) => {
 };
 
 const formatCurrency = (value) => {
-  if (value == null) return "Thương lượng";
-  try {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-      maximumFractionDigits: 0,
-    }).format(Number(value));
-  } catch {
-    return `${Number(value).toLocaleString("vi-VN")} đ`;
-  }
+  if (value == null || value === "") return "Thương lượng";
+
+  const num = Number(value);
+  if (isNaN(num)) return "Thương lượng";
+
+  // nếu là số nguyên → 10 triệu
+  // nếu là số lẻ → 10.5 triệu
+  return num % 1 === 0 
+    ? `${num} triệu`
+    : `${num.toString().replace(".", ",")} triệu`;
 };
 
 const MAPS = {
@@ -111,6 +112,9 @@ export default function CandidateProfilePage() {
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [showAvatarPreview, setShowAvatarPreview] = useState(false);
   const [showAvatarUploadModal, setShowAvatarUploadModal] = useState(false);
+  const [showCareerModal, setShowCareerModal] = useState(false);
+  const [skillOptions, setSkillOptions] = useState([]);
+  const [categories, setCategories] = useState([]);
   const avatarMenuRef = useRef(null);
 
   const reloadProfile = async () => {
@@ -170,6 +174,47 @@ export default function CandidateProfilePage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+  // Load danh sách các kỹ năng:
+  useEffect(() => {
+  const fetchSkills = async () => {
+    try {
+      const res = await SkillAPI.getAll();
+      const list = res.data?.data || res.data || [];
+
+      // Format thành { id, name }
+      setSkillOptions(
+        list.map((skill) => ({
+          id: skill.id,
+          name: skill.name,
+        }))
+      );
+    } catch (err) {
+      console.error("Lỗi load skill:", err);
+    }
+  };
+
+  fetchSkills();
+}, []);
+// Load danh sách danh mục nghề nghiệp:
+useEffect(() => {
+  const fetchCategories = async () => {
+    try {
+      const res = await JobCategoryAPI.getAll();
+      const list = res.data?.data || res.data || [];
+
+      setCategories(
+        list.map((c) => ({
+          value: String(c.id),
+          label: c.name,
+        }))
+      );
+    } catch (err) {
+      console.error("Lỗi load category:", err);
+    }
+  };
+
+  fetchCategories();
+}, []);
 
   // Data processing
   const candidate = profile?.candidate;
@@ -320,11 +365,6 @@ export default function CandidateProfilePage() {
                         <Phone size={14} /> {profile.phone}
                       </span>
                     )}
-                    {profile.address && (
-                      <span className="flex items-center gap-1">
-                        <MapPin size={14} /> {profile.address}
-                      </span>
-                    )}
                   </div>
                 </div>
 
@@ -368,10 +408,10 @@ export default function CandidateProfilePage() {
                         profile.gender
                       }
                     />
-                    <ProfileInfoItem
-                      icon={Globe}
-                      label="Quốc tịch"
-                      value="Việt Nam"
+                      <ProfileInfoItem
+                      icon={Calendar}
+                      label="Ngày tham gia"
+                      value={formatDate(profile.created_at)}
                     />
                     <ProfileInfoItem
                       icon={MapPin}
@@ -405,6 +445,7 @@ export default function CandidateProfilePage() {
                         variant="primary"
                         size="sm"
                         className="shadow-sm shadow-blue-200"
+                        onClick={() => setShowCareerModal(true)}
                       >
                         Cập nhật
                       </Button>
@@ -430,6 +471,7 @@ export default function CandidateProfilePage() {
                           variant="primary"
                           size="sm"
                           className="shadow-sm shadow-blue-200"
+                          onClick={() => setShowCareerModal(true)}
                         >
                           Thêm thông tin
                         </Button>
@@ -460,23 +502,9 @@ export default function CandidateProfilePage() {
                             )}
                           />
                           <ProfileInfoItem
-                            icon={GraduationCap}
-                            label="Học vấn"
-                            value={candidate.education}
-                          />
-                          <ProfileInfoItem
                             icon={Briefcase}
-                            label="Ngành nghề"
-                            value={
-                              candidate.preferred_category
-                                ? `Ngành nghề ID #${candidate.preferred_category}`
-                                : null
-                            }
-                          />
-                          <ProfileInfoItem
-                            icon={Calendar}
-                            label="Kinh nghiệm"
-                            value={candidate.experience}
+                            label="Danh mục ngành nghề"
+                            value={candidate.preferred_category_name}
                           />
                         </div>
 
@@ -527,6 +555,14 @@ export default function CandidateProfilePage() {
           profile={profile}
           onUpdated={handleUpdatedUser}
         />
+        <EditCareerInfoModal
+        open={showCareerModal}
+        onClose={() => setShowCareerModal(false)}
+        candidate={candidate}        // nếu có thì modal sẽ fill data
+        skillOptions={skillOptions}   // bạn tự load skill list
+        categoryOptions={categories}
+        onSuccess={reloadProfile}    // gọi API reload lại
+      />
       </div>
     </div>
   );
