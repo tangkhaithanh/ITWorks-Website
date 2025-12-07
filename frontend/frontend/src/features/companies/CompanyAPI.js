@@ -36,5 +36,7 @@ const CompanyAPI = {
   // Admin duyệt công ty
   approve: (id) => apiClient.patch(`/companies/${id}/approve`),
   reject: (id) => apiClient.patch(`/companies/${id}/reject`),
+  getRecruiterDashboard: (params) =>
+    apiClient.get("/dashboard/recruiter", { params }),
 };
 export default CompanyAPI;

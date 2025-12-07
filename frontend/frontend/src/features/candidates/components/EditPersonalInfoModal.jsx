@@ -65,8 +65,8 @@ export default function EditPersonalInfoModal({
         }
       });
 
-      if (form.dob instanceof Date && !isNaN(form.dob)) {
-        formData.append("dob", form.dob.toISOString());
+      if (form.dob) {
+        formData.append("dob", new Date(form.dob).toISOString());
       }
 
       await CandidateAPI.updateUser(formData);
@@ -126,17 +126,17 @@ export default function EditPersonalInfoModal({
             onChange={handleChange}
           />
 
-          <DatePickerInput
-            label="Ngày sinh"
-            name="dob"
-            value={form.dob}
-            onChange={(date) =>
-              setForm((prev) => ({
-                ...prev,
-                dob: date,
-              }))
-            }
-          />
+                <DatePickerInput
+          label="Ngày sinh"
+          name="dob"
+          value={form.dob}
+          onChange={(e) =>
+            setForm((prev) => ({
+              ...prev,
+              dob: e.target.value, // string "YYYY-MM-DD"
+            }))
+          }
+        />
 
           <SelectInput
             label="Giới tính"

@@ -17,6 +17,7 @@ import { JobCategoriesModule } from './modules/job-categories/job-categories.mod
 import { InterviewModule } from './modules/interviews/interview.module';
 import { IndustryModule } from './modules/industries/industry.module';
 import { UsersModule } from './modules/user/user.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import databaseConfig from '@/config/database.config';
 import jwtConfig from '@/config/jwt.config';
 import mailerConfig from '@/config/mailer.config';
@@ -50,6 +51,7 @@ import mailerConfig from '@/config/mailer.config';
     InterviewModule,
     IndustryModule,
     UsersModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

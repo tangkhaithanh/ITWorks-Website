@@ -17,11 +17,8 @@ const DatePickerInput = ({
 
   const parseDate = (val) => {
     if (!val) return null;
-
     if (val instanceof Date && !isNaN(val)) return val;
-
     if (typeof val === "string") return new Date(val + "T00:00:00");
-
     return null;
   };
 
@@ -34,8 +31,17 @@ const DatePickerInput = ({
   const handleChange = (date) => {
     setSelectedDate(date);
 
-    // 🔥 Gửi DATE object ra ngoài, không phải event
-    onChange(date);
+    const formattedValue = date
+      ? date.toISOString().slice(0, 10)
+      : "";
+
+    // 👉 Always return an event like normal input
+    onChange({
+      target: {
+        name,
+        value: formattedValue,
+      },
+    });
   };
 
   return (

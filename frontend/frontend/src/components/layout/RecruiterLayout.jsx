@@ -1,109 +1,192 @@
-import { Outlet, NavLink } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { LogOut, FileText,BriefcaseBusiness } from "lucide-react";
+import { 
+  LogOut, 
+  FileText, 
+  BriefcaseBusiness, 
+  LayoutDashboard, 
+  Building2, 
+  Menu, 
+  X,
+  ChevronRight
+} from "lucide-react";
 import logo from "@/assets/images/logo.png";
-import Button from "@/components/ui/Button";
 import { logout } from "@/features/auth/authSlice";
+
+// ============================
+// 📌 Menu cấu hình
+// ============================
+const NAV_ITEMS = [
+  { path: "/recruiter/dashboard", label: "Tổng quan", icon: LayoutDashboard },
+  { path: "/recruiter/cv", label: "Quản lý CV", icon: FileText },
+  { path: "/recruiter/jobs", label: "Tin tuyển dụng", icon: BriefcaseBusiness },
+  { path: "/recruiter/company", label: "Hồ sơ công ty", icon: Building2 },
+];
 
 export default function RecruiterLayout() {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // ============================
+  // 🚀 FIX redirect /recruiter → /recruiter/dashboard
+  //     — KHÔNG return Navigate để tránh lỗi hooks
+  // ============================
+  useEffect(() => {
+    if (location.pathname === "/recruiter") {
+      navigate("/recruiter/dashboard", { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
+  // Đóng sidebar khi đổi route
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [location]);
 
   const handleLogout = () => {
     dispatch(logout());
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
-      {/* 🔹 Header */}
-      <header className="bg-white shadow-sm h-16 flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-50">
-        <div className="flex items-center gap-2">
-          <img src={logo} alt="Logo" className="h-8 w-auto" />
-          <span className="text-lg font-bold text-slate-700">
-            ITworks for Business
-          </span>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-rose-600 border-rose-300 hover:bg-rose-50 hover:border-rose-400"
-          onClick={handleLogout}
-        >
-          <LogOut className="w-5 h-5" />
-          <span>Đăng xuất</span>
-        </Button>
-      </header>
+    <div className="flex min-h-screen bg-slate-50/50 font-sans text-slate-900">
 
-      {/* 🔸 Main layout (Sidebar + Content) */}
-      <div className="flex flex-1 pt-16">
-        {/* Sidebar */}
-        <aside className="w-72 bg-white border-r border-slate-200 shadow-sm h-[calc(100vh-4rem)] sticky top-16 flex flex-col">
-          {/* User info */}
-          <div className="flex items-center gap-3 p-4 border-b border-slate-200">
+      {/* Mobile sidebar overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside 
+        className={`
+          fixed lg:sticky top-0 left-0 z-50 h-screen w-72 bg-white border-r border-slate-200 shadow-xl lg:shadow-none
+          transition-transform duration-300 ease-in-out
+          ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+        `}
+      >
+        <div className="flex flex-col h-full">
+
+          {/* Logo */}
+          <div className="h-16 flex items-center px-6 border-b border-slate-100 bg-white">
+            <img src={logo} alt="Logo" className="h-8 w-auto mr-3" />
+            <span className="text-lg font-bold bg-gradient-to-r from-blue-700 to-blue-500 bg-clip-text text-transparent">
+              ITworks Business
+            </span>
+
+            <button 
+              onClick={() => setIsSidebarOpen(false)} 
+              className="ml-auto lg:hidden text-slate-500 hover:text-slate-800"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* User Profile */}
+          <div className="p-4 mx-3 mt-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3">
             <img
-              src={user?.user?.avatar_url || "https://i.pravatar.cc/100"}
-              alt={user?.user?.full_name}
-              className="w-12 h-12 rounded-full object-cover border border-slate-200"
+              src={user?.user?.avatar_url || `https://ui-avatars.com/api/?name=${user?.user?.full_name}&background=random`}
+              alt="User"
+              className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm"
             />
-            <div>
-              <p className="font-semibold text-slate-800 text-sm">
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-slate-800 truncate">
                 {user?.user?.full_name || "Nhà tuyển dụng"}
               </p>
-              <p className="text-xs text-slate-500">{user?.email || "abc"}</p>
+              <p className="text-xs text-slate-500 truncate">
+                {user?.email}
+              </p>
             </div>
           </div>
 
-          {/* Sidebar menu */}
-          <nav className="flex-1 p-4 space-y-2 text-slate-700">
-            <NavLink
-              to="/recruiter/cv"
-              className={({ isActive }) =>
-                `flex items-center gap-2 w-full px-5 py-2 rounded-xl transition-all font-medium ${
-                  isActive
-                    ? "bg-blue-50 text-blue-700"
-                    : "hover:bg-slate-100 text-slate-700"
-                }`
-              }
-            >
-              <FileText className="w-5 h-5 text-blue-600" />
-              Quản lý CV
-            </NavLink>
+          {/* Navigation Menu */}
+          <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
+            {NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) => `
+                  group flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200
+                  ${isActive 
+                    ? "bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100" 
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  }
+                `}
+              >
+                {({ isActive }) => (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <item.icon 
+                        className={`w-5 h-5 ${
+                          isActive 
+                            ? "text-blue-600" 
+                            : "text-slate-400 group-hover:text-slate-600"
+                        }`} 
+                      />
+                      <span>{item.label}</span>
+                    </div>
 
-            <NavLink
-            to="/recruiter/company"
-            className={({ isActive }) =>
-              `flex items-center gap-2 w-full px-5 py-2 rounded-xl transition-all font-medium ${
-                isActive
-                  ? "bg-blue-50 text-blue-700"
-                  : "hover:bg-slate-100 text-slate-700"
-              }`
-            }
-          >
-            <FileText className="w-5 h-5 text-blue-600" />
-            Quản lý công ty
-          </NavLink>
-
-          <NavLink
-          to="/recruiter/jobs"
-          className={({ isActive }) =>
-            `flex items-center gap-2 w-full px-5 py-2 rounded-xl transition-all font-medium ${
-              isActive
-                ? "bg-blue-50 text-blue-700"
-                : "hover:bg-slate-100 text-slate-700"
-            }`
-          }
-        >
-          <BriefcaseBusiness className="w-5 h-5 text-blue-600" />
-          Quản lý tin tuyển dụng
-        </NavLink>
+                    {isActive && <ChevronRight className="w-4 h-4 text-blue-400" />}
+                  </>
+                )}
+              </NavLink>
+            ))}
           </nav>
-        </aside>
 
-        {/* Nội dung chính */}
-        <main className="flex-1 p-6 overflow-y-auto bg-slate-50">
-          <Outlet />
+          {/* Logout */}
+          <div className="p-4 border-t border-slate-100">
+            <button
+              onClick={handleLogout}
+              className="flex items-center justify-center w-full gap-2 px-4 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all duration-200 group"
+            >
+              <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform" />
+              <span>Đăng xuất</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main layout */}
+      <div className="flex-1 flex flex-col min-w-0">
+
+        {/* Header (Không hiển thị tên trang) */}
+        <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/60 lg:bg-white lg:border-b-0 lg:shadow-sm">
+
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="lg:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-md"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+
+          {/* Không hiển thị tiêu đề */}
+          <div />
+
+          {/* Date */}
+          <div className="hidden sm:block text-sm text-slate-500">
+            {new Date().toLocaleDateString('vi-VN', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+          <div className="mx-auto max-w-6xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Outlet />
+          </div>
         </main>
       </div>
+
     </div>
   );
 }

@@ -23,6 +23,8 @@ import JobDashboardForHRPage from "../features/jobs/pages/JobDashboardForHRPage"
 import CandidateProfilePage from "../features/candidates/pages/CandidateProfilePage";
 import MyApplicationsPage from "../features/applications/pages/MyApplicationsPage";
 import MyApplicationDetailPage from "../features/applications/pages/MyApplicationDetailPage";
+import CompanyDashboard from "../features/companies/pages/CompanyDashBoard";
+import { Navigate } from "react-router-dom";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -83,6 +85,8 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
+      { index: true, element: <Navigate to="dashboard" replace /> },
+      { path: "dashboard", element: <CompanyDashboard /> },
       { path: "cv", element: <CvManagementPage /> },
       { path: "applications/:id", element: <ApplicationDetailsPage /> },
       { path: "company", element: <CompanyManagementPage /> },
