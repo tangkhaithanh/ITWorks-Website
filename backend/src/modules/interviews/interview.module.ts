@@ -9,4 +9,4 @@ import { MailModule } from 'src/common/services/mail.module';
   providers: [InterviewService, PrismaService],
   controllers: [InterviewController],
 })
-export class InterviewModule {}
+export class InterviewModule { }

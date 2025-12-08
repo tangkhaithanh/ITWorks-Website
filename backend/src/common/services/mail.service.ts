@@ -19,9 +19,9 @@ interface InterviewScheduleMailPayload extends InterviewMailBase {
 }
 @Injectable()
 export class MailService {
-  constructor(private readonly mailer: MailerService) {}
+  constructor(private readonly mailer: MailerService) { }
   private buildHrSignature(hr: { full_name: string; email: string; phone?: string }) {
-  return `
+    return `
     <br/><br/>
     <p><strong>Thông tin liên hệ:</strong></p>
     <p>
@@ -31,7 +31,7 @@ export class MailService {
       ${hr.phone ? `SĐT: ${hr.phone}<br/>` : ""}
     </p>
   `;
-}
+  }
 
   async sendVerificationMail(to: string, link: string, fullName: string) {
     return this.mailer.sendMail({
@@ -59,36 +59,36 @@ export class MailService {
 
   // Gửi mail tạo lịch phỏng vấn:
   async sendInterviewScheduleMail(payload: InterviewScheduleMailPayload & { hr: any }) {
-  const {
-    to,
-    fullName,
-    jobTitle,
-    companyName,
-    scheduledAt,
-    mode,
-    location,
-    meetingLink,
-    googleCalendarLink,
-    icsContent,
-    hr,
-  } = payload;
+    const {
+      to,
+      fullName,
+      jobTitle,
+      companyName,
+      scheduledAt,
+      mode,
+      location,
+      meetingLink,
+      googleCalendarLink,
+      icsContent,
+      hr,
+    } = payload;
 
-  const dateStr = scheduledAt.toLocaleString("vi-VN", {
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+    const dateStr = scheduledAt.toLocaleString("vi-VN", {
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
-  const modeLabel = mode === "online" ? "Online" : "Trực tiếp";
-  const hrSignature = this.buildHrSignature(hr);
+    const modeLabel = mode === "online" ? "Online" : "Trực tiếp";
+    const hrSignature = this.buildHrSignature(hr);
 
-  return this.mailer.sendMail({
-    to,
-    subject: `Lịch phỏng vấn – ${jobTitle} – ${companyName}`,
-    html: `
+    return this.mailer.sendMail({
+      to,
+      subject: `Lịch phỏng vấn – ${jobTitle} – ${companyName}`,
+      html: `
       <h2>Xin chào ${fullName},</h2>
 
       <p>Bạn có một lịch phỏng vấn mới cho vị trí <strong>${jobTitle}</strong> tại <strong>${companyName}</strong>.</p>
@@ -97,10 +97,9 @@ export class MailService {
       <ul>
         <li><strong>Thời gian:</strong> ${dateStr}</li>
         <li><strong>Hình thức:</strong> ${modeLabel}</li>
-        ${
-          mode === "online"
-            ? `<li><strong>Link phỏng vấn:</strong> <a href="${meetingLink}">${meetingLink}</a></li>`
-            : `<li><strong>Địa điểm:</strong> ${location}</li>`
+        ${mode === "online"
+          ? `<li><strong>Link phỏng vấn:</strong> <a href="${meetingLink}">${meetingLink}</a></li>`
+          : `<li><strong>Địa điểm:</strong> ${location}</li>`
         }
       </ul>
 
@@ -114,50 +113,50 @@ export class MailService {
       <br/>
       <p>Trân trọng,<br/>${companyName}</p>
     `,
-    attachments: [
-      {
-        filename: "interview.ics",
-        content: icsContent,
-        contentType: "text/calendar; charset=utf-8",
-      },
-    ],
-  });
-}
+      attachments: [
+        {
+          filename: "interview.ics",
+          content: icsContent,
+          contentType: "text/calendar; charset=utf-8",
+        },
+      ],
+    });
+  }
 
-  
+
   // Gửi lại email khi sửa lịch phỏng vấn:
 
-   async sendInterviewUpdatedMail(payload: InterviewScheduleMailPayload & { hr: any }) {
-  const {
-    to,
-    fullName,
-    jobTitle,
-    companyName,
-    scheduledAt,
-    mode,
-    location,
-    meetingLink,
-    googleCalendarLink,
-    icsContent,
-    hr,
-  } = payload;
+  async sendInterviewUpdatedMail(payload: InterviewScheduleMailPayload & { hr: any }) {
+    const {
+      to,
+      fullName,
+      jobTitle,
+      companyName,
+      scheduledAt,
+      mode,
+      location,
+      meetingLink,
+      googleCalendarLink,
+      icsContent,
+      hr,
+    } = payload;
 
-  const dateStr = scheduledAt.toLocaleString("vi-VN", {
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+    const dateStr = scheduledAt.toLocaleString("vi-VN", {
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
-  const modeLabel = mode === "online" ? "Online" : "Trực tiếp";
-  const hrSignature = this.buildHrSignature(hr);
+    const modeLabel = mode === "online" ? "Online" : "Trực tiếp";
+    const hrSignature = this.buildHrSignature(hr);
 
-  return this.mailer.sendMail({
-    to,
-    subject: `Cập nhật lịch phỏng vấn – ${jobTitle} – ${companyName}`,
-    html: `
+    return this.mailer.sendMail({
+      to,
+      subject: `Cập nhật lịch phỏng vấn – ${jobTitle} – ${companyName}`,
+      html: `
       <h2>Xin chào ${fullName},</h2>
 
       <p>Lịch phỏng vấn của bạn cho vị trí <strong>${jobTitle}</strong> tại <strong>${companyName}</strong> đã được <strong>cập nhật</strong>.</p>
@@ -166,10 +165,9 @@ export class MailService {
       <ul>
         <li><strong>Thời gian mới:</strong> ${dateStr}</li>
         <li><strong>Hình thức:</strong> ${modeLabel}</li>
-        ${
-          mode === "online"
-            ? `<li><strong>Link mới:</strong> <a href="${meetingLink}">${meetingLink}</a></li>`
-            : `<li><strong>Địa điểm mới:</strong> ${location}</li>`
+        ${mode === "online"
+          ? `<li><strong>Link mới:</strong> <a href="${meetingLink}">${meetingLink}</a></li>`
+          : `<li><strong>Địa điểm mới:</strong> ${location}</li>`
         }
       </ul>
 
@@ -181,36 +179,36 @@ export class MailService {
       <br/>
       <p>Trân trọng,<br/>${companyName}</p>
     `,
-    attachments: [
-      {
-        filename: "interview.ics",
-        content: icsContent,
-        contentType: "text/calendar; charset=utf-8",
-      },
-    ],
-  });
-}
+      attachments: [
+        {
+          filename: "interview.ics",
+          content: icsContent,
+          contentType: "text/calendar; charset=utf-8",
+        },
+      ],
+    });
+  }
 
 
   // Gửi email khi hủy lịch phỏng vấn:
   async sendInterviewCancelledMail(payload: InterviewMailBase & { scheduledAt: Date; hr: any }) {
-  const { to, fullName, jobTitle, companyName, scheduledAt, hr } = payload;
+    const { to, fullName, jobTitle, companyName, scheduledAt, hr } = payload;
 
-  const dateStr = scheduledAt.toLocaleString("vi-VN", {
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+    const dateStr = scheduledAt.toLocaleString("vi-VN", {
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
-  const hrSignature = this.buildHrSignature(hr);
+    const hrSignature = this.buildHrSignature(hr);
 
-  return this.mailer.sendMail({
-    to,
-    subject: `Hủy lịch phỏng vấn – ${jobTitle} – ${companyName}`,
-    html: `
+    return this.mailer.sendMail({
+      to,
+      subject: `Hủy lịch phỏng vấn – ${jobTitle} – ${companyName}`,
+      html: `
       <h2>Xin chào ${fullName},</h2>
 
       <p>Buổi phỏng vấn của bạn cho vị trí <strong>${jobTitle}</strong> vào lúc <strong>${dateStr}</strong> đã được <strong>hủy</strong>.</p>
@@ -222,20 +220,20 @@ export class MailService {
       <br/>
       <p>Trân trọng,<br/>${companyName}</p>
     `,
-  });
-}
+    });
+  }
 
-// Gửi email khi ứng viên được chọn:
-async sendApplicationAcceptedMail(payload: {
-  to: string;
-  fullName: string;
-  jobTitle: string;
-  companyName: string;
-}) {
-  return this.mailer.sendMail({
-  to: payload.to,
-  subject: `🎉 Chúc mừng! Bạn đã trúng tuyển vị trí ${payload.jobTitle}`,
-  html: `
+  // Gửi email khi ứng viên được chọn:
+  async sendApplicationAcceptedMail(payload: {
+    to: string;
+    fullName: string;
+    jobTitle: string;
+    companyName: string;
+  }) {
+    return this.mailer.sendMail({
+      to: payload.to,
+      subject: `🎉 Chúc mừng! Bạn đã trúng tuyển vị trí ${payload.jobTitle}`,
+      html: `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
       
       <h2 style="color: #0d6efd;">Xin chào ${payload.fullName},</h2>
@@ -281,19 +279,19 @@ async sendApplicationAcceptedMail(payload: {
 
     </div>
   `,
-});
-}
+    });
+  }
 
-async sendApplicationRejectedMail(payload: {
-  to: string;
-  fullName: string;
-  jobTitle: string;
-  companyName: string;
-}) {
-  return this.mailer.sendMail({
-  to: payload.to,
-  subject: `Kết quả ứng tuyển – ${payload.jobTitle}`,
-  html: `
+  async sendApplicationRejectedMail(payload: {
+    to: string;
+    fullName: string;
+    jobTitle: string;
+    companyName: string;
+  }) {
+    return this.mailer.sendMail({
+      to: payload.to,
+      subject: `Kết quả ứng tuyển – ${payload.jobTitle}`,
+      html: `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
       
       <h2 style="color: #dc2626;">Xin chào ${payload.fullName},</h2>
@@ -334,6 +332,58 @@ async sendApplicationRejectedMail(payload: {
 
     </div>
   `,
-});
-}
+    });
+  }
+  // Hàm gửi mật khẩu đã được admin reset qua mail:
+  async sendTemporaryPasswordMail(to: string, fullName: string, tempPassword: string) {
+    // Thiết lập màu chủ đạo
+    const PRIMARY_COLOR = '#0d6efd'; // Màu xanh dương nổi bật
+    const SECONDARY_COLOR = '#f8f9fa'; // Màu nền xám nhạt cho khối mật khẩu
+    const BORDER_COLOR = '#dee2e6';
+
+    return this.mailer.sendMail({
+      to,
+      subject: '🔑 Mật khẩu Tạm thời Của Bạn - Hệ thống ITworks',
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333333; max-width: 600px; margin: 20px auto; border: 1px solid ${BORDER_COLOR}; border-radius: 8px; overflow: hidden;">
+            
+            <div style="background-color: ${PRIMARY_COLOR}; padding: 20px; text-align: center; color: white;">
+                <h1 style="margin: 0; font-size: 24px;">ITworks</h1>
+                <p style="margin: 5px 0 0 0;">Thiết lập lại mật khẩu</p>
+            </div>
+
+            <div style="padding: 30px;">
+                <h2 style="color: #1a1a1a; margin-top: 0;">Xin chào ${fullName},</h2>
+
+                <p style="margin-bottom: 25px;">
+                    Chúng tôi đã nhận được yêu cầu thiết lập lại mật khẩu cho tài khoản của bạn. Quản trị viên đã tạo một mật khẩu tạm thời mới.
+                </p>
+
+                <div style="background-color: ${SECONDARY_COLOR}; border: 1px dashed ${BORDER_COLOR}; padding: 20px; text-align: center; border-radius: 6px; margin-bottom: 25px;">
+                    <p style="font-size: 16px; margin-bottom: 10px; color: #555555;">
+                        Mật khẩu tạm thời của bạn là:
+                    </p>
+                    <span style="display: inline-block; padding: 10px 25px; background-color: white; border: 2px solid ${PRIMARY_COLOR}; color: ${PRIMARY_COLOR}; font-size: 24px; font-weight: bold; letter-spacing: 2px; border-radius: 4px;">
+                        ${tempPassword}
+                    </span>
+                </div>
+                <p style="font-weight: bold; color: #dc3545;">
+                    Rất quan trọng: Vui lòng đăng nhập bằng mật khẩu tạm thời này và 
+                    <strong>đổi mật khẩu ngay lập tức</strong>
+                    để bảo vệ thông tin tài khoản của bạn.
+                </p>
+
+                <p style="margin-top: 30px;">
+                    Nếu bạn không yêu cầu thay đổi này, vui lòng bỏ qua email này hoặc liên hệ với bộ phận hỗ trợ.
+                </p>
+            </div>
+
+            <div style="padding: 20px 30px; border-top: 1px solid ${BORDER_COLOR}; font-size: 12px; color: #888888; text-align: center;">
+                <p style="margin: 0;">Trân trọng,<br/>Đội ngũ Hệ thống ITworks</p>
+                <p style="margin: 5px 0 0 0;">Đây là email được gửi tự động. Vui lòng không trả lời.</p>
+            </div>
+        </div>
+      `,
+    });
+  }
 }

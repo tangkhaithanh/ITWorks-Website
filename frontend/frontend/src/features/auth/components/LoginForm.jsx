@@ -40,7 +40,7 @@ const LoginForm = () => {
           navigate("/recruiter");
           break;
         case "admin":
-          navigate("/admin/dashboard");
+          navigate("/admin");
           break;
         default:
           navigate("/");
@@ -48,7 +48,7 @@ const LoginForm = () => {
     } else {
       console.error("❌ Login thất bại:", resultAction.payload?.message);
     }
-};
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded-lg shadow-md max-w-md w-full">

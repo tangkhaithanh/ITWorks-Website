@@ -24,6 +24,8 @@ import CandidateProfilePage from "../features/candidates/pages/CandidateProfileP
 import MyApplicationsPage from "../features/applications/pages/MyApplicationsPage";
 import MyApplicationDetailPage from "../features/applications/pages/MyApplicationDetailPage";
 import CompanyDashboard from "../features/companies/pages/CompanyDashBoard";
+import AdminLayout from "@/components/layout/AdminLayout";
+import ManageAccountPage from "../features/admin/pages/ManageAccountPage";
 import { Navigate } from "react-router-dom";
 const router = createBrowserRouter([
   {
@@ -97,6 +99,19 @@ const router = createBrowserRouter([
       { path: "jobs/create", element: <CreateJobPage /> },
       { path: "jobs/:id/edit", element: <CreateJobPage /> },
       { path: "jobs/:id/dashboard", element: <JobDashboardForHRPage /> }
+    ],
+  },
+  {
+    path: "/admin",
+    element: (
+      <ProtectedRoute roles={["admin"]}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: "accounts", element: <ManageAccountPage /> },
+      { path: "company", element: <CompanyManagementPage /> },
+      { path: "jobs", element: <ManageJobPage /> },
     ],
   },
 ]);

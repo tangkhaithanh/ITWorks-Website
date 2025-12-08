@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { 
-  LogOut, 
-  FileText, 
-  BriefcaseBusiness, 
-  LayoutDashboard, 
-  Building2, 
-  Menu, 
+import {
+  LogOut,
+  FileText,
+  BriefcaseBusiness,
+  LayoutDashboard,
+  Building2,
+  Menu,
   X,
   ChevronRight
 } from "lucide-react";
@@ -37,11 +37,7 @@ export default function RecruiterLayout() {
   // 🚀 FIX redirect /recruiter → /recruiter/dashboard
   //     — KHÔNG return Navigate để tránh lỗi hooks
   // ============================
-  useEffect(() => {
-    if (location.pathname === "/recruiter") {
-      navigate("/recruiter/dashboard", { replace: true });
-    }
-  }, [location.pathname, navigate]);
+
 
   // Đóng sidebar khi đổi route
   useEffect(() => {
@@ -57,14 +53,14 @@ export default function RecruiterLayout() {
 
       {/* Mobile sidebar overlay */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden transition-opacity"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside 
+      <aside
         className={`
           fixed lg:sticky top-0 left-0 z-50 h-screen w-72 bg-white border-r border-slate-200 shadow-xl lg:shadow-none
           transition-transform duration-300 ease-in-out
@@ -80,8 +76,8 @@ export default function RecruiterLayout() {
               ITworks Business
             </span>
 
-            <button 
-              onClick={() => setIsSidebarOpen(false)} 
+            <button
+              onClick={() => setIsSidebarOpen(false)}
               className="ml-auto lg:hidden text-slate-500 hover:text-slate-800"
             >
               <X className="w-6 h-6" />
@@ -113,8 +109,8 @@ export default function RecruiterLayout() {
                 to={item.path}
                 className={({ isActive }) => `
                   group flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200
-                  ${isActive 
-                    ? "bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100" 
+                  ${isActive
+                    ? "bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   }
                 `}
@@ -122,12 +118,11 @@ export default function RecruiterLayout() {
                 {({ isActive }) => (
                   <>
                     <div className="flex items-center gap-3">
-                      <item.icon 
-                        className={`w-5 h-5 ${
-                          isActive 
-                            ? "text-blue-600" 
-                            : "text-slate-400 group-hover:text-slate-600"
-                        }`} 
+                      <item.icon
+                        className={`w-5 h-5 ${isActive
+                          ? "text-blue-600"
+                          : "text-slate-400 group-hover:text-slate-600"
+                          }`}
                       />
                       <span>{item.label}</span>
                     </div>
@@ -158,7 +153,7 @@ export default function RecruiterLayout() {
         {/* Header (Không hiển thị tên trang) */}
         <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/60 lg:bg-white lg:border-b-0 lg:shadow-sm">
 
-          <button 
+          <button
             onClick={() => setIsSidebarOpen(true)}
             className="lg:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-md"
           >
@@ -170,11 +165,11 @@ export default function RecruiterLayout() {
 
           {/* Date */}
           <div className="hidden sm:block text-sm text-slate-500">
-            {new Date().toLocaleDateString('vi-VN', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
+            {new Date().toLocaleDateString('vi-VN', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
             })}
           </div>
         </header>

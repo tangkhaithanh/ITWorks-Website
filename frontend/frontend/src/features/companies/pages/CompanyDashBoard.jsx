@@ -163,7 +163,7 @@ export default function CompanyDashboard() {
   // =========================
   // Handlers
   // =========================
-  
+
   // Chuyển tab Quick <-> Custom
   const handleModeChange = (mode) => {
     setFilterMode(mode);
@@ -208,7 +208,7 @@ export default function CompanyDashboard() {
   return (
     <div className="min-h-screen bg-gray-50/50 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         {/* --- HEADER --- */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
@@ -219,11 +219,11 @@ export default function CompanyDashboard() {
               Theo dõi hiệu quả và tiến độ tuyển dụng của {company?.name || "công ty"}.
             </p>
           </div>
-          
+
           {/* Company Mini Badge */}
           {!loadingCompany && company && (
             <div className="hidden md:flex items-center gap-3 bg-white px-4 py-2 rounded-full border border-gray-200 shadow-sm">
-               {company.logo_url ? (
+              {company.logo_url ? (
                 <img src={company.logo_url} alt="" className="w-6 h-6 rounded-full object-cover" />
               ) : (
                 <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-bold">
@@ -254,7 +254,7 @@ export default function CompanyDashboard() {
             color="blue"
             loading={isGlobalLoading}
           />
-           <StatCard
+          <StatCard
             label="Lượt xem Job"
             value={kpis.totalJobViews}
             icon={Flame}
@@ -268,7 +268,7 @@ export default function CompanyDashboard() {
             color="emerald"
             loading={isGlobalLoading}
           />
-           <StatCard
+          <StatCard
             label="Ứng viên mới (7d)"
             value={kpis.newCandidatesLast7Days}
             icon={TrendingUp}
@@ -276,7 +276,7 @@ export default function CompanyDashboard() {
             loading={isGlobalLoading}
             highlight
           />
-           <StatCard
+          <StatCard
             label="Đơn mới (7d)"
             value={kpis.newApplicationsLast7Days}
             icon={FileClock}
@@ -295,11 +295,11 @@ export default function CompanyDashboard() {
 
         {/* --- MAIN CHART SECTION --- */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          
+
           {/* LEFT: CHART & FILTERS */}
           <div className="xl:col-span-2 space-y-6">
             <Card className="shadow-sm border-gray-200 overflow-visible">
-              <CardHeader 
+              <CardHeader
                 className="border-b border-gray-100 pb-4"
                 title={
                   <div className="flex items-center gap-2">
@@ -311,28 +311,26 @@ export default function CompanyDashboard() {
                 }
               />
               <CardBody className="pt-6">
-                
+
                 {/* Custom Tab Switcher */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                   {/* Mode Switcher */}
                   <div className="bg-gray-100/80 p-1 rounded-lg inline-flex self-start">
                     <button
                       onClick={() => handleModeChange(FILTER_MODES.QUICK)}
-                      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
-                        filterMode === FILTER_MODES.QUICK 
-                          ? "bg-white text-gray-900 shadow-sm" 
-                          : "text-gray-500 hover:text-gray-700"
-                      }`}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterMode === FILTER_MODES.QUICK
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-500 hover:text-gray-700"
+                        }`}
                     >
                       Chọn nhanh
                     </button>
                     <button
-                       onClick={() => handleModeChange(FILTER_MODES.CUSTOM)}
-                       className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
-                        filterMode === FILTER_MODES.CUSTOM 
-                          ? "bg-white text-gray-900 shadow-sm" 
-                          : "text-gray-500 hover:text-gray-700"
-                      }`}
+                      onClick={() => handleModeChange(FILTER_MODES.CUSTOM)}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${filterMode === FILTER_MODES.CUSTOM
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-500 hover:text-gray-700"
+                        }`}
                     >
                       Tùy chỉnh ngày
                     </button>
@@ -346,11 +344,10 @@ export default function CompanyDashboard() {
                           <button
                             key={item.value}
                             onClick={() => handleQuickRangeSelect(item.value)}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
-                              filters.range === item.value
-                                ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                                : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
-                            }`}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${filters.range === item.value
+                              ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                              : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                              }`}
                           >
                             {item.label}
                           </button>
@@ -364,12 +361,12 @@ export default function CompanyDashboard() {
                             name="from"
                             value={filters.from}
                             onChange={handleDateChange}
-                            className="!h-9 !text-xs" 
+                            className="!h-9 !text-xs"
                           />
                         </div>
                         <span className="text-gray-400">-</span>
                         <div className="w-32">
-                           <DatePickerInput
+                          <DatePickerInput
                             placeholderText="Đến ngày"
                             name="to"
                             value={filters.to}
@@ -377,9 +374,9 @@ export default function CompanyDashboard() {
                             className="!h-9 !text-xs"
                           />
                         </div>
-                        <Button 
-                          size="sm" 
-                          variant="primary" 
+                        <Button
+                          size="sm"
+                          variant="primary"
                           className="!h-9 !px-3"
                           disabled={!filters.from || !filters.to}
                           onClick={handleApplyCustom}
@@ -394,9 +391,9 @@ export default function CompanyDashboard() {
                 {/* Chart Area */}
                 <div className="relative h-[300px] w-full">
                   {loadingChart && (
-                     <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center backdrop-blur-[1px]">
-                        <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
-                     </div>
+                    <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center backdrop-blur-[1px]">
+                      <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+                    </div>
                   )}
 
                   {isGlobalLoading ? (
@@ -406,31 +403,31 @@ export default function CompanyDashboard() {
                       <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="colorApps" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.2}/>
-                            <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                            <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis 
-                          dataKey="date" 
-                          tick={{ fontSize: 11, fill: "#94a3b8" }} 
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 11, fill: "#94a3b8" }}
                           tickLine={false}
                           axisLine={false}
                           tickMargin={10}
                         />
-                        <YAxis 
-                          tick={{ fontSize: 11, fill: "#94a3b8" }} 
+                        <YAxis
+                          tick={{ fontSize: 11, fill: "#94a3b8" }}
                           tickLine={false}
                           axisLine={false}
                         />
                         <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }} />
-                        <Area 
-                          type="monotone" 
-                          dataKey="count" 
-                          stroke="#4f46e5" 
+                        <Area
+                          type="monotone"
+                          dataKey="count"
+                          stroke="#4f46e5"
                           strokeWidth={3}
-                          fillOpacity={1} 
-                          fill="url(#colorApps)" 
+                          fillOpacity={1}
+                          fill="url(#colorApps)"
                           activeDot={{ r: 6, strokeWidth: 0, fill: '#4f46e5' }}
                         />
                       </AreaChart>
@@ -444,7 +441,7 @@ export default function CompanyDashboard() {
 
             {/* Recent Applications Table */}
             <Card className="shadow-sm border-gray-200">
-               <CardHeader 
+              <CardHeader
                 className="border-b border-gray-100"
                 title="Ứng viên mới ứng tuyển"
                 icon={<Users className="w-4 h-4 text-emerald-600" />}
@@ -452,7 +449,7 @@ export default function CompanyDashboard() {
               <CardBody className="p-0">
                 {isGlobalLoading ? (
                   <div className="p-4 space-y-3">
-                    {[1,2,3].map(i => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse"/>)}
+                    {[1, 2, 3].map(i => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />)}
                   </div>
                 ) : recentApplications.length === 0 ? (
                   <div className="p-8"><EmptyState text="Chưa có ứng viên nào gần đây." /></div>
@@ -461,13 +458,13 @@ export default function CompanyDashboard() {
                     {recentApplications.map((app) => (
                       <div key={app.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors group">
                         <div className="flex items-center gap-3">
-                           <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-sm">
-                             {(app.candidate?.full_name || "U")[0]}
-                           </div>
-                           <div>
-                             <p className="text-sm font-semibold text-gray-900">{app.candidate?.full_name}</p>
-                             <p className="text-xs text-gray-500">Ứng tuyển: {app.job?.title}</p>
-                           </div>
+                          <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-sm">
+                            {(app.candidate?.full_name || "U")[0]}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{app.candidate?.full_name}</p>
+                            <p className="text-xs text-gray-500">Ứng tuyển: {app.job?.title}</p>
+                          </div>
                         </div>
                         <div className="text-right">
                           <StatusBadge status={app.status} type="application" />
@@ -483,98 +480,97 @@ export default function CompanyDashboard() {
 
           {/* RIGHT: TOP JOBS & INTERVIEWS */}
           <div className="space-y-6">
-            
+
             {/* Top Jobs */}
             <Card className="shadow-sm border-gray-200 h-fit">
-              <CardHeader 
-                title="Top Job hấp dẫn" 
-                icon={<Flame className="w-4 h-4 text-amber-500"/>}
+              <CardHeader
+                title="Top Job hấp dẫn"
+                icon={<Flame className="w-4 h-4 text-amber-500" />}
                 className="border-b border-gray-100"
               />
               <CardBody className="p-0">
-                 {isGlobalLoading ? (
-                   <div className="p-4 space-y-4">
-                     {[1,2,3].map(i => <div key={i} className="h-16 bg-gray-100 rounded animate-pulse"/>)}
-                   </div>
-                 ) : topJobs.length === 0 ? (
-                    <div className="p-6"><EmptyState text="Chưa có dữ liệu." /></div>
-                 ) : (
-                   <div className="divide-y divide-gray-100">
-                     {topJobs.map((job, idx) => (
-                       <div key={job.id} className="p-4 hover:bg-gray-50 transition-colors">
-                         <div className="flex justify-between items-start mb-1">
-                            <span className="text-xs font-bold text-gray-400">#{idx + 1}</span>
-                            <StatusBadge status={job.status} type="job" mini />
-                         </div>
-                         <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 mb-2" title={job.title}>
-                           {job.title}
-                         </h3>
-                         
-                         <div className="flex items-center justify-between text-xs text-gray-500 bg-gray-50 p-2 rounded-md">
-                            <div className="flex items-center gap-1">
-                              <Users className="w-3 h-3" />
-                              <span className="font-medium text-gray-900">{job._count?.applications || 0}</span>
-                              <span className="text-[10px]">đơn</span>
-                            </div>
-                            <div className="w-px h-3 bg-gray-300"></div>
-                            <div className="flex items-center gap-1">
-                              <Globe className="w-3 h-3" />
-                              <span className="font-medium text-gray-900">{job.views_count || 0}</span>
-                              <span className="text-[10px]">xem</span>
-                            </div>
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                 )}
+                {isGlobalLoading ? (
+                  <div className="p-4 space-y-4">
+                    {[1, 2, 3].map(i => <div key={i} className="h-16 bg-gray-100 rounded animate-pulse" />)}
+                  </div>
+                ) : topJobs.length === 0 ? (
+                  <div className="p-6"><EmptyState text="Chưa có dữ liệu." /></div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {topJobs.map((job, idx) => (
+                      <div key={job.id} className="p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="text-xs font-bold text-gray-400">#{idx + 1}</span>
+                          <StatusBadge status={job.status} type="job" mini />
+                        </div>
+                        <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 mb-2" title={job.title}>
+                          {job.title}
+                        </h3>
+
+                        <div className="flex items-center justify-between text-xs text-gray-500 bg-gray-50 p-2 rounded-md">
+                          <div className="flex items-center gap-1">
+                            <Users className="w-3 h-3" />
+                            <span className="font-medium text-gray-900">{job._count?.applications || 0}</span>
+                            <span className="text-[10px]">đơn</span>
+                          </div>
+                          <div className="w-px h-3 bg-gray-300"></div>
+                          <div className="flex items-center gap-1">
+                            <Globe className="w-3 h-3" />
+                            <span className="font-medium text-gray-900">{job.views_count || 0}</span>
+                            <span className="text-[10px]">xem</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardBody>
             </Card>
 
             {/* Interviews */}
             <Card className="shadow-sm border-gray-200 h-fit">
-               <CardHeader 
-                title="Lịch phỏng vấn sắp tới" 
-                icon={<Clock className="w-4 h-4 text-violet-500"/>}
+              <CardHeader
+                title="Lịch phỏng vấn sắp tới"
+                icon={<Clock className="w-4 h-4 text-violet-500" />}
                 className="border-b border-gray-100"
               />
-               <CardBody className="p-0">
-                 {isGlobalLoading ? (
-                   <div className="p-4 space-y-4">
-                     {[1,2].map(i => <div key={i} className="h-14 bg-gray-100 rounded animate-pulse"/>)}
-                   </div>
-                 ) : upcomingInterviews.length === 0 ? (
-                    <div className="p-6"><EmptyState text="Không có lịch phỏng vấn." /></div>
-                 ) : (
-                    <div className="divide-y divide-gray-100">
-                      {upcomingInterviews.map((item) => {
-                         const cName = item.application?.candidate?.user?.full_name || item.candidate?.full_name;
-                         const jTitle = item.application?.job?.title || item.job?.title;
-                         return (
-                           <div key={item.id} className="p-4 flex gap-3 hover:bg-gray-50">
-                             <div className="flex-shrink-0 flex flex-col items-center justify-center w-12 h-12 bg-violet-50 text-violet-700 rounded-lg border border-violet-100">
-                                <span className="text-xs font-bold uppercase">{new Date(item.scheduled_at).toLocaleDateString('en-US', {month: 'short'})}</span>
-                                <span className="text-lg font-bold leading-none">{new Date(item.scheduled_at).getDate()}</span>
-                             </div>
-                             <div className="overflow-hidden">
-                               <p className="text-sm font-semibold text-gray-900 truncate">{cName}</p>
-                               <p className="text-xs text-gray-500 truncate mb-1">{jTitle}</p>
-                               <div className="flex items-center gap-2">
-                                 <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] uppercase font-bold">
-                                   {new Date(item.scheduled_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}
-                                 </span>
-                                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${
-                                   item.mode === 'online' ? 'bg-sky-50 text-sky-700 border-sky-100' : 'bg-orange-50 text-orange-700 border-orange-100'
-                                 }`}>
-                                   {item.mode === 'online' ? 'Online' : 'Offline'}
-                                 </span>
-                               </div>
-                             </div>
-                           </div>
-                         )
-                      })}
-                    </div>
-                 )}
-               </CardBody>
+              <CardBody className="p-0">
+                {isGlobalLoading ? (
+                  <div className="p-4 space-y-4">
+                    {[1, 2].map(i => <div key={i} className="h-14 bg-gray-100 rounded animate-pulse" />)}
+                  </div>
+                ) : upcomingInterviews.length === 0 ? (
+                  <div className="p-6"><EmptyState text="Không có lịch phỏng vấn." /></div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {upcomingInterviews.map((item) => {
+                      const cName = item.application?.candidate?.user?.full_name || item.candidate?.full_name;
+                      const jTitle = item.application?.job?.title || item.job?.title;
+                      return (
+                        <div key={item.id} className="p-4 flex gap-3 hover:bg-gray-50">
+                          <div className="flex-shrink-0 flex flex-col items-center justify-center w-12 h-12 bg-violet-50 text-violet-700 rounded-lg border border-violet-100">
+                            <span className="text-xs font-bold uppercase">{new Date(item.scheduled_at).toLocaleDateString('en-US', { month: 'short' })}</span>
+                            <span className="text-lg font-bold leading-none">{new Date(item.scheduled_at).getDate()}</span>
+                          </div>
+                          <div className="overflow-hidden">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{cName}</p>
+                            <p className="text-xs text-gray-500 truncate mb-1">{jTitle}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] uppercase font-bold">
+                                {new Date(item.scheduled_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${item.mode === 'online' ? 'bg-sky-50 text-sky-700 border-sky-100' : 'bg-orange-50 text-orange-700 border-orange-100'
+                                }`}>
+                                {item.mode === 'online' ? 'Online' : 'Offline'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </CardBody>
             </Card>
 
           </div>
@@ -599,9 +595,8 @@ function StatCard({ label, value, icon: Icon, color, loading, highlight }) {
   };
 
   return (
-    <div className={`relative overflow-hidden rounded-xl border p-4 transition-all duration-200 hover:shadow-md ${
-      highlight ? "bg-white border-indigo-200 shadow-sm" : "bg-white border-gray-100 shadow-sm"
-    }`}>
+    <div className={`relative overflow-hidden rounded-xl border p-4 transition-all duration-200 hover:shadow-md ${highlight ? "bg-white border-indigo-200 shadow-sm" : "bg-white border-gray-100 shadow-sm"
+      }`}>
       <div className="flex items-center justify-between">
         <div className={`p-2 rounded-lg ${colorStyles[color] || "bg-gray-50 text-gray-600"}`}>
           <Icon className="w-5 h-5" />

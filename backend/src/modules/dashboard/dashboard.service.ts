@@ -5,7 +5,7 @@ import { RecruiterDashboardQueryDto } from './dto/recruiter-dashboard-query.dto'
 
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /**
    * Lấy Dashboard cho account recruiter (tự suy ra company theo account_id).
@@ -72,79 +72,79 @@ export class DashboardService {
    *  - newCvsLast7Days (CV liên quan tới application của company trong 7 ngày)
    */
   private async buildKpis(companyId: bigint, now: Date) {
-  const sevenDaysAgo = new Date(now);
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-  const [
-    totalActiveJobs,
-    totalApplications,
-    newCandidatesDistinct,
-    jobViewsAgg,
-    upcomingInterviewsCount,
-    newApplicationsLast7Days,
-  ] = await this.prisma.$transaction([
-    // Tổng job đang active
-    this.prisma.job.count({
-      where: {
-        company_id: companyId,
-        status: 'active',
-        OR: [{ deadline: null }, { deadline: { gte: now } }],
-      },
-    }),
+    const [
+      totalActiveJobs,
+      totalApplications,
+      newCandidatesDistinct,
+      jobViewsAgg,
+      upcomingInterviewsCount,
+      newApplicationsLast7Days,
+    ] = await this.prisma.$transaction([
+      // Tổng job đang active
+      this.prisma.job.count({
+        where: {
+          company_id: companyId,
+          status: 'active',
+          OR: [{ deadline: null }, { deadline: { gte: now } }],
+        },
+      }),
 
-    // Tổng application toàn công ty
-    this.prisma.application.count({
-      where: {
-        job: { company_id: companyId },
-      },
-    }),
-
-    // Số ứng viên unique apply trong 7 ngày
-    this.prisma.application.aggregate({
-      where: {
-        job: { company_id: companyId },
-        applied_at: { gte: sevenDaysAgo },
-      },
-      _count: {
-        candidate_id: true,
-      },
-    }),
-
-    // Tổng lượt view job
-    this.prisma.job.aggregate({
-      where: { company_id: companyId },
-      _sum: { views_count: true },
-    }),
-
-    // Số interview tương lai
-    this.prisma.interview.count({
-      where: {
-        application: {
+      // Tổng application toàn công ty
+      this.prisma.application.count({
+        where: {
           job: { company_id: companyId },
         },
-        scheduled_at: { gte: now },
-        status: { in: ['scheduled', 'rescheduled'] },
-      },
-    }),
+      }),
 
-    // ⭐ NEW: Số application mới 7 ngày qua
-    this.prisma.application.count({
-      where: {
-        job: { company_id: companyId },
-        applied_at: { gte: sevenDaysAgo },
-      },
-    }),
-  ]);
+      // Số ứng viên unique apply trong 7 ngày
+      this.prisma.application.aggregate({
+        where: {
+          job: { company_id: companyId },
+          applied_at: { gte: sevenDaysAgo },
+        },
+        _count: {
+          candidate_id: true,
+        },
+      }),
 
-  return {
-    totalActiveJobs,
-    totalApplications,
-    newCandidatesLast7Days: newCandidatesDistinct._count.candidate_id ?? 0,
-    totalJobViews: jobViewsAgg._sum.views_count ?? 0,
-    upcomingInterviews: upcomingInterviewsCount,
-    newApplicationsLast7Days,
-  };
-}
+      // Tổng lượt view job
+      this.prisma.job.aggregate({
+        where: { company_id: companyId },
+        _sum: { views_count: true },
+      }),
+
+      // Số interview tương lai
+      this.prisma.interview.count({
+        where: {
+          application: {
+            job: { company_id: companyId },
+          },
+          scheduled_at: { gte: now },
+          status: { in: ['scheduled', 'rescheduled'] },
+        },
+      }),
+
+      // ⭐ NEW: Số application mới 7 ngày qua
+      this.prisma.application.count({
+        where: {
+          job: { company_id: companyId },
+          applied_at: { gte: sevenDaysAgo },
+        },
+      }),
+    ]);
+
+    return {
+      totalActiveJobs,
+      totalApplications,
+      newCandidatesLast7Days: newCandidatesDistinct._count.candidate_id ?? 0,
+      totalJobViews: jobViewsAgg._sum.views_count ?? 0,
+      upcomingInterviews: upcomingInterviewsCount,
+      newApplicationsLast7Days,
+    };
+  }
 
   /**
    * Biểu đồ line: tổng số application theo ngày.
@@ -278,30 +278,30 @@ export class DashboardService {
    *  - Có kèm số lượng ứng viên apply
    */
   private async buildTopActiveJobs(companyId: bigint, limit: number) {
-  return this.prisma.job.findMany({
-    where: {
-      company_id: companyId,
-      status: 'active',
-    },
-    orderBy: [
-      { applications: { _count: 'desc' } },
-      { views_count: 'desc' },
-    ],
-    take: limit,
-    select: {
-      id: true,
-      title: true,
-      deadline: true,
-      status: true,
-      views_count: true,
-      _count: {
-        select: {
-          applications: true,  // FE yêu cầu
+    return this.prisma.job.findMany({
+      where: {
+        company_id: companyId,
+        status: 'active',
+      },
+      orderBy: [
+        { applications: { _count: 'desc' } },
+        { views_count: 'desc' },
+      ],
+      take: limit,
+      select: {
+        id: true,
+        title: true,
+        deadline: true,
+        status: true,
+        views_count: true,
+        _count: {
+          select: {
+            applications: true,  // FE yêu cầu
+          },
         },
       },
-    },
-  });
-}
+    });
+  }
 
   /**
    * Ứng viên mới ứng tuyển gần đây
@@ -367,7 +367,7 @@ export class DashboardService {
       orderBy: {
         scheduled_at: 'asc',
       },
-      take: limit,
+      take: 1, // CHỈ LẤY 1 — cái gần nhất
       include: {
         application: {
           include: {
