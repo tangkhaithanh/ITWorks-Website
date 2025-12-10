@@ -21,8 +21,7 @@ import { logout } from "@/features/auth/authSlice";
 const NAV_ITEMS = [
     { path: "/admin/dashboard", label: "Tổng quan", icon: LayoutDashboard },
     { path: "/admin/accounts", label: "Quản lý tài khoản", icon: User },
-    { path: "/admin/jobs", label: "Quản lý tin tuyển dụng", icon: BriefcaseBusiness },
-    { path: "/admin/company", label: "Quản lý công ty", icon: Building2 },
+    { path: "/admin/companies", label: "Quản lý công ty", icon: Building2 },
 ];
 
 export default function AdminLayout() {

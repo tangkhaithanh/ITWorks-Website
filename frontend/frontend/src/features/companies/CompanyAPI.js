@@ -38,5 +38,8 @@ const CompanyAPI = {
   reject: (id) => apiClient.patch(`/companies/${id}/reject`),
   getRecruiterDashboard: (params) =>
     apiClient.get("/dashboard/recruiter", { params }),
+
+  // Lấy toàn bộ công ty dành cho admin:
+  getAllForAdmin: (params) => apiClient.get("/companies", { params }),
 };
 export default CompanyAPI;

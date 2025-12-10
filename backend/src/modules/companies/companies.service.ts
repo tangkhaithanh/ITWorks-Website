@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException, HttpException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CloudinaryService } from '@/modules/cloudinary/cloudinary.service';
 import { CompanyStatus } from '@prisma/client';
@@ -6,250 +6,266 @@ import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { ElasticsearchCompanyService } from '../elasticsearch/company.elasticsearch.service';
 import { JobsService } from '@/modules/jobs/jobs.service';
+import { AdminGetCompaniesDto } from './dto/admin-get-companies.dto';
 @Injectable()
 export class CompaniesService {
-    constructor(
-        private readonly prisma: PrismaService,
-        private readonly cloudinary: CloudinaryService,
-        private readonly esCompany: ElasticsearchCompanyService,
-        private readonly jobsService: JobsService,
-    ) {}
-   async create(
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cloudinary: CloudinaryService,
+    private readonly esCompany: ElasticsearchCompanyService,
+    private readonly jobsService: JobsService,
+  ) { }
+  async create(
     accountId: bigint,
     dto: CreateCompanyDto,
     logo?: Express.Multer.File,
     licenseFile?: Express.Multer.File,
   ) {
-  if (!logo) {
-    throw new BadRequestException('Công ty bắt buộc phải có logo');
-  }
-  if (!licenseFile) {
-    throw new BadRequestException('Vui lòng upload giấy phép kinh doanh');
-  }
-
-  try {
-    const { industry_ids, skill_ids, ...cleanDto } = dto;
-
-    // --- Upload logo ---
-    const logoUploaded = await this.cloudinary.uploadImage(
-      logo,
-      'companies/logos',
-    );
-
-    // --- Upload license PDF ---
-    const licenseUploaded = await this.cloudinary.uploadDocument(
-      licenseFile,
-      'companies/licenses',
-    );
-
-    const company = await this.prisma.company.create({
-      data: {
-        account_id: accountId,
-        ...cleanDto,
-        founded_date: new Date(dto.founded_date),
-        logo_url: logoUploaded.secure_url,
-        logo_public_id: logoUploaded.public_id,
-
-        license_file_url: licenseUploaded.secure_url,
-        license_file_public_id: licenseUploaded.public_id,
-      },
-    });
-
-    await this.linkIndustriesAndSkills(company.id, dto);
-
-    const fullCompany = await this.getFullCompany(company.id);
-    await this.esCompany.indexCompany(fullCompany);
-
-    return fullCompany;
-  } catch (error) {
-    console.error('🔥 Lỗi tạo công ty:', error);
-    throw new InternalServerErrorException('Không thể tạo công ty: ' + error.message);
-  }
-}
-
-  async update(
-  id: bigint,
-  dto: UpdateCompanyDto,
-  logo?: Express.Multer.File,
-  licenseFile?: Express.Multer.File,
-) {
-  try {
-    const company = await this.prisma.company.findUnique({ where: { id } });
-    if (!company) throw new NotFoundException('Không tìm thấy công ty.');
-
-    // Clean DTO – remove undefined and REMOVE industry_ids and skill_ids
-    const updateData: any = {};
-    Object.entries(dto).forEach(([key, val]) => {
-      if (
-        val !== undefined &&
-        val !== null &&
-        key !== "industry_ids" &&
-        key !== "skill_ids"
-      ) {
-        updateData[key] = val;
-      }
-    });
-
-    // Convert date
-    if (updateData.founded_date) {
-      updateData.founded_date = new Date(updateData.founded_date);
+    if (!logo) {
+      throw new BadRequestException('Công ty bắt buộc phải có logo');
+    }
+    if (!licenseFile) {
+      throw new BadRequestException('Vui lòng upload giấy phép kinh doanh');
     }
 
-    // UPDATE LOGO
-    if (logo) {
-      if (company.logo_public_id) {
-        await this.cloudinary.deleteFile(company.logo_public_id);
-      }
-      const uploadedLogo = await this.cloudinary.uploadImage(logo, 'companies/logos');
-      updateData.logo_url = uploadedLogo.secure_url;
-      updateData.logo_public_id = uploadedLogo.public_id;
-    }
+    try {
+      const { industry_ids, skill_ids, ...cleanDto } = dto;
 
-    // UPDATE LICENSE
-    if (licenseFile) {
-      if (company.license_file_public_id) {
-        await this.cloudinary.deleteFile(company.license_file_public_id);
-      }
-      const uploadedLicense = await this.cloudinary.uploadDocument(
+      // --- Upload logo ---
+      const logoUploaded = await this.cloudinary.uploadImage(
+        logo,
+        'companies/logos',
+      );
+
+      // --- Upload license PDF ---
+      const licenseUploaded = await this.cloudinary.uploadDocument(
         licenseFile,
         'companies/licenses',
       );
-      updateData.license_file_url = uploadedLicense.secure_url;
-      updateData.license_file_public_id = uploadedLicense.public_id;
-      updateData.status = CompanyStatus.pending;
+
+      const company = await this.prisma.company.create({
+        data: {
+          account_id: accountId,
+          ...cleanDto,
+          founded_date: new Date(dto.founded_date),
+          logo_url: logoUploaded.secure_url,
+          logo_public_id: logoUploaded.public_id,
+
+          license_file_url: licenseUploaded.secure_url,
+          license_file_public_id: licenseUploaded.public_id,
+        },
+      });
+
+      await this.linkIndustriesAndSkills(company.id, dto);
+
+      const fullCompany = await this.getFullCompany(company.id);
+      await this.esCompany.indexCompany(fullCompany);
+
+      return fullCompany;
+    } catch (error) {
+      console.error('🔥 Lỗi tạo công ty:', error);
+      throw new InternalServerErrorException('Không thể tạo công ty: ' + error.message);
     }
-
-    // UPDATE COMPANY
-    const updated = await this.prisma.company.update({
-      where: { id },
-      data: updateData,
-    });
-
-    // UPDATE INDUSTRY + SKILLS (correctly)
-    await this.linkIndustriesAndSkills(id, dto, true);
-
-    const fullCompany = await this.getFullCompany(id);
-    if (!fullCompany) {
-      throw new NotFoundException("Không lấy được full company");
-    }
-    await this.esCompany.indexCompany(fullCompany);
-    // Lấy danh sách job của công ty
-    const jobs = await this.prisma.job.findMany({
-      where: { company_id: company.id },
-    });
-
-    // Reindex từng job
-   await this.jobsService.reindexJobsByCompany(company.id);
-   console.log("🔥 DB COMPANY AFTER UPDATE:", updated);
-   console.log("🔥 FULL COMPANY AFTER UPDATE:", fullCompany.name, fullCompany.logo_url);
-
-    return fullCompany;
-
-  } catch (error) {
-    console.error("🔥 Lỗi UPDATE công ty:", error);
-    throw new InternalServerErrorException(`Lỗi khi cập nhật công ty: ${error.message}`);
   }
-}
-    async hide(companyId: bigint) {
-    try {
-        const company = await this.prisma.company.findUnique({ where: { id: companyId } });
-        if (!company) throw new NotFoundException('Không tìm thấy công ty');
 
-        if (company.status !== CompanyStatus.approved) {
+  async update(
+    id: bigint,
+    dto: UpdateCompanyDto,
+    logo?: Express.Multer.File,
+    licenseFile?: Express.Multer.File,
+  ) {
+    try {
+      const company = await this.prisma.company.findUnique({ where: { id } });
+      if (!company) throw new NotFoundException('Không tìm thấy công ty.');
+
+      // Clean DTO – remove undefined and REMOVE industry_ids and skill_ids
+      const updateData: any = {};
+      Object.entries(dto).forEach(([key, val]) => {
+        if (
+          val !== undefined &&
+          val !== null &&
+          key !== "industry_ids" &&
+          key !== "skill_ids"
+        ) {
+          updateData[key] = val;
+        }
+      });
+
+      // Convert date
+      if (updateData.founded_date) {
+        updateData.founded_date = new Date(updateData.founded_date);
+      }
+
+      // UPDATE LOGO
+      if (logo) {
+        if (company.logo_public_id) {
+          await this.cloudinary.deleteFile(company.logo_public_id);
+        }
+        const uploadedLogo = await this.cloudinary.uploadImage(logo, 'companies/logos');
+        updateData.logo_url = uploadedLogo.secure_url;
+        updateData.logo_public_id = uploadedLogo.public_id;
+      }
+
+      // UPDATE LICENSE
+      if (licenseFile) {
+        if (company.license_file_public_id) {
+          await this.cloudinary.deleteFile(company.license_file_public_id);
+        }
+        const uploadedLicense = await this.cloudinary.uploadDocument(
+          licenseFile,
+          'companies/licenses',
+        );
+        updateData.license_file_url = uploadedLicense.secure_url;
+        updateData.license_file_public_id = uploadedLicense.public_id;
+        updateData.status = CompanyStatus.pending;
+      }
+
+      // UPDATE COMPANY
+      const updated = await this.prisma.company.update({
+        where: { id },
+        data: updateData,
+      });
+
+      // UPDATE INDUSTRY + SKILLS (correctly)
+      await this.linkIndustriesAndSkills(id, dto, true);
+
+      const fullCompany = await this.getFullCompany(id);
+      if (!fullCompany) {
+        throw new NotFoundException("Không lấy được full company");
+      }
+      await this.esCompany.indexCompany(fullCompany);
+      // Lấy danh sách job của công ty
+      const jobs = await this.prisma.job.findMany({
+        where: { company_id: company.id },
+      });
+
+      // Reindex từng job
+      await this.jobsService.reindexJobsByCompany(company.id);
+      console.log("🔥 DB COMPANY AFTER UPDATE:", updated);
+      console.log("🔥 FULL COMPANY AFTER UPDATE:", fullCompany.name, fullCompany.logo_url);
+
+      return fullCompany;
+
+    } catch (error) {
+      console.error("🔥 Lỗi UPDATE công ty:", error);
+      throw new InternalServerErrorException(`Lỗi khi cập nhật công ty: ${error.message}`);
+    }
+  }
+  async hide(companyId: bigint) {
+    try {
+      const company = await this.prisma.company.findUnique({ where: { id: companyId } });
+      if (!company) throw new NotFoundException('Không tìm thấy công ty');
+
+      if (company.status !== CompanyStatus.approved) {
         throw new BadRequestException('Chỉ công ty ở trạng thái approved mới có thể ẩn');
-        }
+      }
 
-        const updated = await this.prisma.company.update({
-            where: { id: companyId },
-            data: { status: CompanyStatus.hidden },
-        });
+      const updated = await this.prisma.company.update({
+        where: { id: companyId },
+        data: { status: CompanyStatus.hidden },
+      });
 
-         await this.esCompany.removeCompany(companyId);
-         return updated;
+      await this.esCompany.removeCompany(companyId);
+      return updated;
     } catch (error) {
-        console.error('🔥 Lỗi ẩn công ty:', error);
-        throw new InternalServerErrorException('Không thể ẩn công ty: ' + error.message);
+      console.error('🔥 Lỗi ẩn công ty:', error);
+      throw new InternalServerErrorException('Không thể ẩn công ty: ' + error.message);
     }
-}
+  }
 
-    async unhide(companyId: bigint) {
+  async unhide(companyId: bigint) {
     try {
-        const company = await this.prisma.company.findUnique({ where: { id: companyId } });
-        if (!company) throw new NotFoundException('Không tìm thấy công ty');
+      const company = await this.prisma.company.findUnique({ where: { id: companyId } });
+      if (!company) throw new NotFoundException('Không tìm thấy công ty');
 
-        if (company.status !== CompanyStatus.hidden) {
+      if (company.status !== CompanyStatus.hidden) {
         throw new BadRequestException('Chỉ công ty ở trạng thái hidden mới có thể khôi phục');
-        }
+      }
 
-        const updated = await this.prisma.company.update({
-            where: { id: companyId },
-            data: { status: CompanyStatus.approved },
-        });
+      const updated = await this.prisma.company.update({
+        where: { id: companyId },
+        data: { status: CompanyStatus.approved },
+      });
 
-        const fullCompany = await this.getFullCompany(companyId);
-        await this.esCompany.indexCompany(fullCompany);
-        return updated;
+      const fullCompany = await this.getFullCompany(companyId);
+      await this.esCompany.indexCompany(fullCompany);
+      return updated;
     } catch (error) {
-        console.error('🔥 Lỗi khôi phục công ty:', error);
-        throw new InternalServerErrorException('Không thể khôi phục công ty: ' + error.message);
+      console.error('🔥 Lỗi khôi phục công ty:', error);
+      throw new InternalServerErrorException('Không thể khôi phục công ty: ' + error.message);
     }
-}
+  }
 
-   async findOne(companyId: bigint, mode: 'public' | 'edit' = 'public') {
-    const company = await this.getFullCompany(companyId);
-    if (!company) throw new NotFoundException('Không tìm thấy công ty');
+  async findOne(companyId: bigint, mode: 'public' | 'edit' = 'public') {
+    try {
+      const company = await this.getFullCompany(companyId);
+      if (!company) {
+        throw new NotFoundException('Không tìm thấy công ty');
+      }
 
-    // Nếu là public mà công ty chưa approved -> ẩn luôn
-    if (mode === 'public' && company.status !== 'approved') {
-      throw new NotFoundException('Công ty chưa được duyệt hoặc đã bị ẩn');
-    }
+      // Nếu là public nhưng công ty chưa approved → không cho xem
+      if (mode === 'public' && company.status !== 'approved') {
+        throw new NotFoundException('Công ty chưa được duyệt hoặc đã bị ẩn');
+      }
 
-    // -------------------
-    // 1️⃣ Base info dùng chung
-    // -------------------
-    const base = {
-      id: company.id,
-      name: company.name,
-      logo_url: company.logo_url,
-      website: company.website,
-      description: company.description,
-      address: company.address,
-      headquarters: company.headquarters,
-      size: company.size,
-      contact_email: company.contact_email,
-      contact_phone: company.contact_phone,
-      status: company.status,
-      industries: company.industry_info.map((ci) => ci.industry.name),
-      tech_stacks: company.skills.map((cs) => cs.skill.name),
-    };
+      // -------------------
+      // 1️⃣ Base info dùng chung
+      // -------------------
+      const base = {
+        id: company.id,
+        name: company.name,
+        logo_url: company.logo_url,
+        website: company.website,
+        description: company.description,
+        address: company.address,
+        headquarters: company.headquarters,
+        size: company.size,
+        contact_email: company.contact_email,
+        contact_phone: company.contact_phone,
+        status: company.status,
+        industries: company.industry_info.map((ci) => ci.industry.name),
+        tech_stacks: company.skills.map((cs) => cs.skill.name),
+      };
 
-    // -------------------
-    // 2️⃣ Mode xử lý
-    // -------------------
+      // -------------------
+      // 2️⃣ Mode xử lý
+      // -------------------
 
-    // 🟢 PUBLIC MODE (ứng viên xem)
-    if (mode === 'public') {
+      // 🟢 PUBLIC MODE (ứng viên xem)
+      if (mode === 'public') {
+        return {
+          ...base,
+          jobs: company.jobs.filter((j) => j.status === 'active'),
+        };
+      }
+
+      // 🟣 EDIT MODE (recruiter hoặc admin xem/edit)
       return {
         ...base,
-        jobs: company.jobs.filter((j) => j.status === 'active'),
+        industry_ids: company.industry_info.map((ci) => ci.industry_id),
+        skill_ids: company.skills.map((cs) => cs.skill_id),
+        business_code: company.business_code,
+        representative_name: company.representative_name,
+        representative_position: company.representative_position,
+        license_file_url: company.license_file_url,
+        founded_date: company.founded_date,
       };
-    }
 
-    // 🟣 EDIT MODE (recruiter xem / chỉnh sửa)
-    return {
-      ...base,
-      industry_ids: company.industry_info.map((ci) => ci.industry_id),
-      skill_ids: company.skills.map((cs) => cs.skill_id),
-      business_code: company.business_code,
-      representative_name: company.representative_name,
-      representative_position: company.representative_position,
-      license_file_url: company.license_file_url,
-      founded_date: company.founded_date,
-    };
-}
+    } catch (error) {
+      console.error("findOne() error:", error);
+
+      // Nếu lỗi đã là HttpException (NotFound, Forbidden, ...) → ném lại
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // Lỗi bất ngờ → báo lỗi server
+      throw new InternalServerErrorException("Đã xảy ra lỗi khi lấy thông tin công ty");
+    }
+  }
 
   // Hàm cho admin:
- async approve(companyId: bigint) {
+  async approve(companyId: bigint) {
     try {
       const company = await this.prisma.company.findUnique({
         where: { id: companyId },
@@ -309,95 +325,153 @@ export class CompaniesService {
   }
 
   async getMyCompany(accountId: bigint) {
-  const company = await this.prisma.company.findUnique({
-    where: { account_id: accountId },
-    include: {
-      industry_info: { include: { industry: true } },
-      skills: { include: { skill: true } },
-    },
-  });
+    const company = await this.prisma.company.findUnique({
+      where: { account_id: accountId },
+      include: {
+        industry_info: { include: { industry: true } },
+        skills: { include: { skill: true } },
+      },
+    });
 
-  if (!company) {
-    // ❗ Return THUẦN — interceptor sẽ wrap lại
-    return null;
+    if (!company) {
+      // ❗ Return THUẦN — interceptor sẽ wrap lại
+      return null;
+    }
+
+    // ❗ Return THUẦN OBJECT — interceptor sẽ wrap thành { success, message, data }
+    return company;
   }
-
-  // ❗ Return THUẦN OBJECT — interceptor sẽ wrap thành { success, message, data }
-  return company;
-}
   // Helper Xử lý industry và skills
   private async linkIndustriesAndSkills(
-  companyId: bigint,
-  dto: CreateCompanyDto | UpdateCompanyDto,
-  replace = false,// replace true là update, false là create
-) {
-  // 🏭 Nếu DTO có industry_ids thì mới xử lý industry
-  if (replace && dto.industry_ids !== undefined) {
-    await this.prisma.companyIndustry.deleteMany({ where: { company_id: companyId } });
-    if (dto.industry_ids.length) {
-      await this.prisma.companyIndustry.createMany({
-        data: dto.industry_ids.map((id) => ({
-          company_id: companyId,
-          industry_id: id,
-        })),
-      });
+    companyId: bigint,
+    dto: CreateCompanyDto | UpdateCompanyDto,
+    replace = false,// replace true là update, false là create
+  ) {
+    // 🏭 Nếu DTO có industry_ids thì mới xử lý industry
+    if (replace && dto.industry_ids !== undefined) {
+      await this.prisma.companyIndustry.deleteMany({ where: { company_id: companyId } });
+      if (dto.industry_ids.length) {
+        await this.prisma.companyIndustry.createMany({
+          data: dto.industry_ids.map((id) => ({
+            company_id: companyId,
+            industry_id: id,
+          })),
+        });
+      }
+    }
+
+    // 💡 Nếu DTO có skill_ids thì mới xử lý skill
+    if (replace && dto.skill_ids !== undefined) {
+      await this.prisma.companySkill.deleteMany({ where: { company_id: companyId } });
+      if (dto.skill_ids.length) {
+        await this.prisma.companySkill.createMany({
+          data: dto.skill_ids.map((id) => ({
+            company_id: companyId,
+            skill_id: id,
+          })),
+        });
+      }
+    }
+
+    // 🆕 Khi tạo mới (replace = false)
+    if (!replace) {
+      if (dto.industry_ids?.length) {
+        await this.prisma.companyIndustry.createMany({
+          data: dto.industry_ids.map((id) => ({
+            company_id: companyId,
+            industry_id: id,
+          })),
+        });
+      }
+
+      if (dto.skill_ids?.length) {
+        await this.prisma.companySkill.createMany({
+          data: dto.skill_ids.map((id) => ({
+            company_id: companyId,
+            skill_id: id,
+          })),
+        });
+      }
     }
   }
 
-  // 💡 Nếu DTO có skill_ids thì mới xử lý skill
-  if (replace && dto.skill_ids !== undefined) {
-    await this.prisma.companySkill.deleteMany({ where: { company_id: companyId } });
-    if (dto.skill_ids.length) {
-      await this.prisma.companySkill.createMany({
-        data: dto.skill_ids.map((id) => ({
-          company_id: companyId,
-          skill_id: id,
-        })),
-      });
-    }
-  }
-
-  // 🆕 Khi tạo mới (replace = false)
-  if (!replace) {
-    if (dto.industry_ids?.length) {
-      await this.prisma.companyIndustry.createMany({
-        data: dto.industry_ids.map((id) => ({
-          company_id: companyId,
-          industry_id: id,
-        })),
-      });
-    }
-
-    if (dto.skill_ids?.length) {
-      await this.prisma.companySkill.createMany({
-        data: dto.skill_ids.map((id) => ({
-          company_id: companyId,
-          skill_id: id,
-        })),
-      });
-    }
-  }
-  }
-
-private async getFullCompany(id: bigint) {
-  return await this.prisma.company.findUnique({
-    where: { id },
-    include: {
-      industry_info: { include: { industry: true } },
-      skills: { include: { skill: true } },
-      jobs: {
-        select: {
-          id: true,
-          title: true,
-          status: true,
-          employment_type: true,
-          deadline: true,
-          salary_min: true,
-          salary_max: true,
-          negotiable: true,
+  private async getFullCompany(id: bigint) {
+    return await this.prisma.company.findUnique({
+      where: { id },
+      include: {
+        industry_info: { include: { industry: true } },
+        skills: { include: { skill: true } },
+        jobs: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            employment_type: true,
+            deadline: true,
+            salary_min: true,
+            salary_max: true,
+            negotiable: true,
+          },
         },
       },
-    },
-  });
-}
+    });
+  }
+  // Hàm lấy toàn bộ công ty dành cho admin:
+  async adminGetCompanies(query: AdminGetCompaniesDto) {
+    const { page, limit, search, status } = query;
+
+    const where: any = {};
+
+    // 🔍 Search theo tên công ty / email account / business code
+    if (search) {
+      where.OR = [
+        { name: { contains: search } },
+        { business_code: { contains: search } },
+        {
+          account: {
+            email: { contains: search },
+          },
+        },
+      ];
+    }
+
+    //Filter theo trạng thái
+    if (status) {
+      where.status = status;
+    }
+
+    const total = await this.prisma.company.count({ where });
+
+    const companies = await this.prisma.company.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: [
+        { status: 'asc' },        // pending lên đầu
+        { created_at: 'desc' },   // trong mỗi nhóm, mới → cũ
+      ],
+      include: {
+        account: { select: { email: true } },
+        jobs: { select: { id: true } },
+      },
+    });
+
+    const data = companies.map((c) => ({
+      id: c.id,
+      name: c.name,
+      logo_url: c.logo_url,
+      status: c.status,
+      created_at: c.created_at,
+      account_email: c.account.email,
+      total_jobs: c.jobs.length,
+    }));
+
+    return {
+      companies: data,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
 }

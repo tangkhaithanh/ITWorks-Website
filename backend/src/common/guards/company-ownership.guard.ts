@@ -10,7 +10,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 
 @Injectable()
 export class CompanyOwnershipGuard implements CanActivate {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest();
@@ -19,6 +19,7 @@ export class CompanyOwnershipGuard implements CanActivate {
 
     // ⚠️ Admin có quyền sửa bất kỳ công ty nào
     if (user.role === 'admin') {
+      req.company = { id: companyId };
       return true;
     }
 

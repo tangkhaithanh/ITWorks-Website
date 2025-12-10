@@ -26,6 +26,8 @@ import MyApplicationDetailPage from "../features/applications/pages/MyApplicatio
 import CompanyDashboard from "../features/companies/pages/CompanyDashBoard";
 import AdminLayout from "@/components/layout/AdminLayout";
 import ManageAccountPage from "../features/admin/pages/ManageAccountPage";
+import ManageCompanyForAdmin from "../features/companies/pages/ManageCompanyForAdmin";
+import AdminCompanyDetailPage from "../features/companies/pages/AdminCompanyDetailPage";
 import { Navigate } from "react-router-dom";
 const router = createBrowserRouter([
   {
@@ -110,8 +112,8 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: "accounts", element: <ManageAccountPage /> },
-      { path: "company", element: <CompanyManagementPage /> },
-      { path: "jobs", element: <ManageJobPage /> },
+      { path: "companies", element: <ManageCompanyForAdmin /> },
+      { path: "companies/:id", element: <AdminCompanyDetailPage /> },
     ],
   },
 ]);

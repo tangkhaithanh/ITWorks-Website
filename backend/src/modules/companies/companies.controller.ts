@@ -1,4 +1,4 @@
-import { 
+import {
   Controller,
   Post,
   Get,
@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   UseGuards,
   BadRequestException,
+  Query,
 } from '@nestjs/common';
 import { CompaniesService } from './companies.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
@@ -22,10 +23,11 @@ import { Public } from "@/common/decorators/public.decorator";
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { CompanyOwnershipGuard } from '@/common/guards/company-ownership.guard';
 import { Req } from '@nestjs/common';
+import { AdminGetCompaniesDto } from './dto/admin-get-companies.dto';
 @Controller('companies')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CompaniesController {
-  constructor(private readonly companiesService: CompaniesService) {}
+  constructor(private readonly companiesService: CompaniesService) { }
 
   // =========================
   // CREATE COMPANY (Recruiter)
@@ -116,6 +118,13 @@ export class CompaniesController {
   @Roles(Role.recruiter)
   getMyCompany(@User('accountId') accountId: bigint) {
     return this.companiesService.getMyCompany(accountId);
+  }
+
+  // Get all company for admin:
+  @Get()
+  @Roles(Role.admin)
+  getAllCompanies(@Query() query: AdminGetCompaniesDto) {
+    return this.companiesService.adminGetCompanies(query);
   }
 
   // =========================
