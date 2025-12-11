@@ -4,43 +4,43 @@ import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import JoditEditor from "jodit-react";
 
+// Components
 import Button from "@/components/ui/Button";
 import TextInput from "@/components/ui/TextInput";
 import SelectInput from "@/components/ui/SelectInput";
 import DatePickerInput from "@/components/ui/DatePickerInput";
-import { Card, CardHeader, CardBody } from "@/components/common/Card";
+// Lưu ý: Tôi dùng thẻ div bao ngoài thay vì Card component cũ để custom layout linh hoạt hơn,
+// nhưng vẫn giữ style clean. Nếu bạn bắt buộc dùng Card component của hệ thống, hãy bọc nội dung vào đó.
 import MultiSelect from "@/components/common/MultiSelect";
 
+// APIs
 import JobAPI from "@/features/jobs/JobAPI";
 import SkillAPI from "@/features/skills/SkillAPI";
 import JobCategoryAPI from "../../jobCategories/JobCategoryAPI";
+
 const MySwal = withReactContent(Swal);
 
-// Hình thức làm việc (enum WorkMode) → hiển thị tiếng Việt
+// --- CONSTANTS ---
 const WORK_MODE_OPTIONS = [
-  { id: "onsite", name: "Làm việc tại văn phòng (Onsite)" },
-  { id: "remote", name: "Làm việc từ xa (Remote)" },
-  // nếu backend có hybrid thì bật thêm dòng dưới
-  { id: "hybrid", name: "Kết hợp Onsite/Remote (Hybrid)" },
+  { id: "onsite", name: "🏢 Làm việc tại văn phòng (Onsite)" },
+  { id: "remote", name: "🏠 Làm việc từ xa (Remote)" },
+  { id: "hybrid", name: "🌐 Kết hợp (Hybrid)" },
 ];
 
-// Cấp độ kinh nghiệm (enum ExperienceLevel)
-// Bạn có thể bổ sung thêm nếu enum có nhiều hơn
 const EXPERIENCE_LEVEL_OPTIONS = [
+  { id: "intern", name: "Intern" },
+  { id: "fresher", name: "Fresher" },
   { id: "junior", name: "Junior" },
-  { id: "mid", name: "Middle (Mid)" },
+  { id: "mid", name: "Middle" },
   { id: "senior", name: "Senior" },
   { id: "lead", name: "Lead" },
-  { id: "fresher", name: "Fresher" },
-  { id: "intern", name: "Intern" },
 ];
 
-// Loại hình công việc (enum EmploymentType)
 const EMPLOYMENT_TYPE_OPTIONS = [
   { value: "fulltime", label: "Toàn thời gian (Full-time)" },
   { value: "parttime", label: "Bán thời gian (Part-time)" },
   { value: "intern", label: "Thực tập (Intern)" },
-  { value: "contract", label: "Hợp đồng (Contract)" }
+  { value: "contract", label: "Hợp đồng (Contract)" },
 ];
 
 export default function CreateJobPage() {
@@ -48,139 +48,101 @@ export default function CreateJobPage() {
   const { id } = useParams();
   const isEdit = Boolean(id);
 
+  // --- STATE ---
   const [form, setForm] = useState({
     title: "",
     employment_type: "",
     category_id: "",
-    // lương
     salary_min: "",
     salary_max: "",
     negotiable: true,
-    // địa điểm
     location_city: "",
     location_district: "",
     location_ward: "",
     location_street: "",
-    // work modes & exp levels
     work_modes: [],
     experience_levels: [],
-    // deadline
     deadline: "",
-    // mô tả chi tiết
     description: "",
     requirements: "",
-    // kỹ năng
     skill_ids: [],
-    // số lượng tuyển
     number_of_openings: 1,
   });
 
-  // radio: "negotiable" | "range"
   const [salaryType, setSalaryType] = useState("negotiable");
-
   const [skills, setSkills] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [initialLoading, setInitialLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
-  const [categories, setCategories] = useState([]);
 
+  // --- EDITOR CONFIG ---
   const editorConfig = {
     readonly: false,
-    minHeight: 200,
+    minHeight: 300,
+    placeholder: "Nhập nội dung chi tiết...",
     toolbarAdaptive: false,
     askBeforePasteHTML: false,
     askBeforePasteFromWord: false,
     allowPaste: true,
     buttons: [
-      "bold",
-      "italic",
-      "underline",
-      "|",
-      "ul",
-      "ol",
-      "|",
-      "fontsize",
-      "paragraph",
-      "link",
-      "align",
-      "|",
-      "undo",
-      "redo",
-      "hr",
-      "eraser",
+      "bold", "italic", "underline", "|",
+      "ul", "ol", "|",
+      "fontsize", "paragraph", "brush", "|",
+      "link", "table", "|",
+      "align", "undo", "redo", "|",
+      "hr", "eraser", "fullsize"
     ],
   };
 
-  // Load danh sách skills (MultiSelect)
+  // --- EFFECTS ---
   useEffect(() => {
     const loadOptions = async () => {
       try {
         const skillRes = await SkillAPI.getAll();
         setSkills(skillRes.data?.data || []);
       } catch (err) {
-        console.error("❌ Lỗi tải danh sách kỹ năng:", err);
-        MySwal.fire({
-          title: "Lỗi",
-          text: "Không thể tải danh sách kỹ năng. Vui lòng thử lại.",
-          icon: "error",
-        });
+        console.error("❌ Lỗi tải skills:", err);
       } finally {
         setLoadingOptions(false);
       }
     };
-
     loadOptions();
   }, []);
 
-  // Load danh mục nghề nghiệp:
   useEffect(() => {
-  const loadCategories = async () => {
-    try {
-      const res = await JobCategoryAPI.getAll();
-      setCategories(
-        (res.data?.data || []).map((cat) => ({
-          value: String(cat.id),
-          label: cat.name,
-        }))
-      );
-    } catch (err) {
-      console.error("❌ Lỗi tải danh mục nghề nghiệp:", err);
-      MySwal.fire({
-        title: "Lỗi",
-        text: "Không thể tải danh mục nghề nghiệp.",
-        icon: "error",
-      });
-    }
-  };
+    const loadCategories = async () => {
+      try {
+        const res = await JobCategoryAPI.getAll();
+        setCategories(
+          (res.data?.data || []).map((cat) => ({
+            value: String(cat.id),
+            label: cat.name,
+          }))
+        );
+      } catch (err) {
+        console.error("❌ Lỗi tải categories:", err);
+      }
+    };
+    loadCategories();
+  }, []);
 
-  loadCategories();
-}, []);
-
-  // Load dữ liệu job khi edit
   useEffect(() => {
     if (!isEdit) {
       setInitialLoading(false);
       return;
     }
-
     const loadJob = async () => {
       try {
         const res = await JobAPI.getJobToEdit(id);
         const data = res.data?.data;
-
         setForm((prev) => ({
           ...prev,
           title: data.title || "",
           category_id: data.category_id ? String(data.category_id) : "",
           employment_type: data.employment_type || "",
-          salary_min:
-            data.salary_min !== null && data.salary_min !== undefined
-              ? String(data.salary_min)
-              : "",
-          salary_max:
-            data.salary_max !== null && data.salary_max !== undefined
-              ? String(data.salary_max)
-              : "",
+          salary_min: data.salary_min !== null ? String(data.salary_min) : "",
+          salary_max: data.salary_max !== null ? String(data.salary_max) : "",
           negotiable: data.negotiable ?? false,
           location_city: data.location_city || "",
           location_district: data.location_district || "",
@@ -189,97 +151,60 @@ export default function CreateJobPage() {
           work_modes: data.work_modes || [],
           experience_levels: data.experience_levels || [],
           deadline: data.deadline ? data.deadline.split("T")[0] : "",
-          description:
-            data.details?.description ??
-            data.description ??
-            "",
-          requirements:
-            data.details?.requirements ??
-            data.requirements ??
-            "",
+          description: data.details?.description ?? data.description ?? "",
+          requirements: data.details?.requirements ?? data.requirements ?? "",
           skill_ids: Array.isArray(data.skill_ids)
             ? data.skill_ids.map((v) => String(v))
             : data.skills
-            ? data.skills.map((s) => String(s.id))
-            : [],
-          number_of_openings:
-            data.number_of_openings !== undefined &&
-            data.number_of_openings !== null
-              ? data.number_of_openings
-              : 1,
+              ? data.skills.map((s) => String(s.id))
+              : [],
+          number_of_openings: data.number_of_openings ?? 1,
         }));
-
         setSalaryType(data.negotiable ? "negotiable" : "range");
       } catch (err) {
-        console.error("❌ Lỗi tải thông tin job:", err);
-        await MySwal.fire({
-          title: "Lỗi",
-          text: "Không thể tải thông tin công việc để chỉnh sửa.",
-          icon: "error",
-        });
+        console.error("❌ Lỗi tải job:", err);
         navigate("/recruiter/jobs");
       } finally {
         setInitialLoading(false);
       }
     };
-
     loadJob();
   }, [isEdit, id, navigate]);
 
-  // Handle thay đổi input (TextInput, SelectInput, MultiSelect, DatePicker)
+  // --- HANDLERS ---
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSalaryTypeChange = (e) => {
-    const value = e.target.value; // "negotiable" | "range"
-    setSalaryType(value);
-    setForm((prev) => ({
-      ...prev,
-      negotiable: value === "negotiable",
-    }));
+  // Logic chuyển đổi kiểu lương (UI Tabs)
+  const setSalaryMode = (mode) => {
+    setSalaryType(mode);
+    setForm((prev) => ({ ...prev, negotiable: mode === "negotiable" }));
   };
 
   const handleSubmit = async () => {
-    // có thể tự check thêm required ở FE, tạm để backend validate
     try {
       setSaving(true);
-
-      // build payload phù hợp DTO backend
       const payload = {
         ...form,
-        // đảm bảo mảng cho các field JSON
         work_modes: form.work_modes || [],
         experience_levels: form.experience_levels || [],
         skill_ids: form.skill_ids || [],
       };
 
-      // xử lý lương theo radio
       if (salaryType === "negotiable") {
         payload.negotiable = true;
-        // không gửi lương cho backend (để backend tự xử lý / giữ nguyên nếu update)
         delete payload.salary_min;
         delete payload.salary_max;
       } else {
         payload.negotiable = false;
-        // để trống thì cho backend báo lỗi theo ValidateIf
         if (payload.salary_min === "") delete payload.salary_min;
         if (payload.salary_max === "") delete payload.salary_max;
       }
 
-      // deadline: nếu rỗng thì bỏ khỏi payload
-      if (!payload.deadline) {
-        delete payload.deadline;
-      }
-
-      // number_of_openings: nếu rỗng thì bỏ, để default = 1
-      if (!payload.number_of_openings) {
-        delete payload.number_of_openings;
-      }
+      if (!payload.deadline) delete payload.deadline;
+      if (!payload.number_of_openings) delete payload.number_of_openings;
 
       if (isEdit) {
         await JobAPI.update(id, payload);
@@ -289,24 +214,18 @@ export default function CreateJobPage() {
 
       await MySwal.fire({
         title: "Thành công!",
-        text: isEdit
-          ? "Công việc đã được cập nhật."
-          : "Công việc đã được tạo.",
+        text: isEdit ? "Cập nhật thành công." : "Tạo công việc mới thành công.",
         icon: "success",
         confirmButtonText: "OK",
+        confirmButtonColor: "#3b82f6",
       });
 
       navigate("/recruiter/jobs");
     } catch (err) {
-      console.error("❌ Lỗi tạo/cập nhật job:", err);
-      console.error("❌ Backend trả về:", err.response?.data);
-      await MySwal.fire({
+      console.error(err);
+      MySwal.fire({
         title: "Lỗi!",
-        text:
-          err?.response?.data?.message ||
-          (isEdit
-            ? "Không thể cập nhật công việc."
-            : "Không thể tạo công việc."),
+        text: err?.response?.data?.message || "Có lỗi xảy ra.",
         icon: "error",
       });
     } finally {
@@ -316,288 +235,283 @@ export default function CreateJobPage() {
 
   if (loadingOptions || (isEdit && initialLoading)) {
     return (
-      <div className="bg-slate-50 p-6 min-h-screen flex items-center justify-center">
-        <p className="text-slate-500">Đang tải dữ liệu...</p>
+      <div className="bg-slate-50 min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-500 font-medium">Đang tải dữ liệu...</p>
+        </div>
       </div>
     );
-    }
+  }
+
+  // --- RENDER HELPERS ---
+  const SectionTitle = ({ icon, title }) => (
+    <div className="flex items-center gap-2 mb-4 border-b border-slate-100 pb-3">
+      <span className="text-xl">{icon}</span>
+      <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+    </div>
+  );
 
   return (
-    <div className="bg-slate-50 p-6 min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">
-                {isEdit ? "Chỉnh sửa công việc" : "Tạo công việc mới"}
-              </h1>
-              <p className="text-sm text-slate-500 mt-1">
-                {isEdit
-                  ? "Cập nhật thông tin công việc."
-                  : "Nhập thông tin công việc để bắt đầu đăng tuyển."}
-              </p>
+    <div className="bg-[#F8FAFC] min-h-screen pb-20 font-sans">
+      {/* --- Sticky Header --- */}
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div className="flex flex-col">
+            <h1 className="text-xl font-bold text-slate-900">
+              {isEdit ? "Chỉnh sửa tin tuyển dụng" : "Đăng tin tuyển dụng mới"}
+            </h1>
+            <p className="text-sm text-slate-500 hidden sm:block">
+              {isEdit ? "Cập nhật thông tin chi tiết cho job" : "Điền đầy đủ thông tin để thu hút ứng viên"}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
+              onClick={() => navigate("/recruiter/jobs")}
+            >
+              Hủy bỏ
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={saving}
+              className="min-w-[120px] shadow-md shadow-blue-500/20"
+            >
+              {saving ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Đang lưu
+                </span>
+              ) : (
+                "Đăng tin"
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* --- Main Content Grid --- */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+          {/* === LEFT COLUMN (MAIN CONTENT) === */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* 1. General Info */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <SectionTitle icon="📝" title="Thông tin chung" />
+              <div className="space-y-6">
+                <TextInput
+                  label="Tiêu đề công việc"
+                  name="title"
+                  value={form.title}
+                  onChange={handleChange}
+                  required
+                  placeholder="VD: Senior Frontend Developer (ReactJS)"
+                  className="text-lg font-medium"
+                />
+
+                {/* Editors */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">Mô tả công việc</label>
+                  <div className="prose max-w-none border border-slate-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
+                    <JoditEditor
+                      value={form.description}
+                      config={editorConfig}
+                      onBlur={(newContent) => setForm((prev) => ({ ...prev, description: newContent }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">Yêu cầu ứng viên</label>
+                  <div className="prose max-w-none border border-slate-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">
+                    <JoditEditor
+                      value={form.requirements}
+                      config={editorConfig}
+                      onBlur={(newContent) => setForm((prev) => ({ ...prev, requirements: newContent }))}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => navigate("/recruiter/jobs")}
-              >
-                Hủy
-              </Button>
-              <Button onClick={handleSubmit} disabled={saving}>
-                {saving ? "Đang lưu..." : "Lưu"}
-              </Button>
+
+            {/* 2. Location */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <SectionTitle icon="📍" title="Địa điểm làm việc" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <TextInput
+                  label="Thành phố / Tỉnh"
+                  name="location_city"
+                  value={form.location_city}
+                  onChange={handleChange}
+                  required
+                  placeholder="VD: Hồ Chí Minh"
+                />
+                <TextInput
+                  label="Quận / Huyện"
+                  name="location_district"
+                  value={form.location_district}
+                  onChange={handleChange}
+                  placeholder="VD: Quận 1"
+                />
+                <TextInput
+                  label="Phường / Xã"
+                  name="location_ward"
+                  value={form.location_ward}
+                  onChange={handleChange}
+                  placeholder="VD: Phường Bến Nghé"
+                />
+                <TextInput
+                  label="Số nhà, Tên đường"
+                  name="location_street"
+                  value={form.location_street}
+                  onChange={handleChange}
+                  placeholder="VD: 123 Nguyễn Huệ"
+                />
+              </div>
             </div>
+
           </div>
 
-          {/* Nội dung form */}
-          <div className="p-6 space-y-6">
-            {/* Thông tin cơ bản */}
-            <Card>
-              <CardHeader icon="📄" title="Thông tin cơ bản" />
-              <CardBody>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <TextInput
-                    label="Tiêu đề công việc"
-                    name="title"
-                    value={form.title}
-                    onChange={handleChange}
-                    required
-                    placeholder="VD: Backend Developer (Node.js)"
-                  />
+          {/* === RIGHT COLUMN (SIDEBAR / METADATA) === */}
+          <div className="lg:col-span-1 space-y-6">
 
+            {/* 3. Publishing Details */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+              <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                🚀 Thông tin đăng tuyển
+              </h4>
+              <div className="space-y-4">
+                <SelectInput
+                  label="Danh mục nghề nghiệp"
+                  name="category_id"
+                  value={form.category_id}
+                  onChange={handleChange}
+                  options={categories}
+                  required
+                  placeholder="-- Chọn danh mục --"
+                />
+
+                <div className="grid grid-cols-2 gap-4">
                   <SelectInput
-                    label="Loại hình công việc"
+                    label="Loại hình"
                     name="employment_type"
                     value={form.employment_type}
                     onChange={handleChange}
-                    placeholder="Chọn loại hình"
                     options={EMPLOYMENT_TYPE_OPTIONS}
                     required
+                    placeholder="-- Chọn --"
                   />
-
                   <TextInput
-                    label="Số lượng cần tuyển"
+                    label="Số lượng"
                     name="number_of_openings"
                     type="number"
                     min={1}
                     value={form.number_of_openings}
                     onChange={handleChange}
-                    placeholder="VD: 3"
-                  />
-                  <SelectInput
-                    label="Danh mục nghề nghiệp"
-                    name="category_id"
-                    value={form.category_id}
-                    onChange={handleChange}
-                    options={categories}
-                    placeholder="Chọn danh mục"
-                    required
                   />
                 </div>
-              </CardBody>
-            </Card>
-
-            {/* Lương + hình thức làm việc + kinh nghiệm */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Lương & Deadline */}
-              <Card>
-                <CardHeader icon="💰" title="Mức lương & Hạn nộp" />
-                <CardBody>
-                  {/* Lương */}
-                  <div className="space-y-3">
-                    <p className="text-sm font-medium text-slate-700">
-                      Mức lương
-                    </p>
-                    <div className="flex flex-col gap-3">
-                      <div className="flex flex-col md:flex-row md:items-center gap-4">
-                        <div className="flex items-center gap-4">
-                          <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-                            <input
-                              type="radio"
-                              name="salaryType"
-                              value="negotiable"
-                              checked={salaryType === "negotiable"}
-                              onChange={handleSalaryTypeChange}
-                              className="w-4 h-4 text-blue-600 border-slate-300"
-                            />
-                            <span>Thỏa thuận</span>
-                          </label>
-
-                          <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-                            <input
-                              type="radio"
-                              name="salaryType"
-                              value="range"
-                              checked={salaryType === "range"}
-                              onChange={handleSalaryTypeChange}
-                              className="w-4 h-4 text-blue-600 border-slate-300"
-                            />
-                            <span>Nhập khoảng lương</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {salaryType === "range" && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <TextInput
-                            label="Lương tối thiểu (VND)"
-                            name="salary_min"
-                            type="number"
-                            value={form.salary_min}
-                            onChange={handleChange}
-                            placeholder="VD: 15000000"
-                          />
-                          <TextInput
-                            label="Lương tối đa (VND)"
-                            name="salary_max"
-                            type="number"
-                            value={form.salary_max}
-                            onChange={handleChange}
-                            placeholder="VD: 25000000"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Deadline */}
-                  <div className="mt-6">
-                    <DatePickerInput
-                      label="Hạn nộp hồ sơ"
-                      name="deadline"
-                      value={form.deadline}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </CardBody>
-              </Card>
-
-              {/* Hình thức làm việc & cấp độ */}
-              <Card>
-                <CardHeader icon="🧩" title="Hình thức làm việc & cấp độ" />
-                <CardBody>
-                  <div className="space-y-4">
-                    <MultiSelect
-                      label="Hình thức làm việc"
-                      name="work_modes"
-                      value={form.work_modes}
-                      onChange={handleChange}
-                      options={WORK_MODE_OPTIONS}
-                      placeholder="Chọn 1 hoặc nhiều hình thức"
-                    />
-
-                    <MultiSelect
-                      label="Cấp độ kinh nghiệm"
-                      name="experience_levels"
-                      value={form.experience_levels}
-                      onChange={handleChange}
-                      options={EXPERIENCE_LEVEL_OPTIONS}
-                      placeholder="Chọn cấp độ kinh nghiệm"
-                    />
-                  </div>
-                </CardBody>
-              </Card>
+              </div>
             </div>
 
-            {/* Địa điểm làm việc */}
-            <Card>
-              <CardHeader icon="📍" title="Địa điểm làm việc" />
-              <CardBody>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <TextInput
-                    label="Thành phố / Tỉnh"
-                    name="location_city"
-                    value={form.location_city}
+            {/* 4. Salary & Deadline */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+              <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                💰 Lương & Hạn nộp
+              </h4>
+              <div className="space-y-5">
+                {/* Custom Salary Switch */}
+                <div className="bg-slate-100 p-1 rounded-lg flex relative">
+                  <button
+                    onClick={() => setSalaryMode("negotiable")}
+                    className={`flex-1 text-sm font-medium py-2 rounded-md transition-all duration-200 ${salaryType === "negotiable"
+                      ? "bg-white text-blue-600 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                      }`}
+                  >
+                    Thỏa thuận
+                  </button>
+                  <button
+                    onClick={() => setSalaryMode("range")}
+                    className={`flex-1 text-sm font-medium py-2 rounded-md transition-all duration-200 ${salaryType === "range"
+                      ? "bg-white text-blue-600 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                      }`}
+                  >
+                    Nhập mức lương
+                  </button>
+                </div>
+
+                {salaryType === "range" && (
+                  <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <TextInput
+                      label="Tối thiểu (VNĐ)"
+                      name="salary_min"
+                      type="number"
+                      value={form.salary_min}
+                      onChange={handleChange}
+                      placeholder="0"
+                    />
+                    <TextInput
+                      label="Tối đa (VNĐ)"
+                      name="salary_max"
+                      type="number"
+                      value={form.salary_max}
+                      onChange={handleChange}
+                      placeholder="0"
+                    />
+                  </div>
+                )}
+
+                <div className="pt-2 border-t border-slate-100">
+                  <DatePickerInput
+                    label="Hạn nộp hồ sơ"
+                    name="deadline"
+                    value={form.deadline}
                     onChange={handleChange}
-                    required
-                    placeholder="VD: TP.HCM"
-                  />
-                  <TextInput
-                    label="Quận / Huyện"
-                    name="location_district"
-                    value={form.location_district}
-                    onChange={handleChange}
-                    placeholder="VD: Quận 1"
-                  />
-                  <TextInput
-                    label="Phường / Xã"
-                    name="location_ward"
-                    value={form.location_ward}
-                    onChange={handleChange}
-                    placeholder="VD: Phường Bến Nghé"
-                  />
-                  <TextInput
-                    label="Số nhà, Đường"
-                    name="location_street"
-                    value={form.location_street}
-                    onChange={handleChange}
-                    placeholder="VD: 123 Nguyễn Huệ"
                   />
                 </div>
-              </CardBody>
-            </Card>
+              </div>
+            </div>
 
-            {/* Mô tả & Yêu cầu */}
-            <Card>
-              <CardHeader icon="📝" title="Mô tả & Yêu cầu" />
-              <CardBody>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-700">
-                      Mô tả công việc
-                    </p>
-                    <div className="border rounded-2xl bg-white shadow-sm p-2 hover:shadow-md transition-all">
-                      <JoditEditor
-                        value={form.description}
-                        config={editorConfig}
-                        onBlur={(newContent) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            description: newContent,
-                          }))
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-700">
-                      Yêu cầu ứng viên
-                    </p>
-                    <div className="border rounded-2xl bg-white shadow-sm p-2 hover:shadow-md transition-all">
-                      <JoditEditor
-                        value={form.requirements}
-                        config={editorConfig}
-                        onBlur={(newContent) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            requirements: newContent,
-                          }))
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-              </CardBody>
-            </Card>
-
-            {/* Kỹ năng liên quan */}
-            <Card>
-              <CardHeader icon="🛠️" title="Kỹ năng liên quan" />
-              <CardBody>
+            {/* 5. Attributes (Skills, Levels, Modes) */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+              <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                🎯 Yêu cầu chi tiết
+              </h4>
+              <div className="space-y-5">
                 <MultiSelect
-                  label="Chọn kỹ năng / công nghệ"
+                  label="Kỹ năng chuyên môn"
                   name="skill_ids"
                   value={form.skill_ids}
                   onChange={handleChange}
                   options={skills}
-                  placeholder="Chọn các kỹ năng mà job yêu cầu"
+                  placeholder="Chọn kỹ năng..."
                 />
-              </CardBody>
-            </Card>
-          </div>
+
+                <MultiSelect
+                  label="Cấp độ kinh nghiệm"
+                  name="experience_levels"
+                  value={form.experience_levels}
+                  onChange={handleChange}
+                  options={EXPERIENCE_LEVEL_OPTIONS}
+                  placeholder="Chọn cấp độ..."
+                />
+
+                <MultiSelect
+                  label="Hình thức làm việc"
+                  name="work_modes"
+                  value={form.work_modes}
+                  onChange={handleChange}
+                  options={WORK_MODE_OPTIONS}
+                  placeholder="Chọn hình thức..."
+                />
+              </div>
+            </div>
+
+          </div> {/* End Right Column */}
         </div>
       </div>
     </div>

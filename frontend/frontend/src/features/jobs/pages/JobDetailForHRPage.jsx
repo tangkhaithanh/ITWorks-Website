@@ -294,10 +294,9 @@ export default function JobDetailForHRPage() {
             {/* Action Toolbar */}
             <div className="flex items-center gap-2">
               <Button
-                variant="white"
+                variant="primary"
                 size="sm"
                 onClick={() => navigate(`/recruiter/jobs/${job.id}/dashboard`)}
-                className="h-8 text-xs gap-1.5 border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-200 shadow-sm"
               >
                 <BarChart3 className="h-3.5 w-3.5" /> Thống kê
               </Button>
