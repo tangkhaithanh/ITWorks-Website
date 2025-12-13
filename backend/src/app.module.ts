@@ -19,6 +19,8 @@ import { IndustryModule } from './modules/industries/industry.module';
 import { UsersModule } from './modules/user/user.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AccountModule } from './modules/account/account.module';
+import { PlansModule } from './modules/plans/plans.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import databaseConfig from '@/config/database.config';
 import jwtConfig from '@/config/jwt.config';
 import mailerConfig from '@/config/mailer.config';
@@ -54,6 +56,8 @@ import mailerConfig from '@/config/mailer.config';
     UsersModule,
     DashboardModule,
     AccountModule,
+    PlansModule,
+    PaymentsModule,
   ],
 })
 export class AppModule { }

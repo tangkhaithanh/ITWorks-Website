@@ -139,6 +139,11 @@ model Company {
   account    Account  @relation(fields: [account_id], references: [id])
   jobs       Job[]
   statistics RecruiterStatistic[]
+  companyPlan        CompanyPlan?
+  companyPlanHistory CompanyPlanHistory[]
+  paymentOrders      PaymentOrder[]
+  jobBoosts          JobBoost[]
+  creditTransactions CreditTransaction[]
 }
 
 
@@ -220,6 +225,8 @@ model Job {
   applications Application[]
   saved_jobs   SavedJob[]
   skills       JobSkill[]
+  boosts       JobBoost[]
+  creditTransactions CreditTransaction[]
 }
 
 model JobDetail {
@@ -470,5 +477,206 @@ enum InterviewMode {
   online
   offline
 }
+// 16. Plans:
+model Plan {
+  id             BigInt  @id @default(autoincrement())
+  name           String
+  price          BigInt
+  job_limit      Int
+  credit_amount  Int
+  duration_days  Int
+  features       String? @db.LongText
+
+  is_hidden      Boolean @default(false)
+
+  companyPlans   CompanyPlan[]
+  histories      CompanyPlanHistory[]
+  paymentOrders  PaymentOrder[]
+  creditTransactions CreditTransaction[]
+
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+}
+
+// CompanyPlan:
+model CompanyPlan {
+  id            BigInt   @id @default(autoincrement())
+  company_id    BigInt   @unique
+  plan_id       BigInt
+
+  // thời gian hiệu lực của "bucket current"
+  start_date    DateTime
+  end_date      DateTime
+
+  // SNAPSHOT tại thời điểm mua (không phụ thuộc Plan bị sửa sau này)
+  purchased_price        BigInt
+  job_limit_snapshot     Int
+  credit_amount_snapshot Int
+
+  // usage
+  jobs_left     Int
+  order_id      BigInt? @unique
+  credits_left  Int
+
+  status        PlanStatus @default(active)
+
+  company Company @relation(fields: [company_id], references: [id])
+  plan    Plan    @relation(fields: [plan_id], references: [id])
+  order    PaymentOrder? @relation(fields: [order_id], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([company_id, status, end_date])
+}
+
+
+enum PlanStatus {
+  active
+  expired
+  cancelled
+}
+// Company Plan History
+model CompanyPlanHistory {
+  id              BigInt   @id @default(autoincrement())
+  company_id      BigInt
+  plan_id         BigInt
+
+  // SNAPSHOT tại thời điểm mua / lúc bucket được tạo
+  purchased_price        BigInt
+  job_limit_snapshot     Int
+  credit_amount_snapshot Int
+
+  start_date      DateTime
+  end_date        DateTime
+
+  // usage
+  jobs_used       Int
+  credits_used    Int
+
+  status          PlanHistoryStatus
+  order_id        BigInt?
+
+  company Company @relation(fields: [company_id], references: [id])
+  plan    Plan    @relation(fields: [plan_id], references: [id])
+  order   PaymentOrder? @relation(fields: [order_id], references: [id])
+
+  created_at DateTime @default(now())
+
+  @@index([company_id, status, end_date, created_at])
+}
+
+
+enum PlanHistoryStatus {
+  completed
+  expired
+  cancelled
+}
+
+// Payment order- phục vụ cho trang checkout:
+model PaymentOrder {
+  id              BigInt   @id @default(autoincrement())
+  company_id      BigInt
+  plan_id         BigInt
+
+  amount          BigInt
+  payment_method  PaymentMethod @default(vnpay)
+
+  status          PaymentStatus  @default(pending)
+
+  vnp_txn_ref     String?        // vnp_TxnRef
+  vnp_transaction_no String?     // mã GD VNPAY
+  vnp_response_code String?
+
+  paid_at         DateTime?
+  expired_at      DateTime?
+
+  company Company @relation(fields: [company_id], references: [id])
+  plan    Plan    @relation(fields: [plan_id], references: [id])
+  histories CompanyPlanHistory[]
+  companyPlan       CompanyPlan?
+  creditTransactions CreditTransaction[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  cancelled
+  expired
+}
+
+enum PaymentMethod {
+  vnpay
+}
+// Boost Job rule:
+model BoostRule {
+  id        BigInt @id @default(autoincrement())
+  tier      BoostTier
+  credits   Int
+  duration_days Int
+
+  created_at DateTime @default(now())
+}
+
+enum BoostTier {
+  top_100
+  top_50
+  top_30
+  top_10
+}
+// Job boost history:
+model JobBoost {
+  id         BigInt @id @default(autoincrement())
+  job_id     BigInt
+  company_id BigInt
+
+  tier       BoostTier
+  credits    Int
+
+  start_at   DateTime
+  end_at     DateTime
+  status     BoostStatus @default(active)
+
+  job     Job     @relation(fields: [job_id], references: [id])
+  company Company @relation(fields: [company_id], references: [id])
+
+  created_at DateTime @default(now())
+}
+
+enum BoostStatus {
+  active
+  expired
+  cancelled
+}
+
+// CREDIT TRANSACTION - log cộng trừ / cộng redit:
+model CreditTransaction {
+  id          BigInt @id @default(autoincrement())
+  company_id  BigInt
+
+  amount      Int              // + hoặc -
+  type        CreditTxnType
+  job_id      BigInt?
+  order_id    BigInt?
+  plan_id     BigInt?
+
+  created_at  DateTime @default(now())
+
+  company Company @relation(fields: [company_id], references: [id])
+  order   PaymentOrder? @relation(fields: [order_id], references: [id])
+  plan    Plan?         @relation(fields: [plan_id], references: [id])
+  job     Job?          @relation(fields: [job_id], references: [id])
+}
+
+enum CreditTxnType {
+  grant       // cấp khi mua plan
+  boost       // trừ khi boost job
+  refund
+}
+
 
 
