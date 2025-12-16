@@ -133,4 +133,25 @@ export class PlansService {
             throw error;
         }
     }
+    async show(id: bigint) {
+        try {
+            const plan = await this.findOne(id, true);
+
+            if (!plan.is_hidden) {
+                throw new BadRequestException('Plan đang được hiển thị');
+            }
+
+            await this.prisma.plan.update({
+                where: { id },
+                data: { is_hidden: false },
+            });
+
+            return {
+                message: 'Hiện plan thành công',
+            };
+        } catch (error) {
+            console.log(error);
+            throw error;
+        }
+    }
 }

@@ -8,10 +8,11 @@ import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { User } from '@/common/decorators/user.decorator';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
+import { AdminDashboardQueryDto } from './dto/admin-dashboard-query.dto';
 @Controller('dashboard')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class DashboardController {
-  constructor(private readonly dashboardService: DashboardService) {}
+  constructor(private readonly dashboardService: DashboardService) { }
 
   /**
    * GET /recruiter/dashboard
@@ -31,5 +32,11 @@ export class DashboardController {
     // const accountId = Number(req.user.id);
 
     return this.dashboardService.getRecruiterDashboard(accountId, query);
+  }
+
+  @Get('admin')
+  @Roles('admin')
+  async getAdminDashboard(@Query() query: AdminDashboardQueryDto) {
+    return this.dashboardService.getAdminDashboard(query);
   }
 }

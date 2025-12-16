@@ -28,6 +28,12 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import ManageAccountPage from "../features/admin/pages/ManageAccountPage";
 import ManageCompanyForAdmin from "../features/companies/pages/ManageCompanyForAdmin";
 import AdminCompanyDetailPage from "../features/companies/pages/AdminCompanyDetailPage";
+import ManagePlanPage from "../features/admin/pages/ManagePlanPage";
+import UpgradePlanPage from "../pages/UpgradePlanPage";
+import PaymentResultPage from "../pages/PaymentResultPage";
+import UsagePage from "../features/companies/pages/UsagePage";
+import ManageOrderPage from "../features/companies/pages/ManageOrderPage";
+import AdminDashboardPage from "../features/admin/pages/AdminDashboardPage";
 import { Navigate } from "react-router-dom";
 const router = createBrowserRouter([
   {
@@ -100,7 +106,11 @@ const router = createBrowserRouter([
       { path: "jobs/:id", element: <JobDetailForHRPage /> },
       { path: "jobs/create", element: <CreateJobPage /> },
       { path: "jobs/:id/edit", element: <CreateJobPage /> },
-      { path: "jobs/:id/dashboard", element: <JobDashboardForHRPage /> }
+      { path: "jobs/:id/dashboard", element: <JobDashboardForHRPage /> },
+      { path: "upgrade-plan", element: <UpgradePlanPage /> },
+      { path: "payment-result", element: <PaymentResultPage /> },
+      { path: "usage", element: <UsagePage /> },
+      { path: "orders", element: <ManageOrderPage /> },
     ],
   },
   {
@@ -111,9 +121,15 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
+      {
+        index: true, // 👈 TRANG MẶC ĐỊNH /admin
+        element: <Navigate to="dashboard" replace />,
+      },
+      { path: "dashboard", element: <AdminDashboardPage /> },
       { path: "accounts", element: <ManageAccountPage /> },
       { path: "companies", element: <ManageCompanyForAdmin /> },
       { path: "companies/:id", element: <AdminCompanyDetailPage /> },
+      { path: "plans", element: <ManagePlanPage /> }
     ],
   },
 ]);

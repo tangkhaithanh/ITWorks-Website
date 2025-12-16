@@ -7,7 +7,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { CompaniesPlansService } from '../companies/companiesPlans.service';
 import { VnpayService } from './vnpay.service';
 import { PaymentStatus } from '@prisma/client';
-
+import { QueryPaymentOrdersDto } from './dto/query-payment-orders.dto';
 @Injectable()
 export class PaymentsService {
     constructor(
@@ -157,6 +157,103 @@ export class PaymentsService {
             status: isSuccess ? 'paid' : 'failed',
             vnp_response_code: responseCode,
             vnp_transaction_no: vnp.vnp_TransactionNo ?? null,
+        };
+    }
+    async getOrdersByRecruiter(
+        accountId: bigint,
+        query: QueryPaymentOrdersDto,
+    ) {
+        const {
+            keyword,
+            status,
+            page = 1,
+            limit = 10,
+        } = query;
+
+        const company = await this.prisma.company.findFirst({
+            where: { account_id: accountId },
+            select: { id: true },
+        });
+
+        if (!company) {
+            throw new NotFoundException('Company not found');
+        }
+
+        const skip = (page - 1) * limit;
+
+        const where: any = {
+            company_id: company.id,
+        };
+
+        // ✅ Filter status
+        if (status) {
+            where.status = status;
+        }
+
+        // ✅ Keyword search
+        if (keyword) {
+            const orConditions: any[] = [];
+
+            // search theo order id (nếu là số)
+            if (/^\d+$/.test(keyword)) {
+                orConditions.push({
+                    id: BigInt(keyword),
+                });
+            }
+
+            // search theo vnp txn ref
+            orConditions.push({
+                vnp_txn_ref: { contains: keyword },
+            });
+
+            // search theo tên plan
+            orConditions.push({
+                plan: {
+                    name: { contains: keyword },
+                },
+            });
+
+            where.OR = orConditions;
+        }
+
+        const [total, orders] = await Promise.all([
+            this.prisma.paymentOrder.count({ where }),
+            this.prisma.paymentOrder.findMany({
+                where,
+                include: { plan: true },
+                orderBy: { created_at: 'desc' },
+                skip,
+                take: limit,
+            }),
+        ]);
+
+        return {
+            meta: {
+                page,
+                limit,
+                total,
+                total_pages: Math.ceil(total / limit),
+            },
+            data: orders.map((o) => ({
+                id: o.id.toString(),
+                status: o.status,
+                amount: o.amount.toString(),
+                payment_method: o.payment_method,
+                created_at: o.created_at,
+                paid_at: o.paid_at,
+                expired_at: o.expired_at,
+                vnp: {
+                    txn_ref: o.vnp_txn_ref,
+                    transaction_no: o.vnp_transaction_no,
+                    response_code: o.vnp_response_code,
+                },
+                plan: {
+                    id: o.plan.id.toString(),
+                    name: o.plan.name,
+                    price: o.plan.price.toString(),
+                    duration_days: o.plan.duration_days,
+                },
+            })),
         };
     }
 

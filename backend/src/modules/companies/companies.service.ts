@@ -117,9 +117,8 @@ export class CompaniesService {
         );
         updateData.license_file_url = uploadedLicense.secure_url;
         updateData.license_file_public_id = uploadedLicense.public_id;
-        updateData.status = CompanyStatus.pending;
       }
-
+      updateData.status = CompanyStatus.pending;
       // UPDATE COMPANY
       const updated = await this.prisma.company.update({
         where: { id },

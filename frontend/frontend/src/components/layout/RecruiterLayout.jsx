@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
+import CompanyPlanAPI from "../../features/companies/CompanyPlanAPI";
 import {
   LogOut,
   FileText,
@@ -9,9 +10,12 @@ import {
   Building2,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  Receipt
 } from "lucide-react";
 import logo from "@/assets/images/logo.png";
+import { Gauge } from "lucide-react";
+import { Crown } from "lucide-react";
 import { logout } from "@/features/auth/authSlice";
 
 // ============================
@@ -22,6 +26,8 @@ const NAV_ITEMS = [
   { path: "/recruiter/cv", label: "Quản lý CV", icon: FileText },
   { path: "/recruiter/jobs", label: "Tin tuyển dụng", icon: BriefcaseBusiness },
   { path: "/recruiter/company", label: "Hồ sơ công ty", icon: Building2 },
+  { path: "/recruiter/orders", label: "Quản lý đơn hàng", icon: Receipt },
+  { path: "/recruiter/upgrade-plan", label: "Nâng cấp gói", icon: Crown },
 ];
 
 export default function RecruiterLayout() {
@@ -29,6 +35,7 @@ export default function RecruiterLayout() {
   const { user } = useSelector((state) => state.auth);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState(null);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -38,7 +45,19 @@ export default function RecruiterLayout() {
   //     — KHÔNG return Navigate để tránh lỗi hooks
   // ============================
 
+  useEffect(() => {
+    const fetchCompanyPlan = async () => {
+      try {
+        const res = await CompanyPlanAPI.getCurrentSummary();
+        setCurrentPlan(res?.data?.data || null);
+      } catch (err) {
+        console.error("Failed to load company plan", err);
+        setCurrentPlan(null);
+      }
+    };
 
+    fetchCompanyPlan();
+  }, []);
   // Đóng sidebar khi đổi route
   useEffect(() => {
     setIsSidebarOpen(false);
@@ -47,6 +66,7 @@ export default function RecruiterLayout() {
   const handleLogout = () => {
     dispatch(logout());
   };
+
 
   return (
     <div className="flex min-h-screen bg-slate-50/50 font-sans text-slate-900">
@@ -98,6 +118,9 @@ export default function RecruiterLayout() {
               <p className="text-xs text-slate-500 truncate">
                 {user?.email}
               </p>
+              <p className="mt-1 text-[11px] font-semibold truncate text-blue-600">
+                {currentPlan?.current_plan?.name || "Free"}
+              </p>
             </div>
           </div>
 
@@ -132,6 +155,34 @@ export default function RecruiterLayout() {
                 )}
               </NavLink>
             ))}
+            {currentPlan && (
+              <NavLink
+                to="/recruiter/usage"
+                className={({ isActive }) => `
+        group flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200
+        ${isActive
+                    ? "bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  }
+      `}
+              >
+                {({ isActive }) => (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <Gauge
+                        className={`w-5 h-5 ${isActive
+                          ? "text-blue-600"
+                          : "text-slate-400 group-hover:text-slate-600"
+                          }`}
+                      />
+                      <span>Giới hạn sử dụng</span>
+                    </div>
+
+                    {isActive && <ChevronRight className="w-4 h-4 text-blue-400" />}
+                  </>
+                )}
+              </NavLink>
+            )}
           </nav>
 
           {/* Logout */}

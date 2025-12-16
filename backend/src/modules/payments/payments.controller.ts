@@ -18,7 +18,7 @@ import { Roles } from '@/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { User } from '@/common/decorators/user.decorator';
 import { Public } from '@/common/decorators/public.decorator';
-
+import { QueryPaymentOrdersDto } from './dto/query-payment-orders.dto';
 @Controller('payments')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class PaymentsController {
@@ -52,28 +52,25 @@ export class PaymentsController {
     @Public()
     @Get('vnpay/return')
     async vnpayReturn(@Query() query: any, @Res() res: any) {
+        const fe = this.config.get<string>('FRONTEND_PAYMENT_RESULT_URL');
+
         try {
             const result = await this.payments.processVnpayCallback(query);
-            const fe = this.config.get<string>('FRONTEND_PAYMENT_RESULT_URL') ?? '';
 
-            if (fe) {
-                return res.redirect(
-                    `${fe}?order_id=${result.order_id}&status=${result.status}`,
-                );
-            }
-
-            return res.json(result);
+            // ✅ SUCCESS hoặc FAILED đều redirect
+            return res.redirect(
+                `${fe}?order_id=${result.order_id}&status=${result.status}`,
+            );
         } catch (e: any) {
-            const fe = this.config.get<string>('FRONTEND_PAYMENT_RESULT_URL') ?? '';
-            if (fe) {
-                return res.redirect(`${fe}?status=failed`);
-            }
+            console.error('VNPAY RETURN ERROR:', e?.message);
 
-            return res
-                .status(400)
-                .json({ status: 'failed', message: e?.message ?? 'Return error' });
+            // ✅ KỂ CẢ LỖI → vẫn redirect về FE
+            return res.redirect(
+                `${fe}?status=failed`
+            );
         }
     }
+
 
     // =========================
     // VNPAY IPN (Public)
@@ -87,6 +84,14 @@ export class PaymentsController {
         } catch (e: any) {
             return { RspCode: '99', Message: e?.message ?? 'fail' };
         }
+    }
+    @Get('orders')
+    @Roles(Role.recruiter)
+    getMyOrders(
+        @User('accountId') accountId: bigint,
+        @Query() query: QueryPaymentOrdersDto,
+    ) {
+        return this.payments.getOrdersByRecruiter(accountId, query);
     }
 
     // =========================

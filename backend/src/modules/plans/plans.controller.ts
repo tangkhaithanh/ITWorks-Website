@@ -5,6 +5,7 @@ import {
     Get,
     Param,
     ParseIntPipe,
+    Patch,
     Post,
     Put,
     Query,
@@ -75,7 +76,7 @@ export class PlansController {
     }
 
     // Admin: cập nhật plan
-    @Put(':id')
+    @Patch(':id')
     @Roles(Role.admin)
     async update(
         @Param('id', ParseIntPipe) id: number,
@@ -91,5 +92,13 @@ export class PlansController {
         @Param('id', ParseIntPipe) id: number,
     ) {
         return this.plansService.remove(BigInt(id));
+    }
+
+    @Patch(':id')
+    @Roles(Role.admin)
+    async show(
+        @Param('id', ParseIntPipe) id: number,
+    ) {
+        return this.plansService.show(BigInt(id));
     }
 }

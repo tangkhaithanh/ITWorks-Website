@@ -10,7 +10,8 @@ import {
     Menu,
     X,
     ChevronRight,
-    User
+    User,
+    Tag,
 } from "lucide-react";
 import logo from "@/assets/images/logo.png";
 import { logout } from "@/features/auth/authSlice";
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
     { path: "/admin/dashboard", label: "Tổng quan", icon: LayoutDashboard },
     { path: "/admin/accounts", label: "Quản lý tài khoản", icon: User },
     { path: "/admin/companies", label: "Quản lý công ty", icon: Building2 },
+    { path: "/admin/plans", label: "Quản lý gói", icon: Tag },
 ];
 
 export default function AdminLayout() {
