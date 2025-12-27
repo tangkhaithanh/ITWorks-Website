@@ -49,7 +49,9 @@ export class InterviewOwnershipGuard implements CanActivate {
 
     // 2) Check recruiter có đúng công ty sở hữu job?
     if (ownerAccountId !== user.accountId) {
-      throw new ForbiddenException('Bạn không có quyền thao tác lịch phỏng vấn này');
+      throw new ForbiddenException(
+        'Bạn không có quyền thao tác lịch phỏng vấn này',
+      );
     }
 
     // 3) Attach interview cho controller nếu muốn dùng

@@ -3,13 +3,17 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CloudinaryService } from '@/modules/cloudinary/cloudinary.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 @Injectable()
-export class UsersService{
-    constructor(
+export class UsersService {
+  constructor(
     private prisma: PrismaService,
     private cloudinary: CloudinaryService,
   ) {}
 
-  async update(accountId: bigint, dto: UpdateUserDto, avatar?: Express.Multer.File) {
+  async update(
+    accountId: bigint,
+    dto: UpdateUserDto,
+    avatar?: Express.Multer.File,
+  ) {
     const user = await this.prisma.user.findUnique({
       where: { account_id: accountId },
     });
@@ -18,7 +22,7 @@ export class UsersService{
 
     const DEFAULT_AVATAR_PUBLIC_ID = process.env.DEFAULT_AVATAR_PUBLIC_ID;
 
-    let updatePayload: any = { ...dto };
+    const updatePayload: any = { ...dto };
 
     // Convert dob nếu cần
     if (dto.dob) {

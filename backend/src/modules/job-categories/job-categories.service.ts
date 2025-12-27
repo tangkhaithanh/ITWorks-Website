@@ -1,5 +1,9 @@
 // src/modules/job-categories/job-categories.service.ts
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 
 @Injectable()
@@ -13,7 +17,9 @@ export class JobCategoriesService {
   }
 
   async create(name: string) {
-    const exists = await this.prisma.jobCategory.findUnique({ where: { name } });
+    const exists = await this.prisma.jobCategory.findUnique({
+      where: { name },
+    });
     if (exists) throw new BadRequestException('Danh mục đã tồn tại');
     return this.prisma.jobCategory.create({ data: { name } });
   }

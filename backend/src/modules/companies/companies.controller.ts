@@ -19,7 +19,7 @@ import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { User } from '@/common/decorators/user.decorator';
-import { Public } from "@/common/decorators/public.decorator";
+import { Public } from '@/common/decorators/public.decorator';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { CompanyOwnershipGuard } from '@/common/guards/company-ownership.guard';
 import { Req } from '@nestjs/common';
@@ -27,7 +27,7 @@ import { AdminGetCompaniesDto } from './dto/admin-get-companies.dto';
 @Controller('companies')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CompaniesController {
-  constructor(private readonly companiesService: CompaniesService) { }
+  constructor(private readonly companiesService: CompaniesService) {}
 
   // =========================
   // CREATE COMPANY (Recruiter)
@@ -43,7 +43,10 @@ export class CompaniesController {
       {
         limits: { fileSize: 5 * 1024 * 1024 },
         fileFilter: (req, file, cb) => {
-          if (file.fieldname === 'logo' && !file.mimetype.match(/\/(jpg|jpeg|png)$/))
+          if (
+            file.fieldname === 'logo' &&
+            !file.mimetype.match(/\/(jpg|jpeg|png)$/)
+          )
             return cb(new BadRequestException('Logo phải JPG/PNG'), false);
 
           if (file.fieldname === 'licenseFile' && !file.mimetype.match(/pdf$/))
@@ -82,7 +85,10 @@ export class CompaniesController {
       {
         limits: { fileSize: 5 * 1024 * 1024 },
         fileFilter: (req, file, cb) => {
-          if (file.fieldname === 'logo' && !file.mimetype.match(/\/(jpg|jpeg|png)$/))
+          if (
+            file.fieldname === 'logo' &&
+            !file.mimetype.match(/\/(jpg|jpeg|png)$/)
+          )
             return cb(new BadRequestException('Logo phải JPG/PNG'), false);
 
           const allowedFiles = [
@@ -90,8 +96,14 @@ export class CompaniesController {
             'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           ];
-          if (file.fieldname === 'licenseFile' && !allowedFiles.includes(file.mimetype))
-            return cb(new BadRequestException('Giấy phép phải PDF/DOC/DOCX'), false);
+          if (
+            file.fieldname === 'licenseFile' &&
+            !allowedFiles.includes(file.mimetype)
+          )
+            return cb(
+              new BadRequestException('Giấy phép phải PDF/DOC/DOCX'),
+              false,
+            );
 
           cb(null, true);
         },

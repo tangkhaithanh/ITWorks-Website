@@ -1,12 +1,12 @@
-import { 
-    Body,
-    Controller,
-    Get,
-    Param,
-    ParseIntPipe,
-    Patch,
-    Post,
-    UseGuards,
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  UseGuards,
 } from '@nestjs/common';
 import { InterviewService } from './interview.service';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -22,33 +22,32 @@ import { InterviewOwnershipGuard } from '@/common/guards/interview-ownership.gua
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.recruiter)
 export class InterviewController {
+  constructor(private readonly interviewService: InterviewService) {}
 
-    constructor(private readonly interviewService: InterviewService) {}
+  @Post()
+  async create(
+    @User('accountId') accountId: bigint,
+    @Body() dto: CreateInterviewDto,
+  ) {
+    return this.interviewService.createInterview(accountId, dto);
+  }
 
-    @Post()
-    async create(
-        @User('accountId') accountId: bigint,
-        @Body() dto: CreateInterviewDto,
-    ) {
-        return this.interviewService.createInterview(accountId, dto);
-    }
+  @Patch(':id')
+  @UseGuards(InterviewOwnershipGuard)
+  async update(
+    @User('accountId') accountId: bigint,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateInterviewDto,
+  ) {
+    return this.interviewService.updateInterview(accountId, BigInt(id), dto);
+  }
 
-    @Patch(':id')
-    @UseGuards(InterviewOwnershipGuard)
-    async update(
-        @User('accountId') accountId: bigint,
-        @Param('id', ParseIntPipe) id: number,
-        @Body() dto: UpdateInterviewDto,
-    ) {
-        return this.interviewService.updateInterview(accountId, BigInt(id), dto);
-    }
-
-    @Patch(':id/cancel')
-    @UseGuards(InterviewOwnershipGuard)
-    async cancel(
-        @User('accountId') accountId: bigint,
-        @Param('id', ParseIntPipe) id: number,
-    ) {
-        return this.interviewService.cancelInterview(accountId, BigInt(id));
-    }
+  @Patch(':id/cancel')
+  @UseGuards(InterviewOwnershipGuard)
+  async cancel(
+    @User('accountId') accountId: bigint,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.interviewService.cancelInterview(accountId, BigInt(id));
+  }
 }

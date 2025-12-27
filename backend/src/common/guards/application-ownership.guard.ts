@@ -43,7 +43,9 @@ export class ApplicationOwnershipGuard implements CanActivate {
 
     // 2) Check recruiter có đúng công ty không
     if (ownerAccountId !== user.accountId) {
-      throw new ForbiddenException('Bạn không có quyền thao tác đơn ứng tuyển này');
+      throw new ForbiddenException(
+        'Bạn không có quyền thao tác đơn ứng tuyển này',
+      );
     }
 
     req.application = application; // attach data nếu cần

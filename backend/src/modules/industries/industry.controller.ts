@@ -1,7 +1,13 @@
-import { 
-  Controller, Get, Post, Patch, Delete,
-  Param, Body, ParseIntPipe, 
-  UseGuards
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { IndustryService } from './industry.service';
 import { CreateIndustryDto } from './dto/create-industry.dto';

@@ -1,65 +1,86 @@
-import { Controller, Post, Body, Res, Query, UseGuards, Get, Req } from "@nestjs/common";
-import { AuthService } from "./auth.service";
-import { RegisterUserDto } from "./dto/register.dto";
-import type { Response } from "express";
-import { LoginDTO } from "./dto/login.dto";
+import {
+  Controller,
+  Post,
+  Body,
+  Res,
+  Query,
+  UseGuards,
+  Get,
+  Req,
+} from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { RegisterUserDto } from './dto/register.dto';
+import type { Response } from 'express';
+import { LoginDTO } from './dto/login.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { User } from "../../common/decorators/user.decorator";
-import type { Request } from "express";
+import { User } from '../../common/decorators/user.decorator';
+import type { Request } from 'express';
 @Controller('auth')
 export class AuthController {
-    constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
-    @Post('login')
-    async login(@Body() dto: LoginDTO, @Res({ passthrough: true }) res: Response) {
-        return this.authService.login(dto, res);
-    }
-    
-    @Post('register-candidate')
-    async registerCandidate(@Body() dto: RegisterUserDto) {
-        return this.authService.registerCandidate(dto);
-    }
+  @Post('login')
+  async login(
+    @Body() dto: LoginDTO,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.login(dto, res);
+  }
 
-    @Post('register-recruiter')
-    async registerRecruiter(@Body() dto: RegisterUserDto) {
-        return this.authService.registerRecruiter(dto);
-    }
+  @Post('register-candidate')
+  async registerCandidate(@Body() dto: RegisterUserDto) {
+    return this.authService.registerCandidate(dto);
+  }
 
-    @Get('verify-email')
-    async verifyEmail(@Query('token') token: string) {
-        return this.authService.verifyEmail(token);
-    }
+  @Post('register-recruiter')
+  async registerRecruiter(@Body() dto: RegisterUserDto) {
+    return this.authService.registerRecruiter(dto);
+  }
 
-    @Post('request-send')
-    async sendResetPasswordEmail(@Body('email') email: string) {
-        return this.authService.sendResetPasswordEmail(email);
-    }
+  @Get('verify-email')
+  async verifyEmail(@Query('token') token: string) {
+    return this.authService.verifyEmail(token);
+  }
 
-    @Post('reset-password')
-    async resetPassword(@Body('token') token: string, @Body('newPassword') newPassword: string) {
-        return this.authService.resetPassword(token, newPassword);
-    }
+  @Post('request-send')
+  async sendResetPasswordEmail(@Body('email') email: string) {
+    return this.authService.sendResetPasswordEmail(email);
+  }
 
-    @Get('me')
-    @UseGuards(JwtAuthGuard)
-    async getMe(@User('accountId') accountId: bigint) {
+  @Post('reset-password')
+  async resetPassword(
+    @Body('token') token: string,
+    @Body('newPassword') newPassword: string,
+  ) {
+    return this.authService.resetPassword(token, newPassword);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async getMe(@User('accountId') accountId: bigint) {
     console.log('👉 Controller getMe với accountId:', accountId);
     return this.authService.getMe(accountId);
-    }
-    
-    @Post('logout')
-    @UseGuards(JwtAuthGuard) // dùng access token còn sống, hoặc gọi ngay sau refresh
-    async logout(@User('accountId') accountId: bigint, @Res({ passthrough: true }) res: Response) {
-        return this.authService.logout(accountId, res);
-    }
+  }
 
-    @Post('verify-reset-token')
-    async verifyResetToken(@Body('token') token: string) {
+  @Post('logout')
+  @UseGuards(JwtAuthGuard) // dùng access token còn sống, hoặc gọi ngay sau refresh
+  async logout(
+    @User('accountId') accountId: bigint,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.logout(accountId, res);
+  }
+
+  @Post('verify-reset-token')
+  async verifyResetToken(@Body('token') token: string) {
     return this.authService.verifyResetToken(token);
-    }
+  }
 
-    @Post('refresh')
-    async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-        return this.authService.refresh(req, res);
-    }
+  @Post('refresh')
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.refresh(req, res);
+  }
 }

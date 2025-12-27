@@ -1,4 +1,13 @@
-import { Controller, Post, Delete, Get, Body, Param, UseGuards, Patch } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Delete,
+  Get,
+  Body,
+  Param,
+  UseGuards,
+  Patch,
+} from '@nestjs/common';
 import { CandidatesService } from './candidates.service';
 import { SaveJobDto } from './dto/saved-job.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -21,7 +30,10 @@ export class CandidatesController {
   }
 
   @Delete('saved-jobs/:jobId')
-  async unsaveJob(@User('userId') userId: bigint, @Param('jobId') jobId: string) {
+  async unsaveJob(
+    @User('userId') userId: bigint,
+    @Param('jobId') jobId: string,
+  ) {
     return this.candidatesService.unsaveJob(userId, BigInt(jobId));
   }
 
@@ -31,12 +43,18 @@ export class CandidatesController {
   }
 
   @Get('saved-jobs/:jobId/check')
-  async checkSavedJob(@User('userId') userId: bigint, @Param('jobId') jobId: string) {
+  async checkSavedJob(
+    @User('userId') userId: bigint,
+    @Param('jobId') jobId: string,
+  ) {
     return this.candidatesService.checkSavedJob(userId, BigInt(jobId));
   }
 
   @Post()
-  async create(@User('userId') userId: bigint, @Body() dto: CreateCandidateDto) {
+  async create(
+    @User('userId') userId: bigint,
+    @Body() dto: CreateCandidateDto,
+  ) {
     return this.candidatesService.create(userId, dto);
   }
 

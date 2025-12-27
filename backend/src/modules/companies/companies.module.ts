@@ -30,4 +30,4 @@ import { CompaniesPlansService } from './companiesPlans.service';
     CompaniesPlansService, // ✅ export để module khác dùng
   ],
 })
-export class CompaniesModule { }
+export class CompaniesModule {}

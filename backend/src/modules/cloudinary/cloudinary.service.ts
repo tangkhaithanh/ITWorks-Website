@@ -20,8 +20,9 @@ export class CloudinaryService {
         },
         (error, result) => {
           if (error) return reject(error);
-          if (!result) return reject(new Error('Upload failed, no result returned'));
-          resolve(result as UploadApiResponse);
+          if (!result)
+            return reject(new Error('Upload failed, no result returned'));
+          resolve(result);
         },
       );
       uploadStream.end(file.buffer);
@@ -29,48 +30,50 @@ export class CloudinaryService {
   }
 
   // Upload File tài liệu lên Cloudinary
-    async uploadDocument(
-  file: Express.Multer.File,
-  folder = 'cvs',
-): Promise<UploadApiResponse> {
-  if (!file) throw new BadRequestException('Không có file nào được tải lên.');
+  async uploadDocument(
+    file: Express.Multer.File,
+    folder = 'cvs',
+  ): Promise<UploadApiResponse> {
+    if (!file) throw new BadRequestException('Không có file nào được tải lên.');
 
-  const allowedMimeTypes = [
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  ];
+    const allowedMimeTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
 
-  if (!allowedMimeTypes.includes(file.mimetype)) {
-    throw new BadRequestException(
-      'Chỉ hỗ trợ upload file PDF hoặc Word (.doc, .docx)',
-    );
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      throw new BadRequestException(
+        'Chỉ hỗ trợ upload file PDF hoặc Word (.doc, .docx)',
+      );
+    }
+
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder,
+          resource_type: 'raw', // ✅ định dạng file tài liệu
+          type: 'upload', // ✅ bắt buộc để file là PUBLIC raw
+          use_filename: true,
+          unique_filename: true, // tránh đè file nếu trùng tên
+          access_mode: 'public',
+          public_id: file.originalname,
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          if (!result)
+            return reject(new Error('Upload CV thất bại, không có kết quả.'));
+          resolve(result);
+        },
+      );
+
+      uploadStream.end(file.buffer);
+    });
   }
 
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder,
-        resource_type: 'raw',   // ✅ định dạng file tài liệu
-        type: 'upload',         // ✅ bắt buộc để file là PUBLIC raw
-        use_filename: true,
-        unique_filename: true,// tránh đè file nếu trùng tên
-        access_mode: 'public',
-        public_id: file.originalname
-      },
-      (error, result) => {
-        if (error) return reject(error);
-        if (!result)
-          return reject(new Error('Upload CV thất bại, không có kết quả.'));
-        resolve(result as UploadApiResponse);
-      },
-    );
-
-    uploadStream.end(file.buffer);
-  });
-}
-
-  async deleteFile(publicId: string): Promise<UploadApiResponse | UploadApiErrorResponse> {
+  async deleteFile(
+    publicId: string,
+  ): Promise<UploadApiResponse | UploadApiErrorResponse> {
     return new Promise((resolve, reject) => {
       cloudinary.uploader.destroy(publicId, (error, result) => {
         if (error) return reject(error);

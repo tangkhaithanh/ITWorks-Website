@@ -1,157 +1,153 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 
 @Injectable()
 export class PlansService {
-    constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
-    async findAll(includeHidden = false) {
-        const plans = await this.prisma.plan.findMany({
-            where: {
-                ...(includeHidden ? {} : { is_hidden: false }),
-            },
-            orderBy: { price: 'asc' },
-        });
+  async findAll(includeHidden = false) {
+    const plans = await this.prisma.plan.findMany({
+      where: {
+        ...(includeHidden ? {} : { is_hidden: false }),
+      },
+      orderBy: { price: 'asc' },
+    });
 
-        return plans.map((plan) => ({
-            ...plan,
-            price: plan.price.toString(),
-        }));
+    return plans.map((plan) => ({
+      ...plan,
+      price: plan.price.toString(),
+    }));
+  }
+
+  async findOne(id: bigint, includeHidden = false) {
+    const plan = await this.prisma.plan.findFirst({
+      where: {
+        id,
+        ...(includeHidden ? {} : { is_hidden: false }),
+      },
+    });
+
+    if (!plan) {
+      throw new NotFoundException('Plan không tồn tại');
     }
 
-    async findOne(id: bigint, includeHidden = false) {
-        const plan = await this.prisma.plan.findFirst({
-            where: {
-                id,
-                ...(includeHidden ? {} : { is_hidden: false }),
-            },
-        });
+    return {
+      ...plan,
+      price: plan.price.toString(),
+    };
+  }
 
-        if (!plan) {
-            throw new NotFoundException('Plan không tồn tại');
-        }
+  async create(dto: CreatePlanDto) {
+    try {
+      const { name, price, job_limit, credit_amount, duration_days, features } =
+        dto;
 
-        return {
-            ...plan,
-            price: plan.price.toString(),
-        };
+      const existed = await this.prisma.plan.findFirst({
+        where: { name },
+      });
+
+      if (existed) {
+        throw new BadRequestException('Tên plan đã tồn tại');
+      }
+
+      await this.prisma.plan.create({
+        data: {
+          name,
+          price: BigInt(price),
+          job_limit,
+          credit_amount,
+          duration_days,
+          features,
+        },
+      });
+
+      return {
+        message: 'Tạo plan thành công',
+      };
+    } catch (error) {
+      console.log(error);
+      throw error;
     }
+  }
 
-    async create(dto: CreatePlanDto) {
-        try {
-            const {
-                name,
-                price,
-                job_limit,
-                credit_amount,
-                duration_days,
-                features,
-            } = dto;
+  async update(id: bigint, dto: UpdatePlanDto) {
+    try {
+      await this.findOne(id, true);
 
-            const existed = await this.prisma.plan.findFirst({
-                where: { name },
-            });
+      const data: any = { ...dto };
 
-            if (existed) {
-                throw new BadRequestException('Tên plan đã tồn tại');
-            }
+      if (dto.price !== undefined) {
+        data.price = BigInt(dto.price);
+      }
 
-            await this.prisma.plan.create({
-                data: {
-                    name,
-                    price: BigInt(price),
-                    job_limit,
-                    credit_amount,
-                    duration_days,
-                    features,
-                },
-            });
+      Object.keys(data).forEach(
+        (key) => data[key] === undefined && delete data[key],
+      );
 
-            return {
-                message: 'Tạo plan thành công',
-            };
-        } catch (error) {
-            console.log(error);
-            throw error;
-        }
+      if (Object.keys(data).length === 0) {
+        throw new BadRequestException('Không có dữ liệu để cập nhật');
+      }
+
+      await this.prisma.plan.update({
+        where: { id },
+        data,
+      });
+
+      return {
+        message: 'Cập nhật plan thành công',
+      };
+    } catch (error) {
+      console.log(error);
+      throw error;
     }
+  }
 
+  async remove(id: bigint) {
+    try {
+      const plan = await this.findOne(id, true);
 
-    async update(id: bigint, dto: UpdatePlanDto) {
-        try {
-            await this.findOne(id, true);
+      if (plan.is_hidden) {
+        throw new BadRequestException('Plan đã bị ẩn trước đó');
+      }
 
-            const data: any = { ...dto };
+      await this.prisma.plan.update({
+        where: { id },
+        data: { is_hidden: true },
+      });
 
-            if (dto.price !== undefined) {
-                data.price = BigInt(dto.price);
-            }
-
-            Object.keys(data).forEach(
-                (key) => data[key] === undefined && delete data[key],
-            );
-
-            if (Object.keys(data).length === 0) {
-                throw new BadRequestException('Không có dữ liệu để cập nhật');
-            }
-
-            await this.prisma.plan.update({
-                where: { id },
-                data,
-            });
-
-            return {
-                message: 'Cập nhật plan thành công',
-            };
-        } catch (error) {
-            console.log(error);
-            throw error;
-        }
+      return {
+        message: 'Xoá plan thành công',
+      };
+    } catch (error) {
+      console.log(error);
+      throw error;
     }
+  }
+  async show(id: bigint) {
+    try {
+      const plan = await this.findOne(id, true);
 
+      if (!plan.is_hidden) {
+        throw new BadRequestException('Plan đang được hiển thị');
+      }
 
-    async remove(id: bigint) {
-        try {
-            const plan = await this.findOne(id, true);
+      await this.prisma.plan.update({
+        where: { id },
+        data: { is_hidden: false },
+      });
 
-            if (plan.is_hidden) {
-                throw new BadRequestException('Plan đã bị ẩn trước đó');
-            }
-
-            await this.prisma.plan.update({
-                where: { id },
-                data: { is_hidden: true },
-            });
-
-            return {
-                message: 'Xoá plan thành công',
-            };
-        } catch (error) {
-            console.log(error);
-            throw error;
-        }
+      return {
+        message: 'Hiện plan thành công',
+      };
+    } catch (error) {
+      console.log(error);
+      throw error;
     }
-    async show(id: bigint) {
-        try {
-            const plan = await this.findOne(id, true);
-
-            if (!plan.is_hidden) {
-                throw new BadRequestException('Plan đang được hiển thị');
-            }
-
-            await this.prisma.plan.update({
-                where: { id },
-                data: { is_hidden: false },
-            });
-
-            return {
-                message: 'Hiện plan thành công',
-            };
-        } catch (error) {
-            console.log(error);
-            throw error;
-        }
-    }
+  }
 }

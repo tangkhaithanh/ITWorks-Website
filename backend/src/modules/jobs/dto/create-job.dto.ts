@@ -19,7 +19,10 @@ export class CreateJobDto {
 
   // 💰 Lương — chỉ bắt buộc khi không chọn "Thỏa thuận"
   @ValidateIf((o) => !o.negotiable)
-  @IsNumber({}, { message: 'Phải nhập mức lương tối thiểu nếu không thỏa thuận' })
+  @IsNumber(
+    {},
+    { message: 'Phải nhập mức lương tối thiểu nếu không thỏa thuận' },
+  )
   @Type(() => Number)
   salary_min?: number;
 
@@ -61,13 +64,20 @@ export class CreateJobDto {
   @IsArray()
   @ArrayNotEmpty({ message: 'Phải chọn ít nhất một hình thức làm việc' })
   @IsEnum(WorkMode, { each: true, message: 'Hình thức làm việc không hợp lệ' })
-  @Transform(({ value }) => (typeof value === 'string' ? JSON.parse(value) : value))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? JSON.parse(value) : value,
+  )
   work_modes: WorkMode[];
 
   @IsArray()
   @ArrayNotEmpty({ message: 'Phải chọn ít nhất một cấp độ kinh nghiệm' })
-  @IsEnum(ExperienceLevel, { each: true, message: 'Cấp độ kinh nghiệm không hợp lệ' })
-  @Transform(({ value }) => (typeof value === 'string' ? JSON.parse(value) : value))
+  @IsEnum(ExperienceLevel, {
+    each: true,
+    message: 'Cấp độ kinh nghiệm không hợp lệ',
+  })
+  @Transform(({ value }) =>
+    typeof value === 'string' ? JSON.parse(value) : value,
+  )
   experience_levels: ExperienceLevel[];
 
   @IsEnum(EmploymentType, { message: 'Loại công việc không hợp lệ' })

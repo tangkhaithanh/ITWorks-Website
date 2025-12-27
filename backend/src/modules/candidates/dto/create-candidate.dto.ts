@@ -1,4 +1,10 @@
-import { IsOptional, IsString, IsArray, IsNumber, IsEnum } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsArray,
+  IsNumber,
+  IsEnum,
+} from 'class-validator';
 import { WorkMode } from '@prisma/client';
 
 export class CreateCandidateDto {

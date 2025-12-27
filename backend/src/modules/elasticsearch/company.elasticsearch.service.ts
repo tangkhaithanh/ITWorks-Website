@@ -19,17 +19,17 @@ export class ElasticsearchCompanyService {
   }
 
   async updateCompany(company: any) {
-  await this.safeExec('update', company.id, async () =>
-    this.es.update({
-      index: this.index,
-      id: company.id.toString(),
-      body: {
-        doc: this.mapCompany(company),
-        doc_as_upsert: true, // ✅ tạo mới nếu chưa tồn tại
-      },
-    }),
-  );
-}
+    await this.safeExec('update', company.id, async () =>
+      this.es.update({
+        index: this.index,
+        id: company.id.toString(),
+        body: {
+          doc: this.mapCompany(company),
+          doc_as_upsert: true, // ✅ tạo mới nếu chưa tồn tại
+        },
+      }),
+    );
+  }
 
   async removeCompany(id: bigint) {
     await this.safeExec('delete', id, async () =>
@@ -48,7 +48,10 @@ export class ElasticsearchCompanyService {
       industries: c.industry_info?.map((i) => i.industry?.name) ?? [],
       skills: c.skills?.map((s) => s.skill?.name) ?? [],
       status: c.status,
-      created_at: c.created_at instanceof Date ? c.created_at.toISOString() : c.created_at,
+      created_at:
+        c.created_at instanceof Date
+          ? c.created_at.toISOString()
+          : c.created_at,
     };
   }
 

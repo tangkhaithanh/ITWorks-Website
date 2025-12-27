@@ -9,9 +9,9 @@ import { ElasticsearchJobService } from '../elasticsearch/job.elasticsearch.serv
 import { LocationService } from '../location/location.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
-import { Cron, CronExpression } from "@nestjs/schedule";
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { JobStatus } from '@prisma/client';
-import { ApplicationStatus } from "@prisma/client"
+import { ApplicationStatus } from '@prisma/client';
 import { JobDashboardQueryDto } from './dto/job-dashboard-query.dto';
 @Injectable()
 export class JobsService {
@@ -19,7 +19,7 @@ export class JobsService {
     private readonly prisma: PrismaService,
     private readonly esJob: ElasticsearchJobService,
     private readonly locationService: LocationService,
-  ) { }
+  ) {}
 
   // -----------------------------
   // CREATE JOB (Recruiter)
@@ -70,8 +70,14 @@ export class JobsService {
           where: { company_id: company.id },
         });
 
-        if (!current || current.status !== 'active' || current.end_date <= now) {
-          throw new BadRequestException('Bạn chưa có gói dịch vụ hoặc gói đã hết hạn.');
+        if (
+          !current ||
+          current.status !== 'active' ||
+          current.end_date <= now
+        ) {
+          throw new BadRequestException(
+            'Bạn chưa có gói dịch vụ hoặc gói đã hết hạn.',
+          );
         }
 
         // 2) Tạo job (giữ nguyên logic cũ)
@@ -85,10 +91,10 @@ export class JobsService {
             // ⭐ Gắn category bằng quan hệ
             ...(category_id
               ? {
-                category: {
-                  connect: { id: BigInt(category_id) },
-                },
-              }
+                  category: {
+                    connect: { id: BigInt(category_id) },
+                  },
+                }
               : {}),
 
             location_full,
@@ -132,7 +138,9 @@ export class JobsService {
 
         if (result.count === 0) {
           // Nếu 2 request song song, request đến sau sẽ rơi vào case này
-          throw new BadRequestException('Đã hết lượt đăng tin (Quota exhausted). Vui lòng nâng cấp gói.');
+          throw new BadRequestException(
+            'Đã hết lượt đăng tin (Quota exhausted). Vui lòng nâng cấp gói.',
+          );
         }
 
         return job.id;
@@ -146,7 +154,10 @@ export class JobsService {
       try {
         await this.esJob.indexJob(fullJob);
       } catch (esErr) {
-        console.error('⚠️ Elasticsearch index failed (job vẫn tạo thành công):', esErr);
+        console.error(
+          '⚠️ Elasticsearch index failed (job vẫn tạo thành công):',
+          esErr,
+        );
         // không throw
       }
 
@@ -154,14 +165,18 @@ export class JobsService {
     } catch (error) {
       console.error('🔥 Lỗi tạo job:', error);
 
-      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
 
-      throw new InternalServerErrorException('Không thể tạo job: ' + error.message);
+      throw new InternalServerErrorException(
+        'Không thể tạo job: ' + error.message,
+      );
     }
   }
-
 
   // UPDATE JOB (Recruiter)
   // -----------------------------
@@ -209,16 +224,15 @@ export class JobsService {
       }
 
       // ✅ Chuẩn hóa deadline & category_id
-      const deadline = data.deadline
-        ? new Date(data.deadline)
-        : job.deadline;
+      const deadline = data.deadline ? new Date(data.deadline) : job.deadline;
       const category_id =
         data.category_id !== undefined
           ? BigInt(data.category_id as any)
           : job.category_id;
       const updateDetailData: any = {};
       if (description !== undefined) updateDetailData.description = description;
-      if (requirements !== undefined) updateDetailData.requirements = requirements;
+      if (requirements !== undefined)
+        updateDetailData.requirements = requirements;
 
       // ✅ Cập nhật job chính
       const updatedJob = await this.prisma.job.update({
@@ -262,7 +276,9 @@ export class JobsService {
       return fullJob;
     } catch (error) {
       console.error('🔥 Lỗi cập nhật job:', error);
-      throw new InternalServerErrorException('Không thể cập nhật job: ' + error.message);
+      throw new InternalServerErrorException(
+        'Không thể cập nhật job: ' + error.message,
+      );
     }
   }
 
@@ -353,9 +369,10 @@ export class JobsService {
       }
     }
 
-    console.log(`🚀 Đã chuyển ${jobIds.length} job sang 'expired' và xóa khỏi Elasticsearch`);
+    console.log(
+      `🚀 Đã chuyển ${jobIds.length} job sang 'expired' và xóa khỏi Elasticsearch`,
+    );
   }
-
 
   // Hàm SearhJobs (gọi elasticsearch)
   async search(query: any) {
@@ -582,7 +599,9 @@ export class JobsService {
 
       // Job chưa hết hạn thì không cho reset
       if (job.deadline && job.deadline > new Date()) {
-        throw new BadRequestException('Job chưa hết hạn, không thể đặt lại deadline');
+        throw new BadRequestException(
+          'Job chưa hết hạn, không thể đặt lại deadline',
+        );
       }
 
       const newDeadline = new Date(newDeadlineStr);
@@ -604,17 +623,20 @@ export class JobsService {
         message: 'Cập nhật deadline thành công',
         data: updatedJob,
       };
-
     } catch (error) {
       console.error('❌ [resetDeadline] Lỗi xảy ra:', error);
       throw error;
     }
   }
 
-
   async reindexJobsByCompany(companyId: bigint) {
-    const jobs = await this.prisma.job.findMany({ where: { company_id: companyId } });
-    console.log("🔥 JOB LIST NEED REINDEX:", jobs.map(j => j.id));
+    const jobs = await this.prisma.job.findMany({
+      where: { company_id: companyId },
+    });
+    console.log(
+      '🔥 JOB LIST NEED REINDEX:',
+      jobs.map((j) => j.id),
+    );
 
     for (const j of jobs) {
       const fullJob = await this.getFullJob(j.id);
@@ -651,14 +673,14 @@ export class JobsService {
     }
 
     const summary = {
-      views_count: job.views_count,              // 👀
+      views_count: job.views_count, // 👀
       applications_count: job._count.applications, // 📩
-      saved_count: job._count.saved_jobs,        // 💾
-      openings: job.number_of_openings,          // 🎯
-      created_at: job.created_at,                // 📅
+      saved_count: job._count.saved_jobs, // 💾
+      openings: job.number_of_openings, // 🎯
+      created_at: job.created_at, // 📅
       deadline: job.deadline,
       days_left,
-      status: job.status,                        // 🔥 active/hidden/expired/closed
+      status: job.status, // 🔥 active/hidden/expired/closed
     };
 
     // --------------- 2. HIRING FUNNEL ----------------
@@ -698,14 +720,14 @@ export class JobsService {
       fromDate = this.parseLocalDate(query.from);
       toDate = this.parseLocalDate(query.to);
     } else {
-      const range = query.range || "30d";
+      const range = query.range || '30d';
       const mapRangeToDays: Record<string, number> = {
-        "7d": 7,
-        "14d": 14,
-        "30d": 30,
+        '7d': 7,
+        '14d': 14,
+        '30d': 30,
       };
 
-      if (range === "all") {
+      if (range === 'all') {
         fromDate = new Date(job.created_at);
         toDate = now;
       } else {
@@ -746,13 +768,13 @@ export class JobsService {
     const cursor = new Date(
       fromDate.getFullYear(),
       fromDate.getMonth(),
-      fromDate.getDate()
+      fromDate.getDate(),
     );
 
     const endDate = new Date(
       toDate.getFullYear(),
       toDate.getMonth(),
-      toDate.getDate()
+      toDate.getDate(),
     );
 
     // Tạo bucket rỗng cho từng ngày
@@ -838,14 +860,13 @@ export class JobsService {
         title: job.title,
         status: job.status,
       },
-      summary,          // block 1
-      funnel,           // block 2
-      timeline,         // block 3
+      summary, // block 1
+      funnel, // block 2
+      timeline, // block 3
       latest_candidates, // block 4
       latest_pagination,
     };
   }
-
 
   // -----------------------------
   // Helper: Lấy full job
@@ -890,14 +911,14 @@ export class JobsService {
   // Helpers xử lý thời gian:
   private parseLocalDate(dateStr: string): Date {
     // input: "yyyy-MM-dd"
-    const [y, m, d] = dateStr.split("-").map(Number);
+    const [y, m, d] = dateStr.split('-').map(Number);
     return new Date(y, m - 1, d); // local date
   }
 
   private formatLocalDate(date: Date): string {
     const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
   }
 }

@@ -1,5 +1,14 @@
 // src/modules/job-categories/job-categories.controller.ts
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+} from '@nestjs/common';
 import { JobCategoriesService } from './job-categories.service';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';

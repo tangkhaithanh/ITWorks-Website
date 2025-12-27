@@ -4,12 +4,8 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { AccountController } from './account.controller';
 import { MailModule } from 'src/common/services/mail.module';
 @Module({
-    imports: [MailModule],
-    controllers: [AccountController],
-    providers: [
-        AccountService,
-        PrismaService,
-    ],
+  imports: [MailModule],
+  controllers: [AccountController],
+  providers: [AccountService, PrismaService],
 })
-export class AccountModule { }
-
+export class AccountModule {}

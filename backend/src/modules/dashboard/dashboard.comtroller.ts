@@ -12,7 +12,7 @@ import { AdminDashboardQueryDto } from './dto/admin-dashboard-query.dto';
 @Controller('dashboard')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class DashboardController {
-  constructor(private readonly dashboardService: DashboardService) { }
+  constructor(private readonly dashboardService: DashboardService) {}
 
   /**
    * GET /recruiter/dashboard

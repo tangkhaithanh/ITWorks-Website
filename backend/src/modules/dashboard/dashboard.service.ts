@@ -6,19 +6,24 @@ import { AdminDashboardQueryDto } from './dto/admin-dashboard-query.dto';
 type RevenueBucket = 'day' | 'month';
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Lấy Dashboard cho account recruiter (tự suy ra company theo account_id).
    */
-  async getRecruiterDashboard(accountId: bigint, query: RecruiterDashboardQueryDto) {
+  async getRecruiterDashboard(
+    accountId: bigint,
+    query: RecruiterDashboardQueryDto,
+  ) {
     // Tìm company theo account hiện tại
     const company = await this.prisma.company.findUnique({
       where: { account_id: accountId },
     });
 
     if (!company) {
-      throw new NotFoundException('Không tìm thấy công ty cho tài khoản hiện tại');
+      throw new NotFoundException(
+        'Không tìm thấy công ty cho tài khoản hiện tại',
+      );
     }
 
     const companyId = company.id;
@@ -35,13 +40,20 @@ export class DashboardService {
     const kpis = await this.buildKpis(companyId, now);
 
     // 2. Biểu đồ line: ứng tuyển theo ngày
-    const applicationTimeline = await this.buildApplicationTimeline(companyId, query, now);
+    const applicationTimeline = await this.buildApplicationTimeline(
+      companyId,
+      query,
+      now,
+    );
 
     // 3. Top job đang tuyển
     const topJobs = await this.buildTopActiveJobs(companyId, topJobsLimit);
 
     // 4. Ứng viên mới ứng tuyển gần đây
-    const recentApplications = await this.buildRecentApplications(companyId, recentApplicationsLimit);
+    const recentApplications = await this.buildRecentApplications(
+      companyId,
+      recentApplicationsLimit,
+    );
 
     // 5. Lịch phỏng vấn sắp diễn ra
     const upcomingInterviews = await this.buildUpcomingInterviews(
@@ -160,7 +172,11 @@ export class DashboardService {
     query: RecruiterDashboardQueryDto,
     now: Date,
   ) {
-    const { startDate, endDate } = await this.resolveDateRangeForCompany(companyId, query, now);
+    const { startDate, endDate } = await this.resolveDateRangeForCompany(
+      companyId,
+      query,
+      now,
+    );
 
     // Lấy tất cả application trong range và tự group theo day phía server
     const applications = await this.prisma.application.findMany({
@@ -284,10 +300,7 @@ export class DashboardService {
         company_id: companyId,
         status: 'active',
       },
-      orderBy: [
-        { applications: { _count: 'desc' } },
-        { views_count: 'desc' },
-      ],
+      orderBy: [{ applications: { _count: 'desc' } }, { views_count: 'desc' }],
       take: limit,
       select: {
         id: true,
@@ -297,7 +310,7 @@ export class DashboardService {
         views_count: true,
         _count: {
           select: {
-            applications: true,  // FE yêu cầu
+            applications: true, // FE yêu cầu
           },
         },
       },
@@ -356,7 +369,11 @@ export class DashboardService {
   /**
    * Lịch phỏng vấn sắp diễn ra
    */
-  private async buildUpcomingInterviews(companyId: bigint, limit: number, now: Date) {
+  private async buildUpcomingInterviews(
+    companyId: bigint,
+    limit: number,
+    now: Date,
+  ) {
     const interviews = await this.prisma.interview.findMany({
       where: {
         application: {
@@ -421,13 +438,12 @@ export class DashboardService {
     const now = new Date();
     const { startDate, endDate } = this.resolveAdminRange(query, now);
 
-    const [kpis, revenueTimeline, orderStatus, topPlans] =
-      await Promise.all([
-        this.buildAdminKpis(now),
-        this.buildAdminRevenueTimeline(startDate, endDate),
-        this.buildAdminOrderStatus(startDate, endDate),
-        this.buildAdminTopPlans(startDate, endDate),
-      ]);
+    const [kpis, revenueTimeline, orderStatus, topPlans] = await Promise.all([
+      this.buildAdminKpis(now),
+      this.buildAdminRevenueTimeline(startDate, endDate),
+      this.buildAdminOrderStatus(startDate, endDate),
+      this.buildAdminTopPlans(startDate, endDate),
+    ]);
 
     return {
       range: {
@@ -459,10 +475,34 @@ export class DashboardService {
     const todayEnd = new Date(now);
     todayEnd.setHours(23, 59, 59, 999);
 
-    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0);
+    const thisMonthStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      1,
+      0,
+      0,
+      0,
+      0,
+    );
+    const nextMonthStart = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      1,
+      0,
+      0,
+      0,
+      0,
+    );
 
-    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+    const prevMonthStart = new Date(
+      now.getFullYear(),
+      now.getMonth() - 1,
+      1,
+      0,
+      0,
+      0,
+      0,
+    );
     const thisMonthStartCopy = new Date(thisMonthStart);
 
     const [
@@ -532,7 +572,9 @@ export class DashboardService {
 
     const revenueMoMPercent =
       revenuePrevMonth <= 0
-        ? (revenueThisMonth > 0 ? 100 : 0)
+        ? revenueThisMonth > 0
+          ? 100
+          : 0
         : ((revenueThisMonth - revenuePrevMonth) / revenuePrevMonth) * 100;
 
     return {
@@ -554,7 +596,8 @@ export class DashboardService {
    * - nếu range dài (>= ~62 ngày) => group theo tháng
    */
   private async buildAdminRevenueTimeline(startDate: Date, endDate: Date) {
-    const days = Math.ceil((endDate.getTime() - startDate.getTime()) / 86_400_000) + 1;
+    const days =
+      Math.ceil((endDate.getTime() - startDate.getTime()) / 86_400_000) + 1;
     const bucket: RevenueBucket = days >= 62 ? 'month' : 'day';
 
     // Lấy paid orders trong range
@@ -656,7 +699,7 @@ export class DashboardService {
         paid_at: { gte: startDate, lte: endDate },
       },
       _count: {
-        id: true,   // 👈 đếm theo id
+        id: true, // 👈 đếm theo id
       },
       _sum: {
         amount: true,
@@ -680,7 +723,7 @@ export class DashboardService {
     return grouped.map((g) => ({
       plan_id: g.plan_id.toString(),
       plan_name: planMap.get(g.plan_id.toString()) ?? 'Unknown',
-      purchases: g._count.id,      // 👈 dùng id
+      purchases: g._count.id, // 👈 dùng id
       revenue: Number(g._sum.amount ?? 0),
     }));
   }
@@ -692,7 +735,9 @@ export class DashboardService {
    */
   private resolveAdminRange(query: AdminDashboardQueryDto, now: Date) {
     if (query.from || query.to) {
-      const start = query.from ? new Date(`${query.from}T00:00:00`) : new Date(now);
+      const start = query.from
+        ? new Date(`${query.from}T00:00:00`)
+        : new Date(now);
       const end = query.to ? new Date(`${query.to}T23:59:59`) : new Date(now);
 
       start.setHours(0, 0, 0, 0);

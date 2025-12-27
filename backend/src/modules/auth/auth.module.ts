@@ -14,15 +14,15 @@ import { MailModule } from 'src/common/services/mail.module';
 @Module({
   imports: [
     JwtModule.registerAsync({
-    imports: [ConfigModule],
-    inject: [ConfigService],
-    // đăng ký module jwtmodule với các tham số lấy từ biến môi trường
-    useFactory: async (config: ConfigService) => ({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      // đăng ký module jwtmodule với các tham số lấy từ biến môi trường
+      useFactory: async (config: ConfigService) => ({
         secret: config.get<string>('jwt.accessSecret'),
         signOptions: {
           expiresIn: config.get<string>('jwt.accessExpiresIn'), // access token sống trong 15 phút
         },
-    }),
+      }),
     }),
     PrismaModule,
     CustomMailerModule,
@@ -32,7 +32,6 @@ import { MailModule } from 'src/common/services/mail.module';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
-  exports: [AuthService], 
-  
+  exports: [AuthService],
 })
 export class AuthModule {}

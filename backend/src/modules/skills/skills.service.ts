@@ -1,5 +1,9 @@
 // src/modules/skills/skills.service.ts
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 
 @Injectable()

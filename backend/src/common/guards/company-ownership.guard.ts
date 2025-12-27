@@ -10,7 +10,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 
 @Injectable()
 export class CompanyOwnershipGuard implements CanActivate {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest();

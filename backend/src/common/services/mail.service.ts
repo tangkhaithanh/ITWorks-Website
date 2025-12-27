@@ -19,8 +19,12 @@ interface InterviewScheduleMailPayload extends InterviewMailBase {
 }
 @Injectable()
 export class MailService {
-  constructor(private readonly mailer: MailerService) { }
-  private buildHrSignature(hr: { full_name: string; email: string; phone?: string }) {
+  constructor(private readonly mailer: MailerService) {}
+  private buildHrSignature(hr: {
+    full_name: string;
+    email: string;
+    phone?: string;
+  }) {
     return `
     <br/><br/>
     <p><strong>Thông tin liên hệ:</strong></p>
@@ -28,7 +32,7 @@ export class MailService {
       <strong>${hr.full_name}</strong><br/>
       Chuyên viên tuyển dụng<br/>
       Email: <a href="mailto:${hr.email}">${hr.email}</a><br/>
-      ${hr.phone ? `SĐT: ${hr.phone}<br/>` : ""}
+      ${hr.phone ? `SĐT: ${hr.phone}<br/>` : ''}
     </p>
   `;
   }
@@ -58,7 +62,9 @@ export class MailService {
   }
 
   // Gửi mail tạo lịch phỏng vấn:
-  async sendInterviewScheduleMail(payload: InterviewScheduleMailPayload & { hr: any }) {
+  async sendInterviewScheduleMail(
+    payload: InterviewScheduleMailPayload & { hr: any },
+  ) {
     const {
       to,
       fullName,
@@ -73,16 +79,16 @@ export class MailService {
       hr,
     } = payload;
 
-    const dateStr = scheduledAt.toLocaleString("vi-VN", {
+    const dateStr = scheduledAt.toLocaleString('vi-VN', {
       hour12: false,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
     });
 
-    const modeLabel = mode === "online" ? "Online" : "Trực tiếp";
+    const modeLabel = mode === 'online' ? 'Online' : 'Trực tiếp';
     const hrSignature = this.buildHrSignature(hr);
 
     return this.mailer.sendMail({
@@ -97,9 +103,10 @@ export class MailService {
       <ul>
         <li><strong>Thời gian:</strong> ${dateStr}</li>
         <li><strong>Hình thức:</strong> ${modeLabel}</li>
-        ${mode === "online"
-          ? `<li><strong>Link phỏng vấn:</strong> <a href="${meetingLink}">${meetingLink}</a></li>`
-          : `<li><strong>Địa điểm:</strong> ${location}</li>`
+        ${
+          mode === 'online'
+            ? `<li><strong>Link phỏng vấn:</strong> <a href="${meetingLink}">${meetingLink}</a></li>`
+            : `<li><strong>Địa điểm:</strong> ${location}</li>`
         }
       </ul>
 
@@ -115,18 +122,19 @@ export class MailService {
     `,
       attachments: [
         {
-          filename: "interview.ics",
+          filename: 'interview.ics',
           content: icsContent,
-          contentType: "text/calendar; charset=utf-8",
+          contentType: 'text/calendar; charset=utf-8',
         },
       ],
     });
   }
 
-
   // Gửi lại email khi sửa lịch phỏng vấn:
 
-  async sendInterviewUpdatedMail(payload: InterviewScheduleMailPayload & { hr: any }) {
+  async sendInterviewUpdatedMail(
+    payload: InterviewScheduleMailPayload & { hr: any },
+  ) {
     const {
       to,
       fullName,
@@ -141,16 +149,16 @@ export class MailService {
       hr,
     } = payload;
 
-    const dateStr = scheduledAt.toLocaleString("vi-VN", {
+    const dateStr = scheduledAt.toLocaleString('vi-VN', {
       hour12: false,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
     });
 
-    const modeLabel = mode === "online" ? "Online" : "Trực tiếp";
+    const modeLabel = mode === 'online' ? 'Online' : 'Trực tiếp';
     const hrSignature = this.buildHrSignature(hr);
 
     return this.mailer.sendMail({
@@ -165,9 +173,10 @@ export class MailService {
       <ul>
         <li><strong>Thời gian mới:</strong> ${dateStr}</li>
         <li><strong>Hình thức:</strong> ${modeLabel}</li>
-        ${mode === "online"
-          ? `<li><strong>Link mới:</strong> <a href="${meetingLink}">${meetingLink}</a></li>`
-          : `<li><strong>Địa điểm mới:</strong> ${location}</li>`
+        ${
+          mode === 'online'
+            ? `<li><strong>Link mới:</strong> <a href="${meetingLink}">${meetingLink}</a></li>`
+            : `<li><strong>Địa điểm mới:</strong> ${location}</li>`
         }
       </ul>
 
@@ -181,26 +190,27 @@ export class MailService {
     `,
       attachments: [
         {
-          filename: "interview.ics",
+          filename: 'interview.ics',
           content: icsContent,
-          contentType: "text/calendar; charset=utf-8",
+          contentType: 'text/calendar; charset=utf-8',
         },
       ],
     });
   }
 
-
   // Gửi email khi hủy lịch phỏng vấn:
-  async sendInterviewCancelledMail(payload: InterviewMailBase & { scheduledAt: Date; hr: any }) {
+  async sendInterviewCancelledMail(
+    payload: InterviewMailBase & { scheduledAt: Date; hr: any },
+  ) {
     const { to, fullName, jobTitle, companyName, scheduledAt, hr } = payload;
 
-    const dateStr = scheduledAt.toLocaleString("vi-VN", {
+    const dateStr = scheduledAt.toLocaleString('vi-VN', {
       hour12: false,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
     });
 
     const hrSignature = this.buildHrSignature(hr);
@@ -335,7 +345,11 @@ export class MailService {
     });
   }
   // Hàm gửi mật khẩu đã được admin reset qua mail:
-  async sendTemporaryPasswordMail(to: string, fullName: string, tempPassword: string) {
+  async sendTemporaryPasswordMail(
+    to: string,
+    fullName: string,
+    tempPassword: string,
+  ) {
     // Thiết lập màu chủ đạo
     const PRIMARY_COLOR = '#0d6efd'; // Màu xanh dương nổi bật
     const SECONDARY_COLOR = '#f8f9fa'; // Màu nền xám nhạt cho khối mật khẩu

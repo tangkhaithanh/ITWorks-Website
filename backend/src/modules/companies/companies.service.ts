@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException, HttpException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
+  HttpException,
+} from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CloudinaryService } from '@/modules/cloudinary/cloudinary.service';
 import { CompanyStatus } from '@prisma/client';
@@ -14,7 +20,7 @@ export class CompaniesService {
     private readonly cloudinary: CloudinaryService,
     private readonly esCompany: ElasticsearchCompanyService,
     private readonly jobsService: JobsService,
-  ) { }
+  ) {}
   async create(
     accountId: bigint,
     dto: CreateCompanyDto,
@@ -64,7 +70,9 @@ export class CompaniesService {
       return fullCompany;
     } catch (error) {
       console.error('🔥 Lỗi tạo công ty:', error);
-      throw new InternalServerErrorException('Không thể tạo công ty: ' + error.message);
+      throw new InternalServerErrorException(
+        'Không thể tạo công ty: ' + error.message,
+      );
     }
   }
 
@@ -84,8 +92,8 @@ export class CompaniesService {
         if (
           val !== undefined &&
           val !== null &&
-          key !== "industry_ids" &&
-          key !== "skill_ids"
+          key !== 'industry_ids' &&
+          key !== 'skill_ids'
         ) {
           updateData[key] = val;
         }
@@ -101,7 +109,10 @@ export class CompaniesService {
         if (company.logo_public_id) {
           await this.cloudinary.deleteFile(company.logo_public_id);
         }
-        const uploadedLogo = await this.cloudinary.uploadImage(logo, 'companies/logos');
+        const uploadedLogo = await this.cloudinary.uploadImage(
+          logo,
+          'companies/logos',
+        );
         updateData.logo_url = uploadedLogo.secure_url;
         updateData.logo_public_id = uploadedLogo.public_id;
       }
@@ -130,7 +141,7 @@ export class CompaniesService {
 
       const fullCompany = await this.getFullCompany(id);
       if (!fullCompany) {
-        throw new NotFoundException("Không lấy được full company");
+        throw new NotFoundException('Không lấy được full company');
       }
       await this.esCompany.indexCompany(fullCompany);
       // Lấy danh sách job của công ty
@@ -140,23 +151,32 @@ export class CompaniesService {
 
       // Reindex từng job
       await this.jobsService.reindexJobsByCompany(company.id);
-      console.log("🔥 DB COMPANY AFTER UPDATE:", updated);
-      console.log("🔥 FULL COMPANY AFTER UPDATE:", fullCompany.name, fullCompany.logo_url);
+      console.log('🔥 DB COMPANY AFTER UPDATE:', updated);
+      console.log(
+        '🔥 FULL COMPANY AFTER UPDATE:',
+        fullCompany.name,
+        fullCompany.logo_url,
+      );
 
       return fullCompany;
-
     } catch (error) {
-      console.error("🔥 Lỗi UPDATE công ty:", error);
-      throw new InternalServerErrorException(`Lỗi khi cập nhật công ty: ${error.message}`);
+      console.error('🔥 Lỗi UPDATE công ty:', error);
+      throw new InternalServerErrorException(
+        `Lỗi khi cập nhật công ty: ${error.message}`,
+      );
     }
   }
   async hide(companyId: bigint) {
     try {
-      const company = await this.prisma.company.findUnique({ where: { id: companyId } });
+      const company = await this.prisma.company.findUnique({
+        where: { id: companyId },
+      });
       if (!company) throw new NotFoundException('Không tìm thấy công ty');
 
       if (company.status !== CompanyStatus.approved) {
-        throw new BadRequestException('Chỉ công ty ở trạng thái approved mới có thể ẩn');
+        throw new BadRequestException(
+          'Chỉ công ty ở trạng thái approved mới có thể ẩn',
+        );
       }
 
       const updated = await this.prisma.company.update({
@@ -168,17 +188,23 @@ export class CompaniesService {
       return updated;
     } catch (error) {
       console.error('🔥 Lỗi ẩn công ty:', error);
-      throw new InternalServerErrorException('Không thể ẩn công ty: ' + error.message);
+      throw new InternalServerErrorException(
+        'Không thể ẩn công ty: ' + error.message,
+      );
     }
   }
 
   async unhide(companyId: bigint) {
     try {
-      const company = await this.prisma.company.findUnique({ where: { id: companyId } });
+      const company = await this.prisma.company.findUnique({
+        where: { id: companyId },
+      });
       if (!company) throw new NotFoundException('Không tìm thấy công ty');
 
       if (company.status !== CompanyStatus.hidden) {
-        throw new BadRequestException('Chỉ công ty ở trạng thái hidden mới có thể khôi phục');
+        throw new BadRequestException(
+          'Chỉ công ty ở trạng thái hidden mới có thể khôi phục',
+        );
       }
 
       const updated = await this.prisma.company.update({
@@ -191,7 +217,9 @@ export class CompaniesService {
       return updated;
     } catch (error) {
       console.error('🔥 Lỗi khôi phục công ty:', error);
-      throw new InternalServerErrorException('Không thể khôi phục công ty: ' + error.message);
+      throw new InternalServerErrorException(
+        'Không thể khôi phục công ty: ' + error.message,
+      );
     }
   }
 
@@ -249,9 +277,8 @@ export class CompaniesService {
         license_file_url: company.license_file_url,
         founded_date: company.founded_date,
       };
-
     } catch (error) {
-      console.error("findOne() error:", error);
+      console.error('findOne() error:', error);
 
       // Nếu lỗi đã là HttpException (NotFound, Forbidden, ...) → ném lại
       if (error instanceof HttpException) {
@@ -259,7 +286,9 @@ export class CompaniesService {
       }
 
       // Lỗi bất ngờ → báo lỗi server
-      throw new InternalServerErrorException("Đã xảy ra lỗi khi lấy thông tin công ty");
+      throw new InternalServerErrorException(
+        'Đã xảy ra lỗi khi lấy thông tin công ty',
+      );
     }
   }
 
@@ -344,11 +373,13 @@ export class CompaniesService {
   private async linkIndustriesAndSkills(
     companyId: bigint,
     dto: CreateCompanyDto | UpdateCompanyDto,
-    replace = false,// replace true là update, false là create
+    replace = false, // replace true là update, false là create
   ) {
     // 🏭 Nếu DTO có industry_ids thì mới xử lý industry
     if (replace && dto.industry_ids !== undefined) {
-      await this.prisma.companyIndustry.deleteMany({ where: { company_id: companyId } });
+      await this.prisma.companyIndustry.deleteMany({
+        where: { company_id: companyId },
+      });
       if (dto.industry_ids.length) {
         await this.prisma.companyIndustry.createMany({
           data: dto.industry_ids.map((id) => ({
@@ -361,7 +392,9 @@ export class CompaniesService {
 
     // 💡 Nếu DTO có skill_ids thì mới xử lý skill
     if (replace && dto.skill_ids !== undefined) {
-      await this.prisma.companySkill.deleteMany({ where: { company_id: companyId } });
+      await this.prisma.companySkill.deleteMany({
+        where: { company_id: companyId },
+      });
       if (dto.skill_ids.length) {
         await this.prisma.companySkill.createMany({
           data: dto.skill_ids.map((id) => ({
@@ -446,8 +479,8 @@ export class CompaniesService {
       skip: (page - 1) * limit,
       take: limit,
       orderBy: [
-        { status: 'asc' },        // pending lên đầu
-        { created_at: 'desc' },   // trong mỗi nhóm, mới → cũ
+        { status: 'asc' }, // pending lên đầu
+        { created_at: 'desc' }, // trong mỗi nhóm, mới → cũ
       ],
       include: {
         account: { select: { email: true } },

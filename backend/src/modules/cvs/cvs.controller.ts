@@ -28,15 +28,12 @@ import type { Response } from 'express';
 import fetch from 'node-fetch';
 @Controller('cvs')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.candidate) 
+@Roles(Role.candidate)
 export class CvsController {
   constructor(private readonly cvsService: CvsService) {}
   // Tạo CV online theo template:
   @Post()
-  async createCv(
-    @User('userId') userId: bigint,
-    @Body() dto: CreateCvDto,
-  ) {
+  async createCv(@User('userId') userId: bigint, @Body() dto: CreateCvDto) {
     return this.cvsService.createCV(userId, dto);
   }
   // Upload file CV (PDF/DOCX):
@@ -51,15 +48,31 @@ export class CvsController {
   }
   // Tách ra 2 endpoint riêng để lấy CV online và file CV
   @Get('my/online')
-  async getMyOnlineCvs(@User('userId') userId: bigint, @Query() query: QueryCvDto) {
-  return this.cvsService.listMyCvsByType(userId, 'ONLINE', query.page, query.limit);
+  async getMyOnlineCvs(
+    @User('userId') userId: bigint,
+    @Query() query: QueryCvDto,
+  ) {
+    return this.cvsService.listMyCvsByType(
+      userId,
+      'ONLINE',
+      query.page,
+      query.limit,
+    );
   }
 
   @Get('my/file')
-  async getMyFileCvs(@User('userId') userId: bigint, @Query() query: QueryCvDto) {
-  return this.cvsService.listMyCvsByType(userId, 'FILE', query.page, query.limit);
-}
-// Lấy chi tiết CV của tôi:
+  async getMyFileCvs(
+    @User('userId') userId: bigint,
+    @Query() query: QueryCvDto,
+  ) {
+    return this.cvsService.listMyCvsByType(
+      userId,
+      'FILE',
+      query.page,
+      query.limit,
+    );
+  }
+  // Lấy chi tiết CV của tôi:
 
   @Get(':id')
   async getCvDetail(@Param('id', ParseIntPipe) id: number) {

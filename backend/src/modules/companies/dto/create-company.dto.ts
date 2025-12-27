@@ -1,4 +1,13 @@
-import { IsString, IsEnum, IsEmail, IsDateString, IsOptional, IsUrl, ArrayNotEmpty, IsArray } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsEmail,
+  IsDateString,
+  IsOptional,
+  IsUrl,
+  ArrayNotEmpty,
+  IsArray,
+} from 'class-validator';
 import { CompanySize } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 
@@ -41,7 +50,7 @@ export class CreateCompanyDto {
   @IsString()
   contact_phone: string;
 
-    // 🏭 Lĩnh vực hoạt động (nhiều ngành)
+  // 🏭 Lĩnh vực hoạt động (nhiều ngành)
   @IsOptional()
   @Transform(({ value }) => {
     if (!value) return [];

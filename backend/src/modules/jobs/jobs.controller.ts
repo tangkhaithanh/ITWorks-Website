@@ -124,25 +124,19 @@ export class JobsController {
   @Patch(':id/deadline')
   @Roles(Role.recruiter)
   @UseGuards(JobOwnershipGuard)
-  resetDeadline(
-    @Req() req: any,
-    @Body() body: ResetDeadlineDto,
-  ) {
+  resetDeadline(@Req() req: any, @Body() body: ResetDeadlineDto) {
     return this.jobsService.resetDeadline(req.job.id, body.newDeadline);
   }
 
   @Get(':id/dashboard')
   @Roles(Role.recruiter)
   @UseGuards(JobOwnershipGuard)
-  getJobDashboard(
-    @Req() req: any,
-    @Query() query: JobDashboardQueryDto,
-  ) {
+  getJobDashboard(@Req() req: any, @Query() query: JobDashboardQueryDto) {
     // JobOwnershipGuard đã gắn req.job.id (BigInt)
     return this.jobsService.getJobDashboard(req.job.id, query);
   }
 
-   // ============================
+  // ============================
   // 📌 GET JOB BY ID (PUBLIC)
   // ============================
   @Public()

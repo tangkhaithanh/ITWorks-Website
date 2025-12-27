@@ -60,4 +60,4 @@ import mailerConfig from '@/config/mailer.config';
     PaymentsModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}

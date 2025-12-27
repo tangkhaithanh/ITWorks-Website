@@ -20,49 +20,54 @@ export class CvsService {
     private readonly cloudinary: CloudinaryService,
   ) {}
 
-   private async getCandidateIdByUserId(userId: bigint): Promise<bigint> {
+  private async getCandidateIdByUserId(userId: bigint): Promise<bigint> {
     const candidate = await this.prisma.candidate.findUnique({
       where: { user_id: userId },
       select: { id: true },
     });
     if (!candidate) {
-      throw new ForbiddenException('Tài khoản hiện không có hồ sơ ứng viên (candidate).');
+      throw new ForbiddenException(
+        'Tài khoản hiện không có hồ sơ ứng viên (candidate).',
+      );
     }
     return candidate.id;
   }
 
-
   async createCV(userId: bigint, dto: CreateCvDto) {
     try {
-        const candidateId = await this.getCandidateIdByUserId(userId);
+      const candidateId = await this.getCandidateIdByUserId(userId);
 
-        if (!candidateId) {
-        throw new NotFoundException('Không tìm thấy candidate tương ứng với user này');
-        }
+      if (!candidateId) {
+        throw new NotFoundException(
+          'Không tìm thấy candidate tương ứng với user này',
+        );
+      }
 
-        const cv = await this.prisma.cv.create({
+      const cv = await this.prisma.cv.create({
         data: {
-            candidate_id: candidateId,
-            title: dto.title,
-            template_id: dto.template_id,
-            content: dto.content,
-            type: CvType.ONLINE,
+          candidate_id: candidateId,
+          title: dto.title,
+          template_id: dto.template_id,
+          content: dto.content,
+          type: CvType.ONLINE,
         },
-        });
+      });
 
-        return cv;
+      return cv;
     } catch (error) {
-        console.error('❌ Lỗi khi tạo CV:', error);
+      console.error('❌ Lỗi khi tạo CV:', error);
 
-        if (error instanceof NotFoundException) {
+      if (error instanceof NotFoundException) {
         throw error;
-        }
+      }
 
-        throw new InternalServerErrorException('Không thể tạo CV, vui lòng thử lại sau');
+      throw new InternalServerErrorException(
+        'Không thể tạo CV, vui lòng thử lại sau',
+      );
     }
-}
-    // Hàm lấy toàn bộ CV của một candidate
-    async listMyCvsByType(
+  }
+  // Hàm lấy toàn bộ CV của một candidate
+  async listMyCvsByType(
     userId: bigint,
     type: CvType, // 'ONLINE' | 'FILE'
     page: number,
@@ -92,7 +97,11 @@ export class CvsService {
           take: limit,
           include:
             type === CvType.ONLINE // lấy dữ liệu từ bảng CVTemplate nếu là CV online
-              ? { template: { select: { id: true, name: true, preview_url: true } } }
+              ? {
+                  template: {
+                    select: { id: true, name: true, preview_url: true },
+                  },
+                }
               : undefined,
         }),
         this.prisma.cv.count({
@@ -124,8 +133,8 @@ export class CvsService {
     }
   }
 
-// Lấy chi tiết CV theo ID
-    async getMyCvDetail(cvId: bigint) {
+  // Lấy chi tiết CV theo ID
+  async getMyCvDetail(cvId: bigint) {
     const cv = await this.prisma.cv.findFirst({
       where: { id: cvId, is_deleted: false },
       include: {
@@ -139,105 +148,112 @@ export class CvsService {
 
     return CvHelper.format(cv);
   }
-    // Cập nhật CV
-    async updateMyCv(cvId: bigint, dto: UpdateCvDto) {
+  // Cập nhật CV
+  async updateMyCv(cvId: bigint, dto: UpdateCvDto) {
+    const cv = await this.prisma.cv.findFirst({
+      where: { id: cvId, is_deleted: false },
+    });
+    if (!cv) throw new NotFoundException('CV không tồn tại.');
 
-        const cv = await this.prisma.cv.findFirst({ where: { id: cvId, is_deleted: false } });
-        if (!cv) throw new NotFoundException('CV không tồn tại.');
+    // ✅ Chỉ truyền những field thực sự có trong DTO
+    return this.prisma.cv.update({
+      where: { id: cvId },
+      data: {
+        ...(dto.title && { title: dto.title }),
+        ...(dto.template_id && { template_id: dto.template_id }),
+        ...(dto.content && { content: dto.content }),
+      },
+    });
+  }
 
-        // ✅ Chỉ truyền những field thực sự có trong DTO
-        return this.prisma.cv.update({
-            where: { id: cvId },
-            data: {
-            ...(dto.title && { title: dto.title }),
-            ...(dto.template_id && { template_id: dto.template_id }),
-            ...(dto.content && { content: dto.content }),
-            },
-        });
+  // Xóa CV (soft delete)
+  async deleteMyCv(cvId: bigint) {
+    const cv = await this.prisma.cv.findFirst({
+      where: { id: cvId, is_deleted: false },
+    });
+    if (!cv) throw new NotFoundException('CV không tồn tại hoặc đã bị xóa.');
+    const used = await this.prisma.application.count({
+      where: { cv_id: cvId },
+    });
+
+    //Nếu CV đang dùng → soft delete
+    if (used > 0) {
+      return this.prisma.cv.update({
+        where: { id: cvId },
+        data: {
+          is_deleted: true,
+        },
+      });
     }
 
-    // Xóa CV (soft delete)
-    async deleteMyCv(cvId: bigint) {
-        const cv = await this.prisma.cv.findFirst({
-            where: { id: cvId, is_deleted: false },
-        });
-        if (!cv) throw new NotFoundException('CV không tồn tại hoặc đã bị xóa.');
-        const used = await this.prisma.application.count({ where: { cv_id: cvId } });
-
-        //Nếu CV đang dùng → soft delete
-        if (used > 0) {
-            return this.prisma.cv.update({
-            where: { id: cvId },
-            data: {
-                is_deleted: true,
-            },
-            });
-        }
-
-        //Nếu chưa dùng → xóa thật + cleanup Cloudinary
-        if (cv.file_public_id) {
-            try {
-            await this.cloudinary.deleteFile(cv.file_public_id);
-            } catch (err) {
-            this.logger?.warn?.(
-                `⚠️ Lỗi khi xóa file Cloudinary (${cv.file_public_id}): ${err.message}`,
-            );
-            }
-        }
-
-        return this.prisma.cv.delete({ where: { id: cvId } });
+    //Nếu chưa dùng → xóa thật + cleanup Cloudinary
+    if (cv.file_public_id) {
+      try {
+        await this.cloudinary.deleteFile(cv.file_public_id);
+      } catch (err) {
+        this.logger?.warn?.(
+          `⚠️ Lỗi khi xóa file Cloudinary (${cv.file_public_id}): ${err.message}`,
+        );
+      }
     }
 
-//======Xử lí cho trường hợp upload CV dạng file (PDF/Word) lên Cloudinary ======//
+    return this.prisma.cv.delete({ where: { id: cvId } });
+  }
 
+  //======Xử lí cho trường hợp upload CV dạng file (PDF/Word) lên Cloudinary ======//
 
-    async uploadFileCv(userId: bigint, file: Express.Multer.File, overrideTitle?: string) {
+  async uploadFileCv(
+    userId: bigint,
+    file: Express.Multer.File,
+    overrideTitle?: string,
+  ) {
     if (!file) throw new BadRequestException('Không có file đính kèm.');
 
-        const candidateId = await this.getCandidateIdByUserId(userId);
-        const uploaded = await this.cloudinary.uploadDocument(file, 'cvs');
+    const candidateId = await this.getCandidateIdByUserId(userId);
+    const uploaded = await this.cloudinary.uploadDocument(file, 'cvs');
 
-        return this.prisma.cv.create({
-            data: {
-            candidate_id: candidateId,
-            title: overrideTitle || file.originalname,
-            file_url: uploaded.secure_url,
-            file_public_id: uploaded.public_id,
-            type: CvType.FILE,
-            },
-        });
+    return this.prisma.cv.create({
+      data: {
+        candidate_id: candidateId,
+        title: overrideTitle || file.originalname,
+        file_url: uploaded.secure_url,
+        file_public_id: uploaded.public_id,
+        type: CvType.FILE,
+      },
+    });
+  }
+
+  // Trường hợp người dùng thay đổi file CV đã upload
+  async replaceFile(cvId: bigint, file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('Không có file đính kèm.');
+
+    const cv = await this.prisma.cv.findFirst({
+      where: { id: cvId, is_deleted: false },
+    });
+    if (!cv) throw new NotFoundException('CV không tồn tại.');
+
+    // 🧹 Nếu CV có file cũ => xóa trên Cloudinary
+    if (cv.file_public_id) {
+      try {
+        await this.cloudinary.deleteFile(cv.file_public_id);
+      } catch (err) {
+        console.warn(`⚠️ Lỗi khi xóa file cũ trên Cloudinary: ${err.message}`);
+      }
     }
 
-    // Trường hợp người dùng thay đổi file CV đã upload
-    async replaceFile(cvId: bigint, file: Express.Multer.File) {
-        if (!file) throw new BadRequestException('Không có file đính kèm.');
-        
-        const cv = await this.prisma.cv.findFirst({ where: { id: cvId , is_deleted: false } });
-        if (!cv) throw new NotFoundException('CV không tồn tại.');
+    // 📤 Upload file mới
+    const uploaded = await this.cloudinary.uploadDocument(file, 'cvs');
 
-        // 🧹 Nếu CV có file cũ => xóa trên Cloudinary
-        if (cv.file_public_id) {
-            try {
-            await this.cloudinary.deleteFile(cv.file_public_id);
-            } catch (err) {
-            console.warn(`⚠️ Lỗi khi xóa file cũ trên Cloudinary: ${err.message}`);
-            }
-        }
+    return this.prisma.cv.update({
+      where: { id: cvId },
+      data: {
+        file_url: uploaded.secure_url,
+        file_public_id: uploaded.public_id,
+      },
+    });
+  }
 
-        // 📤 Upload file mới
-        const uploaded = await this.cloudinary.uploadDocument(file, 'cvs');
-
-        return this.prisma.cv.update({
-            where: { id: cvId },
-            data: {
-            file_url: uploaded.secure_url,
-            file_public_id: uploaded.public_id,
-            },
-        });
-    }
-
-
-    async getPdfBuffer(filename: string): Promise<Buffer> {
+  async getPdfBuffer(filename: string): Promise<Buffer> {
     try {
       const cloudUrl = `https://res.cloudinary.com/dzgltugct/raw/upload/v1761391116/cvs/${filename}`;
       const response = await fetch(cloudUrl);

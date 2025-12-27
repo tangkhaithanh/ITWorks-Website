@@ -14,7 +14,7 @@ import { MailService } from 'src/common/services/mail.service';
 import { RegisterUserDto } from './dto/register.dto';
 import { Request } from 'express';
 import { env } from 'process';
-const ACCESS_EXPIRES_MS = 15 * 60 * 1000;         // 15m
+const ACCESS_EXPIRES_MS = 15 * 60 * 1000; // 15m
 const REFRESH_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000; // 7d
 @Injectable()
 export class AuthService {
@@ -23,7 +23,7 @@ export class AuthService {
     private jwtService: JwtService,
     private mailService: MailService,
     private configService: ConfigService,
-  ) { }
+  ) {}
 
   private cookieBase(): CookieOptions {
     const isProd = process.env.NODE_ENV === 'production';
@@ -58,7 +58,8 @@ export class AuthService {
 
     const ok = await bcrypt.compare(dto.password, account.password);
     if (!ok) throw new UnauthorizedException('Invalid email or password');
-    if (account.status !== 'active') throw new UnauthorizedException('Account not active');
+    if (account.status !== 'active')
+      throw new UnauthorizedException('Account not active');
 
     const payload = { sub: account.id.toString(), role: account.role };
 
@@ -145,7 +146,9 @@ export class AuthService {
   // Register candidate
   async registerCandidate(dto: RegisterUserDto) {
     try {
-      const exists = await this.prisma.account.findUnique({ where: { email: dto.email } });
+      const exists = await this.prisma.account.findUnique({
+        where: { email: dto.email },
+      });
       if (exists) throw new BadRequestException('Email already registered');
 
       const hashed = await bcrypt.hash(dto.password, 10);
@@ -181,7 +184,11 @@ export class AuthService {
         { expiresIn: '10m' },
       );
       const link = `http://localhost:3000/auth/verify-email?token=${token}`;
-      await this.mailService.sendVerificationMail(account.email, link, user.full_name);
+      await this.mailService.sendVerificationMail(
+        account.email,
+        link,
+        user.full_name,
+      );
       return { message: 'Please check your email to verify account' };
     } catch (error) {
       console.error(error);
@@ -190,7 +197,9 @@ export class AuthService {
   }
   async registerRecruiter(dto: RegisterUserDto) {
     try {
-      const exists = await this.prisma.account.findUnique({ where: { email: dto.email } });
+      const exists = await this.prisma.account.findUnique({
+        where: { email: dto.email },
+      });
       if (exists) throw new BadRequestException('Email already registered');
 
       const hashed = await bcrypt.hash(dto.password, 10);
@@ -225,7 +234,11 @@ export class AuthService {
       const link = `http://localhost:3000/auth/verify-email?token=${token}`;
 
       // Gửi mail verify
-      await this.mailService.sendVerificationMail(account.email, link, user.full_name);
+      await this.mailService.sendVerificationMail(
+        account.email,
+        link,
+        user.full_name,
+      );
 
       return { message: 'Please check your email to verify account' };
     } catch (error) {
@@ -256,7 +269,9 @@ export class AuthService {
   // Gửi link quên mật khẩu qua mail:
   async sendResetPasswordEmail(email: string) {
     try {
-      const account = await this.prisma.account.findUnique({ where: { email } });
+      const account = await this.prisma.account.findUnique({
+        where: { email },
+      });
 
       if (account) {
         const token = await this.jwtService.signAsync(
@@ -265,18 +280,21 @@ export class AuthService {
         );
 
         const link = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
-        console.log("📩 Reset password link:", link);
+        console.log('📩 Reset password link:', link);
 
         await this.mailService.sendResetPasswordMail(email, link);
       }
 
-      return { message: 'Nếu email tồn tại, bạn sẽ nhận được email reset mật khẩu' };
+      return {
+        message: 'Nếu email tồn tại, bạn sẽ nhận được email reset mật khẩu',
+      };
     } catch (err) {
-      console.error("❌ Lỗi gửi mail:", err);
-      throw new InternalServerErrorException("Không thể gửi email, vui lòng thử lại sau");
+      console.error('❌ Lỗi gửi mail:', err);
+      throw new InternalServerErrorException(
+        'Không thể gửi email, vui lòng thử lại sau',
+      );
     }
   }
-
 
   // Hàm đặt lại mật khẩu
   async resetPassword(token: string, newPassword: string) {
@@ -344,12 +362,12 @@ export class AuthService {
   async verifyResetToken(token: string) {
     try {
       const payload = await this.jwtService.verifyAsync(token);
-      if (payload.purpose !== "reset-password") {
-        throw new BadRequestException("Invalid token purpose");
+      if (payload.purpose !== 'reset-password') {
+        throw new BadRequestException('Invalid token purpose');
       }
       return { valid: true };
     } catch (e) {
-      throw new BadRequestException("Token invalid or expired");
+      throw new BadRequestException('Token invalid or expired');
     }
   }
 }

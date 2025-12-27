@@ -60,7 +60,7 @@ export class ApplicationController {
       Number(page),
       Number(limit),
       status as ApplicationStatus,
-      search
+      search,
     );
   }
 

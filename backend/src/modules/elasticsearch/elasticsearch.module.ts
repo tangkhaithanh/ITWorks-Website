@@ -10,7 +10,9 @@ import { ElasticsearchJobService } from './job.elasticsearch.service';
       provide: 'ELASTIC_CLIENT',
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const node = configService.get<string>('ELASTICSEARCH_NODE') || 'http://localhost:9200';
+        const node =
+          configService.get<string>('ELASTICSEARCH_NODE') ||
+          'http://localhost:9200';
         console.log('✅ Elasticsearch node:', node);
 
         return new Client({
@@ -27,6 +29,10 @@ import { ElasticsearchJobService } from './job.elasticsearch.service';
     ElasticsearchCompanyService,
     ElasticsearchJobService,
   ],
-  exports: ['ELASTIC_CLIENT', ElasticsearchCompanyService, ElasticsearchJobService],
+  exports: [
+    'ELASTIC_CLIENT',
+    ElasticsearchCompanyService,
+    ElasticsearchJobService,
+  ],
 })
 export class ElasticsearchCustomModule {}

@@ -1,5 +1,13 @@
 // src/dashboard/dto/recruiter-dashboard-query.dto.ts
-import { IsOptional, IsString, IsIn, IsDateString, IsInt, Min, Max } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsIn,
+  IsDateString,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 /**

@@ -1,4 +1,14 @@
-import { IsDateString, IsEmail, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsEmail,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 import { InterviewMode, InterviewStatus } from '@prisma/client';
 export class CreateInterviewDto {
   @IsNumber()

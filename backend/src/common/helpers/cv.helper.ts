@@ -6,11 +6,11 @@ export class CvHelper {
     // ====== CV FILE ======
     if (cv.type === CvType.FILE) {
       return {
-        type: "file",
+        type: 'file',
         id: cv.id,
         title: cv.title,
         file_url: cv.file_url,
-        file_public_id: cv.file_public_id,   // 🔥 thêm dòng này
+        file_public_id: cv.file_public_id, // 🔥 thêm dòng này
         created_at: cv.created_at,
         updated_at: cv.updated_at,
       };
@@ -19,7 +19,7 @@ export class CvHelper {
     // ====== CV ONLINE ======
     if (cv.type === CvType.ONLINE) {
       return {
-        type: "online",
+        type: 'online',
         id: cv.id,
         title: cv.title,
         template_id: cv.template_id,
