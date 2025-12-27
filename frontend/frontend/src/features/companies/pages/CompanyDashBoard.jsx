@@ -28,7 +28,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
-
+import { useNavigate } from "react-router-dom";
 import CompanyAPI from "../CompanyAPI";
 
 // Import UI Components (Giữ nguyên)
@@ -202,6 +202,7 @@ const QUICK_RANGES = [
 const DEFAULT_FILTERS = { range: "7d", from: "", to: "" };
 
 export default function CompanyDashboard() {
+  const navigate = useNavigate();
   const [company, setCompany] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
   const [filterMode, setFilterMode] = useState(FILTER_MODES.QUICK);
