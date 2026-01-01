@@ -25,7 +25,7 @@ import withReactContent from "sweetalert2-react-content";
 import TextInput from "@/components/ui/TextInput";
 import SelectInput from "@/components/ui/SelectInput";
 import Button from "@/components/ui/Button";
-
+import SearchableDropdown from "@/components/ui/SearchableDropdown";
 // APIs
 import ApplicationAPI from "@/features/applications/ApplicationAPI";
 import CandidateAPI from "@/features/candidates/CandidateAPI";
@@ -44,101 +44,7 @@ const truncateText = (text, maxLength = 30) => {
 };
 
 // 2. Component Custom Dropdown cho Job (Giải pháp UX tối ưu)
-function JobFilterDropdown({ value, onChange, options }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const wrapperRef = useRef(null);
 
-  // Đóng dropdown khi click ra ngoài
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Tìm label của job đang chọn để hiển thị ra ngoài (Cắt ngắn)
-  const selectedOption = options.find(opt => String(opt.value) === String(value));
-  const displayLabel = selectedOption ? truncateText(selectedOption.fullLabel, 35) : "Tất cả công việc";
-
-  // Lọc danh sách job theo từ khóa tìm kiếm trong dropdown
-  const filteredOptions = useMemo(() => {
-    if (!searchTerm) return options;
-    return options.filter(opt =>
-      opt.fullLabel.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [options, searchTerm]);
-
-  return (
-    <div className="relative w-full" ref={wrapperRef}>
-      {/* TRIGGER BUTTON (Luôn gọn gàng, fixed height) */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full h-[42px] px-3 py-2 bg-white border border-slate-200 rounded-2xl flex items-center justify-between text-sm text-slate-700 hover:border-blue-400 focus:ring-4 focus:ring-blue-100 transition-all outline-none"
-      >
-        <span className="truncate mr-2" title={selectedOption?.fullLabel}>
-          {displayLabel}
-        </span>
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-      </button>
-
-      {/* DROPDOWN MENU (Rộng, hiển thị Full tên) */}
-      {isOpen && (
-        <div className="absolute top-[110%] left-0 w-full sm:w-[350px] bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-left">
-
-          {/* Search Box bên trong Dropdown */}
-          <div className="p-2 border-b border-slate-100 bg-slate-50">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-              <input
-                autoFocus
-                type="text"
-                placeholder="Tìm nhanh tên job..."
-                className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* List Options */}
-          <div className="max-h-[250px] overflow-y-auto p-1 custom-scrollbar">
-            {filteredOptions.length > 0 ? (
-              filteredOptions.map((opt) => (
-                <div
-                  key={opt.value}
-                  onClick={() => {
-                    onChange({ target: { name: "jobId", value: opt.value } });
-                    setIsOpen(false);
-                    setSearchTerm("");
-                  }}
-                  className={`px-3 py-2.5 rounded-lg text-sm cursor-pointer transition-colors flex items-start gap-2 mb-0.5 last:mb-0 ${String(value) === String(opt.value)
-                    ? "bg-indigo-50 text-indigo-700 font-medium"
-                    : "hover:bg-slate-50 text-slate-700"
-                    }`}
-                >
-                  {/* Icon check nếu đang chọn */}
-                  <div className={`mt-0.5 w-4 h-4 flex-shrink-0 flex items-center justify-center ${String(value) === String(opt.value) ? "opacity-100" : "opacity-0"}`}>
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                  {/* Tên Job Full (Whitespace normal để xuống dòng) */}
-                  <span className="whitespace-normal leading-tight">
-                    {opt.fullLabel}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="p-4 text-center text-xs text-slate-400">Không tìm thấy công việc</div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 
 // 3. Status Badge Helper
@@ -286,10 +192,10 @@ export default function CvManagementPage() {
 
   // Prepare Dropdown Options (Giữ Full tên ở field khác)
   const jobDropdownData = [
-    { value: "", fullLabel: "Tất cả công việc" },
+    { value: "", label: "Tất cả công việc" },
     ...jobOptions.map((job) => ({
       value: String(job.id),
-      fullLabel: job.title, // Giữ nguyên tên gốc để hiển thị trong list
+      label: job.title,
     })),
   ];
 
@@ -372,11 +278,14 @@ export default function CvManagementPage() {
 
               {/* Custom Job Dropdown */}
               <div className="flex-1 min-w-[200px]">
-                <JobFilterDropdown
-                  value={filters.jobId}
-                  onChange={handleChange}
-                  options={jobDropdownData}
-                />
+                <SearchableDropdown
+                   name="jobId"
+                   value={filters.jobId}
+                   onChange={handleChange}
+                   options={jobDropdownData}
+                   placeholder="Tất cả công việc"
+                   searchPlaceholder="Tìm nhanh tên job..."
+                 />
               </div>
 
               {/* Status Filter */}

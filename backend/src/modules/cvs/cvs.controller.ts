@@ -25,7 +25,6 @@ import { Role } from '@prisma/client';
 import { QueryCvDto } from './dto/query-cv.dto';
 import { Roles } from '@/common/decorators/roles.decorator';
 import type { Response } from 'express';
-import fetch from 'node-fetch';
 @Controller('cvs')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.candidate)

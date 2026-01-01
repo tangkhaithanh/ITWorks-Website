@@ -428,7 +428,7 @@ export class CompaniesService {
   }
 
   private async getFullCompany(id: bigint) {
-    return await this.prisma.company.findUnique({
+    return this.prisma.company.findUnique({
       where: { id },
       include: {
         industry_info: { include: { industry: true } },
@@ -506,4 +506,5 @@ export class CompaniesService {
       totalPages: Math.ceil(total / limit),
     };
   }
+
 }

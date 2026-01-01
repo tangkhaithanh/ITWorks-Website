@@ -321,8 +321,6 @@ export class ApplicationService {
     }
   }
   async getApplicationDetailByCompany(accountId: bigint, appId: bigint) {
-    console.log('Getting application detail for appId:', appId);
-    console.log('AccountId:', accountId);
 
     // Kiểm tra recruiter thuộc công ty nào
     const company = await this.prisma.company.findUnique({
