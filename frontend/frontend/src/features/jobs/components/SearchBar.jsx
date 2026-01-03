@@ -1,50 +1,67 @@
 import { useDispatch, useSelector } from "react-redux";
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { setKeyword, setCity } from "../jobSearchSlice";
-import TextInput from "@/components/ui/TextInput";
-import SelectInput from "@/components/ui/SelectInput";
 import Button from "@/components/ui/Button";
+import SearchableDropdown from "@/components/ui/SearchableDropdown";
+import LocationAPI from "@/features/jobs/LocationAPI";
 import JobAPI from "../JobAPI";
+import { Search, MapPin, Loader2, X, History, Sparkles } from "lucide-react";
 
-const SearchBar = ({ onSearch, size = "md" }) => {
+const SearchBar = ({ onSearch, size = "md", compact = false }) => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
   const { keyword, city } = useSelector((s) => s.jobSearch);
 
   const [suggestions, setSuggestions] = useState([]);
   const [isFocused, setIsFocused] = useState(false);
   const [loading, setLoading] = useState(false);
   const wrapperRef = useRef(null);
+  const [cities, setCities] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(false);
 
-  const inputSize =
-    size === "lg"
-      ? "p-6 text-lg rounded-3xl shadow-xl"
-      : "p-4 text-base rounded-2xl shadow-md";
+  // Layout Config
+  const isLarge = size === "lg";
+  const containerHeight = compact ? "h-[50px]" : isLarge ? "h-[64px]" : "h-[56px]";
+  const iconSize = isLarge ? "w-6 h-6" : "w-5 h-5";
+  const fontSize = isLarge ? "text-lg" : "text-base";
 
-  // 🧠 debounce suggest
+  // --- Logic giữ nguyên ---
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        setLoadingCities(true);
+        const res = await LocationAPI.getCities();
+        const data = res?.data?.data || [];
+        setCities([
+          { value: "", label: "Tất cả thành phố" },
+          ...data.map((c) => ({ value: c.name, label: c.name })),
+        ]);
+      } catch (err) {
+        console.error("Fetch cities error:", err);
+      } finally {
+        setLoadingCities(false);
+      }
+    };
+    fetchCities();
+  }, []);
+
   useEffect(() => {
     const timeout = setTimeout(async () => {
       const query = keyword.trim();
       if (!query) return setSuggestions([]);
-
       try {
         setLoading(true);
         const res = await JobAPI.suggest(query);
         const result = res?.data?.data;
         setSuggestions(Array.isArray(result) ? result : []);
       } catch (err) {
-        console.error("Suggest error:", err);
         setSuggestions([]);
       } finally {
         setLoading(false);
       }
     }, 300);
-
     return () => clearTimeout(timeout);
   }, [keyword]);
 
-  // 🔒 Đóng popup khi click ra ngoài
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
@@ -55,103 +72,160 @@ const SearchBar = ({ onSearch, size = "md" }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 🚀 Khi click 1 gợi ý hoặc bấm nút tìm kiếm → chuyển sang trang search
-  const goToSearchPage = (kw, ct) => {
-    const params = new URLSearchParams();
-    if (kw) params.set("keyword", kw);
-    if (ct) params.set("city", ct);
-    navigate(`/jobs/search?${params.toString()}`);
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsFocused(false);
-    goToSearchPage(keyword, city);
+    onSearch?.({ page: 1 }); // ✅ ĐÚNG
+  };
+
+  const handleClearKeyword = () => {
+    dispatch(setKeyword(""));
+    setSuggestions([]);
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className={`relative z-50 flex flex-wrap items-center gap-3 
-             bg-white/95 backdrop-blur-sm border border-white/40
-             px-4 py-3 rounded-2xl shadow-[0_0_15px_rgba(255,255,255,0.25)]
-             ${size === "lg" ? "shadow-2xl" : "shadow-md"}`}
-      ref={wrapperRef}
-    >
-      {/* Ô nhập từ khóa */}
-      <div className="relative flex-1 min-w-[240px]">
-        <TextInput
-          value={keyword}
-          onChange={(e) => dispatch(setKeyword(e.target.value))}
-          placeholder="Tìm việc làm (VD: ReactJS, NodeJS...)"
-          className={inputSize}
-          onFocus={() => setIsFocused(true)}
-        />
-
-        {/* 🔍 Gợi ý giống Google */}
-        {isFocused && (
-          <ul className="absolute top-full left-0 w-full mt-2 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-top-2 duration-200">
-            {loading && (
-              <li className="px-4 py-3 text-sm text-slate-500 italic">
-                Đang gợi ý...
-              </li>
+      <form
+          onSubmit={handleSubmit}
+          ref={wrapperRef}
+          className={`
+        relative z-50 flex items-center gap-1
+        bg-white  /* ✅ QUAN TRỌNG: Nền trắng tuyệt đối 100%, không dùng /90 hay /95 */
+        transition-all duration-300 ease-out
+        ${
+              isFocused
+                  ? "ring-4 ring-blue-100 shadow-xl" // Khi focus: Glow xanh nhẹ
+                  : "shadow-lg hover:shadow-xl border border-transparent" // Bình thường: Đổ bóng sâu để tách biệt nền
+          }
+        ${compact ? "rounded-full py-1 pl-1 pr-1.5" : "rounded-full p-2 pl-3"}
+      `}
+      >
+        {/* ----------------------------------------------------------------
+          KHỐI 1: TỪ KHÓA
+      ------------------------------------------------------------------ */}
+        <div className={`relative flex-1 group ${containerHeight} flex items-center ml-2`}>
+          {/* Icon Search */}
+          <div className={`
+            flex items-center justify-center rounded-full transition-all duration-300
+            ${isLarge ? "w-10 h-10" : "w-8 h-8"}
+            ${isFocused ? "bg-blue-50 text-blue-600" : "bg-gray-50 text-gray-400 group-hover:bg-gray-100 group-hover:text-gray-500"}
+        `}>
+            {loading ? (
+                <Loader2 className={`${iconSize} animate-spin`} />
+            ) : (
+                <Search className={iconSize} />
             )}
+          </div>
 
-            {!loading &&
-              suggestions.map((item, i) => (
-                <li
-                  key={i}
-                  onClick={() => {
-                    dispatch(setKeyword(item));
-                    setIsFocused(false);
-                    goToSearchPage(item, city); // ✅ chuyển trang ngay khi click gợi ý
-                  }}
-                  className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-blue-50 transition-colors duration-200"
-                >
-                  <svg
-                    className="w-5 h-5 text-slate-400"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"
-                    />
-                  </svg>
-                  <span className="text-slate-700 font-medium">{item}</span>
-                </li>
-              ))}
+          {/* Input Field */}
+          <input
+              type="text"
+              value={keyword}
+              onChange={(e) => dispatch(setKeyword(e.target.value))}
+              onFocus={() => setIsFocused(true)}
+              placeholder={isLarge ? "Tìm công việc, kỹ năng, công ty..." : "Tìm việc làm..."}
+              className={`
+            w-full h-full pl-4 pr-10
+            bg-transparent border-none outline-none 
+            text-slate-800 font-semibold placeholder:text-slate-400 placeholder:font-medium
+            ${fontSize}
+          `}
+          />
 
-            {!loading && suggestions.length === 0 && keyword.trim() && (
-              <li className="px-4 py-3 text-sm text-slate-500 italic">
-                Không có gợi ý phù hợp
-              </li>
+          {/* Nút Clear */}
+          {keyword && (
+              <button
+                  type="button"
+                  onClick={handleClearKeyword}
+                  className="absolute right-2 p-1.5 text-slate-300 bg-transparent hover:bg-slate-100 hover:text-red-500 rounded-full transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+          )}
+
+          {/* --- SUGGESTIONS DROPDOWN (Nền trắng tuyệt đối) --- */}
+          {isFocused && (suggestions.length > 0 || loading) && (
+              <div className="absolute top-[calc(100%+16px)] left-[-12px] w-[calc(100%+40px)] bg-white rounded-3xl shadow-2xl border border-slate-50 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300 z-[60]">
+                <div className="px-6 py-3 bg-white text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 flex items-center gap-2">
+                  <Sparkles className="w-3 h-3 text-yellow-500" />
+                  Gợi ý thông minh
+                </div>
+
+                <ul className="py-2">
+                  {suggestions.map((item, i) => (
+                      <li
+                          key={i}
+                          onClick={() => {
+                            dispatch(setKeyword(item));
+                            setIsFocused(false);
+                          }}
+                          className="flex items-center gap-4 px-6 py-3.5 cursor-pointer hover:bg-blue-50 transition-all group/item border-l-4 border-transparent hover:border-blue-500"
+                      >
+                        <div className="p-2 bg-slate-50 rounded-full group-hover/item:bg-blue-100 transition-colors">
+                          <History className="w-4 h-4 text-slate-400 group-hover/item:text-blue-600" />
+                        </div>
+                        <span className="text-slate-600 font-medium group-hover/item:text-slate-900 group-hover/item:translate-x-1 transition-transform">
+                    {item}
+                  </span>
+                      </li>
+                  ))}
+                </ul>
+              </div>
+          )}
+        </div>
+
+        {/* Divider: Màu xám cực nhạt để không làm bẩn nền trắng */}
+        <div className="w-[1px] h-8 bg-gray-100 mx-2 hidden sm:block"></div>
+
+        {/* ----------------------------------------------------------------
+          KHỐI 2: THÀNH PHỐ
+      ------------------------------------------------------------------ */}
+        <div className="w-[160px] sm:w-[220px] relative z-40 group/city">
+          <div className="relative px-2">
+            <div className="flex items-center gap-2">
+              <div className="text-gray-400 group-hover/city:text-blue-500 transition-colors">
+                <MapPin className={iconSize} />
+              </div>
+              <SearchableDropdown
+                  name="city"
+                  value={city}
+                  onChange={(e) => dispatch(setCity(e.target.value))}
+                  options={cities}
+                  placeholder={loadingCities ? "Đang tải..." : "Địa điểm"}
+                  searchPlaceholder="Tìm tỉnh/thành..."
+                  maxWidth="100%"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ----------------------------------------------------------------
+          KHỐI 3: BUTTON SUBMIT
+      ------------------------------------------------------------------ */}
+        <div className="pl-2">
+          <Button
+              type="submit"
+              size={compact ? "sm" : isLarge ? "lg" : "md"}
+              className={`
+            !rounded-full font-bold tracking-wide
+            shadow-lg shadow-blue-500/30 
+            hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300
+            ${compact
+                  ? '!w-10 !h-10 !p-0 flex items-center justify-center bg-blue-600'
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8'
+              }
+            `}
+          >
+            {compact ? (
+                <Search className="w-5 h-5 text-white" />
+            ) : (
+                <span className="flex items-center gap-2">
+                    {isLarge && <Search className="w-5 h-5" />}
+                  Tìm Kiếm
+                </span>
             )}
-          </ul>
-        )}
-      </div>
-
-      {/* Ô chọn thành phố */}
-      <div className="w-[200px]">
-        <SelectInput
-          value={city}
-          onChange={(e) => dispatch(setCity(e.target.value))}
-          options={[
-            { value: "", label: "Tất cả thành phố" },
-            { value: "TP.HCM", label: "TP.HCM" },
-            { value: "Hà Nội", label: "Hà Nội" },
-            { value: "Đà Nẵng", label: "Đà Nẵng" },
-          ]}
-        />
-      </div>
-
-      <Button type="submit" size={size === "lg" ? "lg" : "md"}>
-        Tìm kiếm
-      </Button>
-    </form>
+          </Button>
+        </div>
+      </form>
   );
 };
 

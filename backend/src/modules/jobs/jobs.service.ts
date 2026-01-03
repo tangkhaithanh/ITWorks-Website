@@ -29,12 +29,10 @@ export class JobsService {
   // -----------------------------
   async create(accountId: bigint, dto: CreateJobDto) {
     try {
-      const { skill_ids, description, requirements, ...rest } = dto;
+      const { skill_ids, description, requirements, ...data } = dto;
+      const { category_id, ...rest } = data;
 
-      // ⭐ Tách category_id ra để không bị spread vào Prisma
-      const { category_id, ...data } = rest;
-
-      // ✅ Lấy công ty của recruiter
+      // 1️⃣ Lấy company
       const company = await this.prisma.company.findUnique({
         where: { account_id: accountId },
       });
@@ -42,18 +40,42 @@ export class JobsService {
         throw new NotFoundException('Nhà tuyển dụng chưa có công ty hợp lệ');
       }
 
-      // ✅ Ghép địa chỉ đầy đủ
-      const parts = [
-        data.location_street,
-        data.location_ward,
-        data.location_district,
-        data.location_city,
-      ].filter(Boolean);
+      // 2️⃣ Resolve CITY
+      const city = await this.prisma.locationCity.findUnique({
+        where: { id: rest.location_city_id },
+      });
+      if (!city) {
+        throw new BadRequestException('Thành phố không hợp lệ');
+      }
+
+      // 3️⃣ Resolve WARD (optional)
+      let ward: { name: string } | null = null;
+      if (rest.location_ward_id) {
+        ward = await this.prisma.locationWard.findFirst({
+          where: {
+            id: rest.location_ward_id,
+            city_id: city.id,
+          },
+          select: { name: true },
+        });
+
+        if (!ward) {
+          throw new BadRequestException('Phường/Xã không hợp lệ');
+        }
+      }
+
+      const location_city = city.name;
+      const location_ward = ward?.name ?? null;
+
+      // 4️⃣ Build location_full
+      const parts = [rest.location_street, location_ward, location_city].filter(
+        Boolean,
+      );
       const location_full = parts.join(', ');
 
-      // ✅ Tự động lấy toạ độ (nếu có) — làm ngoài transaction để tránh gọi API nhiều lần
-      let latitude = data.latitude ?? null;
-      let longitude = data.longitude ?? null;
+      // 5️⃣ Geocode
+      let latitude = rest.latitude ?? null;
+      let longitude = rest.longitude ?? null;
 
       if (!latitude && !longitude && location_full) {
         const geo = await this.locationService.geocodeAddress(location_full);
@@ -63,32 +85,45 @@ export class JobsService {
 
       const now = new Date();
 
-      // 🔐 DB TRANSACTION: Create Job + Skills + Consume Quota (atomic)
+      // 6️⃣ TRANSACTION
       const createdJobId = await this.prisma.$transaction(async (tx) => {
-        // 1) Check plan active (giống consumeJobQuota)
-        const current = await tx.companyPlan.findUnique({
+        const currentPlan = await tx.companyPlan.findUnique({
           where: { company_id: company.id },
         });
 
         if (
-          !current ||
-          current.status !== 'active' ||
-          current.end_date <= now
+          !currentPlan ||
+          currentPlan.status !== 'active' ||
+          currentPlan.end_date <= now
         ) {
           throw new BadRequestException(
-            'Bạn chưa có gói dịch vụ hoặc gói đã hết hạn.',
+            'Bạn chưa có gói dịch vụ hoặc gói đã hết hạn',
           );
         }
 
-        // 2) Tạo job (giữ nguyên logic cũ)
         const job = await tx.job.create({
           data: {
             company: { connect: { id: company.id } },
 
-            // ⭐ Chỉ spread data KHÔNG chứa category_id
-            ...data,
+            title: rest.title,
+            salary_min: rest.salary_min,
+            salary_max: rest.salary_max,
+            negotiable: rest.negotiable,
+            employment_type: rest.employment_type,
+            work_modes: rest.work_modes,
+            experience_levels: rest.experience_levels,
 
-            // ⭐ Gắn category bằng quan hệ
+            location_city,
+            location_ward,
+            location_district: null,
+            location_street: rest.location_street,
+            location_full,
+            latitude,
+            longitude,
+
+            number_of_openings: rest.number_of_openings ?? 1,
+            deadline: rest.deadline ? new Date(rest.deadline) : null,
+
             ...(category_id
               ? {
                   category: {
@@ -97,24 +132,15 @@ export class JobsService {
                 }
               : {}),
 
-            location_full,
-            latitude,
-            longitude,
-
-            number_of_openings: data.number_of_openings ?? 1,
-
             details: {
               create: {
                 description,
                 requirements,
               },
             },
-
-            deadline: data.deadline ? new Date(data.deadline) : null,
           },
         });
 
-        // 3) Gắn kỹ năng nếu có (giữ nguyên logic cũ)
         if (skill_ids?.length) {
           await tx.jobSkill.createMany({
             data: skill_ids.map((id) => ({
@@ -124,11 +150,9 @@ export class JobsService {
           });
         }
 
-        // 4) ✅ ATOMIC CONSUME QUOTA (GIỐNG consumeJobQuota)
-        // updateMany + điều kiện gt:0 để chống race condition / double click
-        const result = await tx.companyPlan.updateMany({
+        const quotaResult = await tx.companyPlan.updateMany({
           where: {
-            id: current.id,
+            id: currentPlan.id,
             jobs_left: { gt: 0 },
           },
           data: {
@@ -136,42 +160,30 @@ export class JobsService {
           },
         });
 
-        if (result.count === 0) {
-          // Nếu 2 request song song, request đến sau sẽ rơi vào case này
-          throw new BadRequestException(
-            'Đã hết lượt đăng tin (Quota exhausted). Vui lòng nâng cấp gói.',
-          );
+        if (quotaResult.count === 0) {
+          throw new BadRequestException('Đã hết lượt đăng tin');
         }
 
         return job.id;
       });
 
-      // ✅ Lấy lại dữ liệu đầy đủ để index (giữ nguyên logic cũ)
       const fullJob = await this.getFullJob(createdJobId);
 
-      // ✅ Index Elasticsearch (ngoài transaction)
-      // Khuyên: đừng làm fail cả request vì ES không rollback được -> tránh user retry gây tạo trùng
       try {
         await this.esJob.indexJob(fullJob);
-      } catch (esErr) {
-        console.error(
-          '⚠️ Elasticsearch index failed (job vẫn tạo thành công):',
-          esErr,
-        );
-        // không throw
+      } catch (e) {
+        console.error('⚠️ ES index failed:', e);
       }
 
       return fullJob;
     } catch (error) {
       console.error('🔥 Lỗi tạo job:', error);
-
       if (
         error instanceof BadRequestException ||
         error instanceof NotFoundException
       ) {
         throw error;
       }
-
       throw new InternalServerErrorException(
         'Không thể tạo job: ' + error.message,
       );
@@ -184,37 +196,59 @@ export class JobsService {
     try {
       const { skill_ids, description, requirements, ...data } = dto;
 
-      // ✅ Kiểm tra job tồn tại
       const job = await this.prisma.job.findUnique({
         where: { id: jobId },
         include: { details: true },
       });
       if (!job) throw new NotFoundException('Không tìm thấy công việc');
 
-      // ✅ Ghép location_full nếu có bất kỳ field địa chỉ nào thay đổi
+      let location_city = job.location_city;
+      let location_ward = job.location_ward;
+
+      // 1️⃣ Resolve city nếu có gửi ID
+      if (data.location_city_id) {
+        const city = await this.prisma.locationCity.findUnique({
+          where: { id: data.location_city_id },
+        });
+        if (!city) throw new BadRequestException('Thành phố không hợp lệ');
+        location_city = city.name;
+      }
+
+      // 2️⃣ Resolve ward nếu có
+      if (data.location_ward_id) {
+        const ward = await this.prisma.locationWard.findFirst({
+          where: {
+            id: data.location_ward_id,
+            city_id: data.location_city_id ?? undefined,
+          },
+          select: { name: true },
+        });
+        if (!ward) throw new BadRequestException('Phường/Xã không hợp lệ');
+        location_ward = ward.name;
+      }
+
+      // 3️⃣ Build location_full
       let location_full = job.location_full;
       if (
-        data.location_city ||
-        data.location_district ||
-        data.location_ward ||
+        data.location_city_id ||
+        data.location_ward_id ||
         data.location_street
       ) {
         const parts = [
           data.location_street ?? job.location_street,
-          data.location_ward ?? job.location_ward,
-          data.location_district ?? job.location_district,
-          data.location_city ?? job.location_city,
+          location_ward,
+          location_city,
         ].filter(Boolean);
         location_full = parts.join(', ');
       }
 
-      // ✅ Tính lại toạ độ nếu có thay đổi địa chỉ hoặc latitude/longitude được gửi mới
+      // 4️⃣ Geocode lại nếu cần
       let latitude = data.latitude ?? job.latitude;
       let longitude = data.longitude ?? job.longitude;
+
       if (
-        (data.location_city ||
-          data.location_district ||
-          data.location_ward ||
+        (data.location_city_id ||
+          data.location_ward_id ||
           data.location_street) &&
         location_full
       ) {
@@ -223,40 +257,55 @@ export class JobsService {
         longitude = geo.longitude;
       }
 
-      // ✅ Chuẩn hóa deadline & category_id
       const deadline = data.deadline ? new Date(data.deadline) : job.deadline;
+
       const category_id =
         data.category_id !== undefined
           ? BigInt(data.category_id as any)
           : job.category_id;
-      const updateDetailData: any = {};
-      if (description !== undefined) updateDetailData.description = description;
-      if (requirements !== undefined)
-        updateDetailData.requirements = requirements;
 
-      // ✅ Cập nhật job chính
       const updatedJob = await this.prisma.job.update({
         where: { id: jobId },
         data: {
-          ...data,
-          category_id,
+          title: data.title ?? job.title,
+          salary_min: data.salary_min,
+          salary_max: data.salary_max,
+          negotiable: data.negotiable,
+          employment_type: data.employment_type,
+          work_modes: data.work_modes,
+          experience_levels: data.experience_levels,
+
+          location_city,
+          location_ward,
+          location_district: null,
+          location_street: data.location_street ?? job.location_street,
           location_full,
           latitude,
           longitude,
           deadline,
+          category_id,
+          number_of_openings:
+            data.number_of_openings !== undefined
+              ? data.number_of_openings
+              : job.number_of_openings,
           details: {
             upsert: {
-              update: { ...updateDetailData },
-              create: { description, requirements },
+              update: {
+                description,
+                requirements,
+              },
+              create: {
+                description,
+                requirements,
+              },
             },
           },
         },
-        include: { company: true, category: true },
       });
 
-      // ✅ Nếu có skill_ids gửi lên => thay toàn bộ
       if (skill_ids !== undefined) {
         await this.prisma.jobSkill.deleteMany({ where: { job_id: jobId } });
+
         if (skill_ids.length) {
           await this.prisma.jobSkill.createMany({
             data: skill_ids.map((id) => ({
@@ -267,15 +316,18 @@ export class JobsService {
         }
       }
 
-      // ✅ Lấy lại job đầy đủ để index
       const fullJob = await this.getFullJob(jobId);
-
-      // ✅ Cập nhật Elasticsearch
       await this.esJob.updateJob(fullJob);
 
       return fullJob;
     } catch (error) {
       console.error('🔥 Lỗi cập nhật job:', error);
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
       throw new InternalServerErrorException(
         'Không thể cập nhật job: ' + error.message,
       );
@@ -462,6 +514,7 @@ export class JobsService {
       location: { full: job.location_full },
       description: job.details?.description,
       requirements: job.details?.requirements,
+      number_of_openings: job.number_of_openings,
       category: job.category
         ? { id: job.category.id, name: job.category.name }
         : null,
@@ -872,7 +925,7 @@ export class JobsService {
   // Helper: Lấy full job
   // -----------------------------
   private async getFullJob(id: bigint) {
-    return await this.prisma.job.findUnique({
+    return this.prisma.job.findUnique({
       where: { id },
       include: {
         details: true,

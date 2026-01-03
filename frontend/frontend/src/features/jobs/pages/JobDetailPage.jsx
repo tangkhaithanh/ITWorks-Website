@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import JobAPI from "@/features/jobs/JobAPI";
 import SearchBar from "@/features/jobs/components/SearchBar";
 import JobHeader from "@/features/jobs/components/JobHeader";
@@ -10,14 +10,23 @@ import JobExtraInfo from "@/features/jobs/components/JobExtraInfo";
 
 const JobDetailPage = () => {
   const { id } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [textboxWidth, setTextboxWidth] = useState(null);
   const [showSearchBar, setShowSearchBar] = useState(false);
-  const location = useLocation();
 
   const isSavedFromCard = location.state?.isSaved ?? false;
 
+  const handleSearch = ({ keyword, city }) => {
+    const params = new URLSearchParams();
+    if (keyword) params.set("keyword", keyword);
+    if (city) params.set("city", city);
+    navigate(`/jobs/search?${params.toString()}`);
+  };
+
+  // Fetch job detail
   useEffect(() => {
     const fetchJob = async () => {
       try {
@@ -32,82 +41,71 @@ const JobDetailPage = () => {
     fetchJob();
   }, [id]);
 
-  // 📏 Đo chiều rộng thực tế của textbox search
-  useEffect(() => {
-    const measureTextbox = () => {
-      const textboxWrapper = document.querySelector('.flex-1.min-w-\\[240px\\]');
-      if (textboxWrapper) {
-        const width = textboxWrapper.offsetWidth;
-        setTextboxWidth(width);
-      }
-    };
-    const timeout = setTimeout(measureTextbox, 100);
-    window.addEventListener('resize', measureTextbox);
-    return () => {
-      window.removeEventListener('resize', measureTextbox);
-      clearTimeout(timeout);
-    };
-  }, []);
-
-  // 🧭 Theo dõi scroll để ẩn header, hiện thanh search
+  // Scroll logic để merge header
   useEffect(() => {
     const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      setShowSearchBar(scrollTop > 80); // khi cuộn xuống chút xíu thì merge
+      setShowSearchBar(window.scrollY > 80);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  if (loading) return <div className="p-10 text-center text-slate-500">Đang tải...</div>;
-  if (!job) return <div className="p-10 text-center text-rose-500">Không tìm thấy công việc</div>;
+  if (loading)
+    return (
+        <div className="p-10 text-center text-slate-500">Đang tải...</div>
+    );
 
-   return (
-  <div className="flex min-h-screen flex-col bg-gray-50 relative">
-    {/* 🟦 Thanh search cố định với hiệu ứng dạ quang + animation merge */}
-    <div
-  className={`fixed left-0 w-full 
-              bg-gradient-to-r from-blue-600/95 via-blue-800/95 to-blue-900/95
-              backdrop-blur-lg border-b border-blue-500/20
-              shadow-[0_4px_20px_rgba(40,80,200,0.35)]
-              py-2 transition-all duration-500 ease-in-out
-              ${showSearchBar ? "top-0 z-[60]" : "top-16 z-40"}`}
->
-  <div className="mx-auto max-w-6xl px-4">
-    <SearchBar size="sm" compact />
-  </div>
-</div>
-
-    {/* ✅ Container chính, có padding-top tránh đè Header + Search */}
-    <div className="mx-auto max-w-6xl px-4 w-full space-y-2 pt-[120px]">
-      {/* JobHeader + Thông tin công ty */}
-      <div className="flex items-start gap-5">
-        <div style={{ width: textboxWidth ? `${textboxWidth}px` : "auto" }}>
-          <JobHeader job={job} isSaved={isSavedFromCard} />
+  if (!job)
+    return (
+        <div className="p-10 text-center text-rose-500">
+          Không tìm thấy công việc
         </div>
+    );
 
-        <div style={{ width: textboxWidth ? `${textboxWidth * 0.55}px` : "auto" }}>
-          <JobCompanyInfo company={job.company} job={job} />
-        </div>
-      </div>
-
-      {/* Mô tả + Yêu cầu + ExtraInfo */}
-      <div className="flex gap-5 mt-5">
+  return (
+      <div className="flex min-h-screen flex-col bg-gray-50 relative selection:bg-blue-100">
+        {/* 🟦 SEARCH BAR FIXED – MERGE HEADER */}
         <div
-          className="flex flex-col gap-8"
-          style={{ width: textboxWidth ? `${textboxWidth}px` : "auto" }}
+            className={`fixed left-0 w-full
+          bg-gradient-to-r from-blue-600/95 via-blue-800/95 to-blue-900/95
+          backdrop-blur-lg border-b border-blue-500/20
+          shadow-[0_4px_20px_rgba(40,80,200,0.35)]
+          py-2 transition-all duration-500 ease-in-out
+          ${showSearchBar ? "top-0 z-[55]" : "top-16 z-40"}
+        `}
         >
-          <JobDescription description={job.description} />
-          <JobRequirements requirements={job.requirements} />
+          <div className="mx-auto max-w-6xl px-4">
+            <SearchBar size="sm" compact onSearch={handleSearch} />
+          </div>
         </div>
 
-        <aside style={{ width: textboxWidth ? `${textboxWidth * 0.55}px` : "auto" }}>
-          <JobExtraInfo job={job} />
-        </aside>
+        {/* MAIN CONTENT */}
+        <main className="mx-auto max-w-6xl px-4 w-full pt-[120px] pb-10 space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 mt-6">
+            {/* LEFT */}
+            <div className="md:col-span-8 flex flex-col gap-6">
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                <JobHeader job={job} isSaved={isSavedFromCard} />
+              </div>
+
+              <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 space-y-8">
+                <JobDescription description={job.description} />
+                <hr className="border-slate-100" />
+                <JobRequirements requirements={job.requirements} />
+              </div>
+            </div>
+
+            {/* RIGHT */}
+            <aside className="md:col-span-4">
+              <div className="sticky top-[100px] flex flex-col gap-5">
+                <JobCompanyInfo company={job.company} job={job} />
+                <JobExtraInfo job={job} />
+              </div>
+            </aside>
+          </div>
+        </main>
       </div>
-    </div>
-  </div>
-);
+  );
 };
 
 export default JobDetailPage;

@@ -12,7 +12,8 @@ import DatePickerInput from "@/components/ui/DatePickerInput";
 // Lưu ý: Tôi dùng thẻ div bao ngoài thay vì Card component cũ để custom layout linh hoạt hơn,
 // nhưng vẫn giữ style clean. Nếu bạn bắt buộc dùng Card component của hệ thống, hãy bọc nội dung vào đó.
 import MultiSelect from "@/components/common/MultiSelect";
-
+import SearchableDropdown from "@/components/ui/SearchableDropdown";
+import LocationAPI from "@/features/jobs/LocationAPI";
 // APIs
 import JobAPI from "@/features/jobs/JobAPI";
 import SkillAPI from "@/features/skills/SkillAPI";
@@ -56,9 +57,8 @@ export default function CreateJobPage() {
     salary_min: "",
     salary_max: "",
     negotiable: true,
-    location_city: "",
-    location_district: "",
-    location_ward: "",
+    location_city_id: "",
+    location_ward_id: "",
     location_street: "",
     work_modes: [],
     experience_levels: [],
@@ -75,7 +75,9 @@ export default function CreateJobPage() {
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [initialLoading, setInitialLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
-
+  const [cityOptions, setCityOptions] = useState([]);
+  const [wardOptions, setWardOptions] = useState([]);
+  const [editLocationName, setEditLocationName] = useState(null);
   // --- EDITOR CONFIG ---
   const editorConfig = {
     readonly: false,
@@ -136,6 +138,10 @@ export default function CreateJobPage() {
       try {
         const res = await JobAPI.getJobToEdit(id);
         const data = res.data?.data;
+        setEditLocationName({
+          cityName: data.location_city || "",
+          wardName: data.location_ward || "",
+        });
         setForm((prev) => ({
           ...prev,
           title: data.title || "",
@@ -144,9 +150,8 @@ export default function CreateJobPage() {
           salary_min: data.salary_min !== null ? String(data.salary_min) : "",
           salary_max: data.salary_max !== null ? String(data.salary_max) : "",
           negotiable: data.negotiable ?? false,
-          location_city: data.location_city || "",
-          location_district: data.location_district || "",
-          location_ward: data.location_ward || "",
+          location_city_id: "",
+          location_ward_id: "",
           location_street: data.location_street || "",
           work_modes: data.work_modes || [],
           experience_levels: data.experience_levels || [],
@@ -170,10 +175,69 @@ export default function CreateJobPage() {
     };
     loadJob();
   }, [isEdit, id, navigate]);
+  // Load city cho dropdown
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        const res = await LocationAPI.getCities();
+        const rows = res.data?.data ?? res.data ?? [];
+        setCityOptions(
+            rows.map((c) => ({ value: String(c.id), label: c.name }))
+        );
+      } catch (e) {
+        console.error("❌ Fetch cities error:", e);
+        setCityOptions([]);
+      }
+    };
+    fetchCities();
+  }, []);
+    // Load wards khi city thay đổi
+  useEffect(() => {
+    const cityId = form.location_city_id;
+    if (!cityId) {
+      setWardOptions([]);
+      setForm((prev) => ({ ...prev, location_ward_id: "" }));
+      return;
+    }
+
+    const fetchWards = async () => {
+      try {
+        const res = await LocationAPI.getWardsByCity(cityId);
+        const rows = res.data?.data ?? res.data ?? [];
+        setWardOptions(rows.map((w) => ({ value: String(w.id), label: w.name })));
+      } catch (e) {
+        console.error("❌ Fetch wards error:", e);
+        setWardOptions([]);
+      }
+    };
+
+    fetchWards();
+  }, [form.location_city_id]);
+  useEffect(() => {
+    if (!isEdit || !editLocationName?.cityName || form.location_city_id) return;
+    const found = cityOptions.find((c) => c.label === editLocationName.cityName);
+    if (found) setForm((prev) => ({ ...prev, location_city_id: String(found.value) }));
+  }, [isEdit, editLocationName, cityOptions, form.location_city_id]);
+
+  useEffect(() => {
+    if (!isEdit || !editLocationName?.wardName || form.location_ward_id) return;
+    const found = wardOptions.find((w) => w.label === editLocationName.wardName);
+    if (found) setForm((prev) => ({ ...prev, location_ward_id: String(found.value) }));
+  }, [isEdit, editLocationName, wardOptions, form.location_ward_id]);
 
   // --- HANDLERS ---
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === "location_city_id") {
+      setForm((prev) => ({
+        ...prev,
+        location_city_id: value,
+        location_ward_id: "",
+      }));
+      return;
+    }
+
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -188,6 +252,13 @@ export default function CreateJobPage() {
       setSaving(true);
       const payload = {
         ...form,
+        location_city_id: form.location_city_id ? Number(form.location_city_id) : undefined,
+        location_ward_id: form.location_ward_id ? Number(form.location_ward_id) : undefined,
+        number_of_openings:
+            form.number_of_openings === "" || form.number_of_openings === null
+                ? undefined
+                : Number(form.number_of_openings),
+
         work_modes: form.work_modes || [],
         experience_levels: form.experience_levels || [],
         skill_ids: form.skill_ids || [],
@@ -341,38 +412,47 @@ export default function CreateJobPage() {
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
               <SectionTitle icon="📍" title="Địa điểm làm việc" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Thành phố / Tỉnh <span className="text-red-500">*</span>
+                  </label>
+                  <SearchableDropdown
+                      name="location_city_id"
+                      value={form.location_city_id}
+                      onChange={handleChange}
+                      options={cityOptions}
+                      placeholder="Chọn thành phố"
+                      searchPlaceholder="Tìm thành phố..."
+                      maxWidth="100%"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Phường / Xã <span className="text-red-500">*</span>
+                  </label>
+                  <SearchableDropdown
+                      name="location_ward_id"
+                      value={form.location_ward_id}
+                      onChange={handleChange}
+                      options={form.location_city_id ? wardOptions : []}
+                      placeholder={form.location_city_id ? "Chọn phường/xã" : "Chọn thành phố trước"}
+                      searchPlaceholder="Tìm phường/xã..."
+                      maxWidth="100%"
+                  />
+                </div>
+
                 <TextInput
-                  label="Thành phố / Tỉnh"
-                  name="location_city"
-                  value={form.location_city}
-                  onChange={handleChange}
-                  required
-                  placeholder="VD: Hồ Chí Minh"
-                />
-                <TextInput
-                  label="Quận / Huyện"
-                  name="location_district"
-                  value={form.location_district}
-                  onChange={handleChange}
-                  placeholder="VD: Quận 1"
-                />
-                <TextInput
-                  label="Phường / Xã"
-                  name="location_ward"
-                  value={form.location_ward}
-                  onChange={handleChange}
-                  placeholder="VD: Phường Bến Nghé"
-                />
-                <TextInput
-                  label="Số nhà, Tên đường"
-                  name="location_street"
-                  value={form.location_street}
-                  onChange={handleChange}
-                  placeholder="VD: 123 Nguyễn Huệ"
+                    label="Số nhà, Tên đường"
+                    name="location_street"
+                    value={form.location_street}
+                    onChange={handleChange}
+                    placeholder="VD: 123 Nguyễn Huệ"
+                    className="sm:col-span-2"
                 />
               </div>
             </div>
-
           </div>
 
           {/* === RIGHT COLUMN (SIDEBAR / METADATA) === */}

@@ -82,45 +82,44 @@ const JobSearchPage = () => {
 
   // Hàm search chính (tái sử dụng ở mọi nơi)
   const handleSearch = useCallback(
-    async (params = {}) => {
-      const isNewSearch = !params.page || params.page === 1;
+      async (params = {}) => {
+        const isNewSearch = !params.page || params.page === 1;
 
-      if (isNewSearch) {
-        setPage(1);
-        setHasMore(true);
-        // giờ scroll là toàn trang, nên scroll cả window lên đầu
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
+        if (isNewSearch) {
+          setPage(1);
+          setHasMore(true);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
 
-      // Lưu filters vào redux để phân trang không mất lọc
-      if (params.__setFilters) {
-        const cloned = { ...params };
-        delete cloned.__setFilters;
-        delete cloned.page;
-        dispatch(setFilters(cloned));
-      }
+        // luôn clone để tránh mutate object bên ngoài
+        let cleaned = { ...params };
 
-      if (params.__clearFilters) {
-        dispatch(clearFilters());
-        const cloned = { ...params };
-        delete cloned.__clearFilters;
-        params = cloned;
-      }
+        // Lưu filters vào redux để phân trang không mất lọc
+        if (cleaned.__setFilters) {
+          delete cleaned.__setFilters;
 
-      const res = await dispatch(
-        searchJobs({
-          keyword: params.keyword ?? keyword,
-          city: params.city ?? city,
-          page: params.page ?? 1,
-          ...params,
-        })
-      );
+          // Nếu bạn muốn filters persist, thì chỉ lưu phần filter
+          const { page, keyword, city, ...filtersOnly } = cleaned; // tránh nhét keyword/city vào filters
+          dispatch(setFilters(filtersOnly));
 
-      const fetched = res?.payload?.results ?? [];
-      // Giả định page size ~10
-      if (fetched.length < 10) setHasMore(false);
-    },
-    [dispatch, keyword, city]
+          // vẫn giữ cleaned (trừ page nếu muốn) để search ngay
+          // (page vẫn ok để search)
+        }
+
+        if (cleaned.__clearFilters) {
+          delete cleaned.__clearFilters;
+          dispatch(clearFilters());
+        }
+
+        // ✅ QUAN TRỌNG:
+        // - KHÔNG tự gán keyword/city ở đây nữa
+        // - thunk searchJobs sẽ tự lấy keyword/city từ redux state nếu cleaned không có
+        const res = await dispatch(searchJobs(cleaned));
+
+        const fetched = res?.payload?.results ?? [];
+        if (fetched.length < 10) setHasMore(false);
+      },
+      [dispatch]
   );
 
   // Saved jobs

@@ -37,16 +37,14 @@ export class CreateJobDto {
   negotiable?: boolean = false;
 
   // --- Địa điểm ---
-  @IsString()
-  location_city: string;
+  @Type(() => Number)
+  @IsNumber()
+  location_city_id?: number;
 
   @IsOptional()
-  @IsString()
-  location_district?: string;
-
-  @IsOptional()
-  @IsString()
-  location_ward?: string;
+  @Type(() => Number)
+  @IsNumber()
+  location_ward_id?: number;
 
   @IsOptional()
   @IsString()
@@ -110,5 +108,5 @@ export class CreateJobDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  number_of_openings?: number = 1;
+  number_of_openings?: number;
 }
