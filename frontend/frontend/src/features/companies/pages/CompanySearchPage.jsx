@@ -49,13 +49,31 @@ const CompanyLogo = ({ src, name, size = "lg" }) => {
 // ============================================================================
 // COMPONENT: CompanyCard - Card hiển thị thông tin công ty
 // ============================================================================
-const CompanyCard = ({ company, onClick }) => {
+const CompanyCard = ({ company, onClick, index = 0 }) => {
+    const [isVisible, setIsVisible] = useState(false);
+
+    useEffect(() => {
+        // Stagger animation based on index
+        const timer = setTimeout(() => {
+            setIsVisible(true);
+        }, index * 50); // Delay 50ms cho mỗi card
+
+        return () => clearTimeout(timer);
+    }, [index]);
+
     return (
         <div
             onClick={() => onClick?.(company)}
-            className="group relative rounded-2xl border border-slate-200 bg-white p-5
+            className={`group relative rounded-2xl border border-slate-200 bg-white p-5
                      hover:border-blue-300 hover:shadow-xl hover:-translate-y-1
-                     transition-all duration-300 cursor-pointer overflow-hidden"
+                     transition-all duration-300 cursor-pointer overflow-hidden
+                     ${isVisible
+                ? 'opacity-100 translate-y-0'
+                : 'opacity-0 translate-y-8'
+            }`}
+            style={{
+                transition: 'opacity 0.5s ease-out, transform 0.5s ease-out'
+            }}
         >
             {/* Gradient overlay khi hover */}
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-indigo-50/0
@@ -258,7 +276,8 @@ const SearchStats = ({ total, keyword, loading }) => {
 
     return (
         <div className="flex items-center gap-2 text-sm text-slate-600 bg-blue-50
-                      px-4 py-2.5 rounded-xl border border-blue-100">
+                      px-4 py-2.5 rounded-xl border border-blue-100
+                      animate-fade-in-up">
             <Building2 className="w-4 h-4 text-blue-600" />
             <span>
                 Tìm thấy <span className="font-bold text-blue-600">{total}</span> công ty
@@ -283,6 +302,10 @@ const LoadingSkeleton = ({ count = 8 }) => {
                 <div
                     key={i}
                     className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm animate-pulse"
+                    style={{
+                        animationDelay: `${i * 50}ms`,
+                        animationDuration: '1s'
+                    }}
                 >
                     <div className="w-20 h-20 rounded-2xl bg-slate-100 mx-auto mb-4" />
                     <div className="h-4 bg-slate-100 rounded w-3/4 mx-auto mb-2" />
@@ -302,9 +325,9 @@ const LoadingSkeleton = ({ count = 8 }) => {
 // ============================================================================
 const EmptyState = ({ keyword }) => {
     return (
-        <div className="flex flex-col items-center justify-center py-16 px-4">
+        <div className="flex flex-col items-center justify-center py-16 px-4 animate-fade-in">
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-slate-100 to-slate-200
-                          flex items-center justify-center mb-6">
+                          flex items-center justify-center mb-6 animate-bounce-slow">
                 <Building2 className="w-12 h-12 text-slate-400" />
             </div>
             <h3 className="text-xl font-bold text-slate-800 mb-2">
@@ -337,12 +360,18 @@ const CompanySearchPage = () => {
 
     const [loading, setLoading] = useState(false);
     const [initLoading, setInitLoading] = useState(true);
+    const [mounted, setMounted] = useState(false);
 
     const observerRef = useRef(null);
     const lastQueryRef = useRef("");
     const requestIdRef = useRef(0);
     const navigate = useNavigate();
     const hasMore = page < totalPages;
+
+    // Animation on mount
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Fetch companies
     const fetchCompanies = useCallback(
@@ -441,17 +470,24 @@ const CompanySearchPage = () => {
             {/* ============================================================
                 HERO SECTION - Banner tìm kiếm chính
             ============================================================ */}
-            <section className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800
-                              pt-24 pb-32 px-4 overflow-hidden">
+            <section className={`relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800
+                              pt-24 pb-32 px-4 overflow-hidden
+                              transition-all duration-1000 ease-out
+                              ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-8'}`}>
                 {/* Background decorations */}
                 <div className="absolute inset-0 overflow-hidden">
-                    <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl" />
-                    <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl" />
+                    <div className={`absolute -top-24 -right-24 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl
+                                   transition-all duration-1000 delay-200
+                                   ${mounted ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`} />
+                    <div className={`absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl
+                                   transition-all duration-1000 delay-300
+                                   ${mounted ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`} />
                 </div>
 
                 <div className="relative max-w-5xl mx-auto text-center">
                     {/* Title */}
-                    <div className="mb-8">
+                    <div className={`mb-8 transition-all duration-700 delay-100
+                                   ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
                         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4
                                      tracking-tight leading-tight">
                             Khám phá các công ty hàng đầu
@@ -462,7 +498,8 @@ const CompanySearchPage = () => {
                     </div>
 
                     {/* Search Bar */}
-                    <div className="max-w-3xl mx-auto">
+                    <div className={`max-w-3xl mx-auto transition-all duration-700 delay-300
+                                   ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
                         <CompanySearchBar
                             value={keyword}
                             onChange={(e) => setKeyword(e.target.value)}
@@ -473,16 +510,18 @@ const CompanySearchPage = () => {
                     </div>
 
                     {/* Quick stats */}
-                    <div className="mt-10 flex flex-wrap items-center justify-center gap-8 text-white/90">
-                        <div className="flex items-center gap-2">
+                    <div className={`mt-10 flex flex-wrap items-center justify-center gap-8 text-white/90
+                                   transition-all duration-700 delay-500
+                                   ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+                        <div className="flex items-center gap-2 hover:scale-110 transition-transform duration-300">
                             <Building2 className="w-5 h-5" />
                             <span className="text-sm font-medium">1000+ Công ty</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 hover:scale-110 transition-transform duration-300">
                             <Briefcase className="w-5 h-5" />
                             <span className="text-sm font-medium">5000+ Việc làm</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 hover:scale-110 transition-transform duration-300">
                             <Users className="w-5 h-5" />
                             <span className="text-sm font-medium">10000+ Ứng viên</span>
                         </div>
@@ -493,7 +532,9 @@ const CompanySearchPage = () => {
             {/* ============================================================
                 MAIN CONTENT - Danh sách công ty
             ============================================================ */}
-            <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 -mt-16 pb-16 relative z-10">
+            <main className={`max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 -mt-16 pb-16 relative z-10
+                            transition-all duration-700 delay-700
+                            ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}>
 
                 {/* Results container with white background */}
                 <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-6 md:p-8">
@@ -530,18 +571,19 @@ const CompanySearchPage = () => {
                     {!initLoading && companies.length > 0 && (
                         <>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                                {companies.map((company) => (
+                                {companies.map((company, index) => (
                                     <CompanyCard
                                         key={company.id}
                                         company={company}
                                         onClick={handleCompanyClick}
+                                        index={index}
                                     />
                                 ))}
                             </div>
 
                             {/* Loading more indicator */}
                             {loading && !initLoading && (
-                                <div className="flex justify-center items-center py-8 gap-3">
+                                <div className="flex justify-center items-center py-8 gap-3 animate-fade-in">
                                     <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
                                     <span className="text-slate-600 font-medium">
                                         Đang tải thêm công ty...
@@ -551,7 +593,7 @@ const CompanySearchPage = () => {
 
                             {/* End of results */}
                             {!hasMore && companies.length > 0 && (
-                                <div className="text-center py-8 text-slate-500 border-t border-slate-100 mt-8">
+                                <div className="text-center py-8 text-slate-500 border-t border-slate-100 mt-8 animate-fade-in">
                                     <Building2 className="w-8 h-8 mx-auto mb-2 text-slate-300" />
                                     <p className="font-medium">Đã hiển thị tất cả {totalCompanies} công ty</p>
                                 </div>
@@ -566,6 +608,50 @@ const CompanySearchPage = () => {
 
             {/* Bottom spacer */}
             <div style={{ height: NAV_HEIGHT }} />
+
+            {/* CSS Animations */}
+            <style jsx>{`
+                @keyframes fade-in {
+                    from {
+                        opacity: 0;
+                    }
+                    to {
+                        opacity: 1;
+                    }
+                }
+
+                @keyframes fade-in-up {
+                    from {
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                @keyframes bounce-slow {
+                    0%, 100% {
+                        transform: translateY(0);
+                    }
+                    50% {
+                        transform: translateY(-10px);
+                    }
+                }
+
+                .animate-fade-in {
+                    animation: fade-in 0.6s ease-out;
+                }
+
+                .animate-fade-in-up {
+                    animation: fade-in-up 0.6s ease-out;
+                }
+
+                .animate-bounce-slow {
+                    animation: bounce-slow 2s ease-in-out infinite;
+                }
+            `}</style>
         </div>
     );
 };
