@@ -138,6 +138,20 @@ export class CompaniesController {
   getAllCompanies(@Query() query: AdminGetCompaniesDto) {
     return this.companiesService.adminGetCompanies(query);
   }
+  // search công ty
+  @Public()
+  @Get('search')
+  searchCompanies(
+    @Query('q') q?: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '12',
+  ) {
+    return this.companiesService.searchCompanies(
+      q,
+      Number(page),
+      Number(limit),
+    );
+  }
 
   // =========================
   // HIDE COMPANY (Admin + Recruiter owner)

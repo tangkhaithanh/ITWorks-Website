@@ -41,5 +41,7 @@ const CompanyAPI = {
 
   // Lấy toàn bộ công ty dành cho admin:
   getAllForAdmin: (params) => apiClient.get("/companies", { params }),
+  search: (params) =>
+      apiClient.get("/companies/search", { params }),
 };
 export default CompanyAPI;

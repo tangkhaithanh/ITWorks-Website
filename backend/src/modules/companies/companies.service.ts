@@ -13,6 +13,8 @@ import { UpdateCompanyDto } from './dto/update-company.dto';
 import { ElasticsearchCompanyService } from '../elasticsearch/company.elasticsearch.service';
 import { JobsService } from '@/modules/jobs/jobs.service';
 import { AdminGetCompaniesDto } from './dto/admin-get-companies.dto';
+import { JobStatus } from '@prisma/client';
+import { PlanStatus } from '@prisma/client';
 @Injectable()
 export class CompaniesService {
   constructor(
@@ -443,6 +445,15 @@ export class CompaniesService {
             salary_min: true,
             salary_max: true,
             negotiable: true,
+            location_city: true,
+            created_at:true,
+            // ✅ THÊM PHẦN NÀY
+            category: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
@@ -507,4 +518,87 @@ export class CompaniesService {
     };
   }
 
+  // Hàm tìm kiếm công ty:
+  async searchCompanies(keyword?: string, page = 1, limit = 12) {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const skip = (page - 1) * limit;
+    const hasKeyword = !!keyword && keyword.trim().length > 0;
+
+    /**
+     * =================================================
+     * BASE QUERY (approved companies)
+     * =================================================
+     */
+    const companies = await this.prisma.company.findMany({
+      where: {
+        status: CompanyStatus.approved,
+        ...(hasKeyword && {
+          name: {
+            contains: keyword,
+          },
+        }),
+      },
+      include: {
+        companyPlan: true,
+        jobs: {
+          where: {
+            status: JobStatus.active,
+          },
+          select: {
+            id: true,
+            created_at: true,
+          },
+        },
+      },
+    });
+
+    /**
+     * =================================================
+     * SOFT RANKING (DÙ CÓ HAY KHÔNG KEYWORD)
+     * =================================================
+     */
+    const ranked = companies
+      .map((c) => {
+        const hasActivePlan =
+          c.companyPlan &&
+          c.companyPlan.status === PlanStatus.active &&
+          c.companyPlan.end_date > now;
+
+        const jobsLast30Days = c.jobs.filter(
+          (j) => j.created_at >= thirtyDaysAgo,
+        );
+
+        let score = 0;
+
+        if (hasActivePlan) score += 100;
+        if (jobsLast30Days.length > 0) score += jobsLast30Days.length * 10;
+        if (c.jobs.length > 0) score += 5;
+
+        return {
+          id: c.id,
+          name: c.name,
+          logo_url: c.logo_url,
+          score,
+        };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    /**
+     * =================================================
+     * PAGINATION
+     * =================================================
+     */
+    const total = ranked.length;
+    const paged = ranked.slice(skip, skip + limit);
+
+    return {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      result: paged.map(({ score, ...rest }) => rest),
+    };
+  }
 }

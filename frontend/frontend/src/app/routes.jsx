@@ -34,6 +34,8 @@ import PaymentResultPage from "../pages/PaymentResultPage";
 import UsagePage from "../features/companies/pages/UsagePage";
 import ManageOrderPage from "../features/companies/pages/ManageOrderPage";
 import AdminDashboardPage from "../features/admin/pages/AdminDashboardPage";
+import CompanySearchPage from "@/features/companies/pages/CompanySearchPage.jsx";
+import CompanyProfilePage from "@/features/companies/pages/CompanyProfilePage.jsx";
 import { Navigate } from "react-router-dom";
 const router = createBrowserRouter([
   {
@@ -76,6 +78,14 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      {
+        path: "companies",
+        element: <CompanySearchPage/>,
+      },
+      {
+        path: "companies/:id",
+        element: <CompanyProfilePage/>,
+      }
     ],
   },
   {
