@@ -38,8 +38,15 @@ function InfoItem({ icon: Icon, label, value, isLink, href }) {
 
 export default function CompanyProfileContent({ company }) {
     // Data Preparation
-    const industries = company.industry_info?.map((i) => i.industry?.name) || [];
-    const skills = company.skills?.map((i) => i.skill?.name) || [];
+    const industries =
+    company.industries ??
+    company.industry_info?.map((i) => i.industry?.name) ??
+    [];
+
+    const skills =
+    company.tech_stacks ??
+    company.skills?.map((i) => i.skill?.name) ??
+    [];
 
     return (
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
