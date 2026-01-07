@@ -507,6 +507,8 @@ export class CompaniesService {
       created_at: c.created_at,
       account_email: c.account.email,
       total_jobs: c.jobs.length,
+      representative_name: c.representative_name,
+      contact_email: c.contact_email,
     }));
 
     return {

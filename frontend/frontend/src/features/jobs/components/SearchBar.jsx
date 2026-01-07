@@ -10,7 +10,10 @@ import { Search, MapPin, Loader2, X, History, Sparkles } from "lucide-react";
 const SearchBar = ({ onSearch, size = "md", compact = false }) => {
   const dispatch = useDispatch();
   const { keyword, city } = useSelector((s) => s.jobSearch);
+  const reduxKeyword = useSelector((s) => s.jobSearch.keyword);
+  const reduxCity = useSelector((s) => s.jobSearch.city);
 
+  const [localKeyword, setLocalKeyword] = useState(reduxKeyword);
   const [suggestions, setSuggestions] = useState([]);
   const [isFocused, setIsFocused] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -71,12 +74,25 @@ const SearchBar = ({ onSearch, size = "md", compact = false }) => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+  useEffect(() => {
+  setLocalKeyword(reduxKeyword);
+}, [reduxKeyword]);
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-    setIsFocused(false);
-    onSearch?.({ page: 1 }); // ✅ ĐÚNG
-  };
+  e.preventDefault();
+  setIsFocused(false);
+
+  const kw = localKeyword.trim();
+
+  dispatch(setKeyword(kw));
+  dispatch(setCity(city));
+
+  onSearch?.({
+    keyword: kw,
+    city,
+  });
+};
+
 
   const handleClearKeyword = () => {
     dispatch(setKeyword(""));
@@ -119,8 +135,8 @@ const SearchBar = ({ onSearch, size = "md", compact = false }) => {
           {/* Input Field */}
           <input
               type="text"
-              value={keyword}
-              onChange={(e) => dispatch(setKeyword(e.target.value))}
+              value={localKeyword}
+              onChange={(e) => setLocalKeyword(e.target.value)}
               onFocus={() => setIsFocused(true)}
               placeholder={isLarge ? "Tìm công việc, kỹ năng, công ty..." : "Tìm việc làm..."}
               className={`

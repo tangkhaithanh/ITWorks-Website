@@ -201,14 +201,35 @@ export default function CvManagementPage() {
 
   // Title Logic
   const selectedJob = jobOptions.find(job => String(job.id) === filters.jobId);
-  const currentFilterLabel = selectedJob ? selectedJob.title : "Tất cả công việc";
-  if (checkingJob) {
-    return (
-      <div className="p-8 text-center text-slate-500">
-        Đang kiểm tra danh sách công việc...
-      </div>
-    );
+  const selectedStatus = filters.status 
+    ? ["pending", "interviewing", "accepted", "rejected"].find(s => s === filters.status)
+    : null;
+
+  // Tạo mảng các filter đang active
+  const activeFilters = [];
+  if (selectedJob) {
+    activeFilters.push(selectedJob.title);
   }
+  if (selectedStatus) {
+    const statusLabels = {
+      pending: "Đang chờ",
+      interviewing: "Phỏng vấn", 
+      accepted: "Đã nhận",
+      rejected: "Từ chối"
+    };
+    activeFilters.push(statusLabels[selectedStatus]);
+  }
+
+  const currentFilterLabel = activeFilters.length > 0 
+    ? activeFilters.join(" • ") 
+    : "Tất cả";
+    if (checkingJob) {
+      return (
+        <div className="p-8 text-center text-slate-500">
+          Đang kiểm tra danh sách công việc...
+        </div>
+      );
+    }
   if (!hasJob) {
     return (
       <div className="p-12 text-center text-slate-600">
@@ -320,14 +341,29 @@ export default function CvManagementPage() {
         </div>
 
         {/* --- SUMMARY INFO --- */}
+        {/* ✅ MỚI */}
         {!loading && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1 py-2 border-b border-slate-200/60">
             <div className="flex items-center gap-2 text-sm text-slate-600 w-full overflow-hidden">
               <Filter className="w-4 h-4 flex-shrink-0" />
               <span className="flex-shrink-0">Đang lọc theo:</span>
-              <span className="font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded text-xs border border-indigo-100 truncate" title={currentFilterLabel}>
-                {currentFilterLabel}
-              </span>
+              {activeFilters.length > 0 ? (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {activeFilters.map((filter, idx) => (
+                    <span 
+                      key={idx}
+                      className="font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded text-xs border border-indigo-100" 
+                      title={filter}
+                    >
+                      {filter}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span className="font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded text-xs border border-slate-100">
+                  Tất cả
+                </span>
+              )}
             </div>
             <div className="sm:hidden text-xs text-slate-500 font-medium text-right">
               {total} kết quả
