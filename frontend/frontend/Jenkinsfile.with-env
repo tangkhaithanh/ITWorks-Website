@@ -1,0 +1,176 @@
+pipeline {
+    agent any
+    
+    environment {
+        // Tên image và container
+        IMAGE_NAME = 'itworks-frontend'
+        CONTAINER_NAME = 'itworks-frontend'
+        
+        // Port mapping
+        APP_PORT = '80'
+        HOST_PORT = '5173'
+        
+        // Credentials ID cho .env file (nếu cần build-time variables)
+        ENV_FILE_CREDENTIAL_ID = 'frontend-env-file'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo '📥 Checking out code from GitHub...'
+                checkout scm
+            }
+        }
+        
+        stage('Load Environment File') {
+            steps {
+                script {
+                    echo '📝 Loading .env file for build-time variables...'
+                    dir('frontend/frontend') {
+                        // Load .env file từ Jenkins credentials (nếu cần VITE_* variables)
+                        withCredentials([file(credentialsId: env.ENV_FILE_CREDENTIAL_ID, variable: 'ENV_FILE')]) {
+                            sh """
+                                cp ${ENV_FILE} .env
+                                echo "✅ .env file loaded"
+                            """
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    echo '🔨 Building Docker image...'
+                    dir('frontend/frontend') {
+                        // Build image với tag
+                        def imageTag = "${IMAGE_NAME}:${BUILD_NUMBER}"
+                        def imageLatest = "${IMAGE_NAME}:latest"
+                        
+                        sh """
+                            docker build -t ${imageTag} -t ${imageLatest} .
+                        """
+                        
+                        echo "✅ Image built: ${imageTag}"
+                    }
+                }
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                script {
+                    echo '🧪 Running tests...'
+                    dir('frontend/frontend') {
+                        // Chạy tests trong container (optional)
+                        // sh 'docker run --rm ${IMAGE_NAME}:${BUILD_NUMBER} npm test'
+                        echo '⚠️  Tests skipped (uncomment to enable)'
+                    }
+                }
+            }
+        }
+        
+        stage('Stop Old Container') {
+            steps {
+                script {
+                    echo '🛑 Stopping old container if exists...'
+                    sh """
+                        docker stop ${CONTAINER_NAME} || true
+                        docker rm ${CONTAINER_NAME} || true
+                    """
+                }
+            }
+        }
+        
+        stage('Deploy') {
+            steps {
+                script {
+                    echo '🚀 Deploying new container...'
+                    // Frontend không cần --env-file vì đã build vào bundle
+                    sh """
+                        docker run -d \\
+                            --name ${CONTAINER_NAME} \\
+                            --restart unless-stopped \\
+                            -p ${HOST_PORT}:${APP_PORT} \\
+                            ${IMAGE_NAME}:${BUILD_NUMBER}
+                    """
+                }
+            }
+        }
+        
+        stage('Health Check') {
+            steps {
+                script {
+                    echo '🏥 Waiting for application to start...'
+                    sleep(time: 5, unit: 'SECONDS')
+                    
+                    // Kiểm tra container có chạy không
+                    sh """
+                        if docker ps | grep -q ${CONTAINER_NAME}; then
+                            echo "✅ Container is running"
+                        else
+                            echo "❌ Container failed to start"
+                            docker logs ${CONTAINER_NAME} || true
+                            exit 1
+                        fi
+                    """
+                    
+                    // Kiểm tra health endpoint
+                    sh """
+                        sleep 3
+                        curl -f http://localhost:${HOST_PORT}/health || echo "⚠️  Health check endpoint not available"
+                    """
+                    
+                    // Kiểm tra trang chủ
+                    sh """
+                        curl -f http://localhost:${HOST_PORT}/ || echo "⚠️  Homepage check failed"
+                    """
+                }
+            }
+        }
+        
+        stage('Cleanup') {
+            steps {
+                script {
+                    echo '🧹 Cleaning up old images...'
+                    // Xóa images cũ (giữ lại 5 images gần nhất)
+                    sh """
+                        docker images ${IMAGE_NAME} --format '{{.ID}} {{.Tag}}' | \\
+                        grep -v latest | \\
+                        sort -k2 -n -r | \\
+                        tail -n +6 | \\
+                        awk '{print \$1}' | \\
+                        xargs -r docker rmi || true
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '✅ Pipeline completed successfully!'
+            // Có thể thêm notification ở đây (email, Slack, etc.)
+        }
+        failure {
+            echo '❌ Pipeline failed!'
+            script {
+                // Log container logs nếu fail
+                sh """
+                    docker logs ${CONTAINER_NAME} || true
+                """
+            }
+        }
+        always {
+            echo '📋 Pipeline finished'
+            // Cleanup .env file sau khi build (optional, để bảo mật)
+            script {
+                sh """
+                    rm -f frontend/frontend/.env || true
+                """
+            }
+        }
+    }
+}
+
