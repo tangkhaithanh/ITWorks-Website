@@ -27,9 +27,10 @@ async function bootstrap() {
 
   // 👇 cho phép FE gọi API kèm cookie
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: 'http://itworks.dpdns.org',
     credentials: true,
   });
+  
 
   // 👇 đọc cookie từ request
   app.use(cookieParser());
