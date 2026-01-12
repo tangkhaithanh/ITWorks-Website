@@ -27,7 +27,7 @@ async function bootstrap() {
 
   // 👇 cho phép FE gọi API kèm cookie
   app.enableCors({
-    origin: 'http://itworks.dpdns.org',
+    origin: ['http://14.225.217.237:5173', 'http://14.225.217.237'],
     credentials: true,
   });
   
