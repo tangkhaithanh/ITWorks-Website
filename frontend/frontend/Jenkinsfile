@@ -5,13 +5,14 @@ pipeline {
         // Tên image và container
         IMAGE_NAME = 'itworks-frontend'
         CONTAINER_NAME = 'itworks-frontend'
+        NGINX_IMAGE_NAME = 'itworks-nginx'
+        NGINX_CONTAINER_NAME = 'itworks-nginx'
         DOCKER_NETWORK = 'itworks-network'
         
         // Port mapping
-        // Frontend container expose port 8080 trên localhost
-        // Nginx trên VPS sẽ proxy đến port này
         APP_PORT = '80'
-        FRONTEND_HOST_PORT = '8080'
+        NGINX_HTTP_PORT = '80'
+        NGINX_HTTPS_PORT = '443'
     }
     
     stages {
@@ -52,6 +53,25 @@ pipeline {
             }
         }
         
+        stage('Build Nginx Image') {
+            steps {
+                script {
+                    echo '🔨 Building Nginx reverse proxy image...'
+                    dir('frontend/frontend/nginx') {
+                        // Build nginx image với tag
+                        def nginxImageTag = "${NGINX_IMAGE_NAME}:${BUILD_NUMBER}"
+                        def nginxImageLatest = "${NGINX_IMAGE_NAME}:latest"
+                        
+                        sh """
+                            docker build -t ${nginxImageTag} -t ${nginxImageLatest} .
+                        """
+                        
+                        echo "✅ Nginx image built: ${nginxImageTag}"
+                    }
+                }
+            }
+        }
+        
         stage('Test') {
             steps {
                 script {
@@ -70,8 +90,8 @@ pipeline {
                 script {
                     echo '🛑 Stopping old containers if exists...'
                     sh """
-                        docker stop ${CONTAINER_NAME} || true
-                        docker rm ${CONTAINER_NAME} || true
+                        docker stop ${CONTAINER_NAME} ${NGINX_CONTAINER_NAME} || true
+                        docker rm ${CONTAINER_NAME} ${NGINX_CONTAINER_NAME} || true
                     """
                 }
             }
@@ -81,18 +101,33 @@ pipeline {
             steps {
                 script {
                     echo '🚀 Deploying Frontend container...'
-                    // Frontend chạy trong Docker network, expose port 80
-                    // Nginx trên VPS sẽ proxy đến container này qua Docker network
+                    // Frontend không cần expose port ra ngoài, chỉ cần trong Docker network
+                    // Nginx sẽ proxy đến container này
                     sh """
                         docker run -d \\
                             --name ${CONTAINER_NAME} \\
                             --restart unless-stopped \\
-                            -p 127.0.0.1:8080:80 \\
                             --network ${DOCKER_NETWORK} \\
                             ${IMAGE_NAME}:${BUILD_NUMBER}
                     """
-                    echo "ℹ️  Frontend container đang chạy trên port 8080 (localhost only)"
-                    echo "ℹ️  Nginx trên VPS cần được cấu hình thủ công để proxy đến container này"
+                }
+            }
+        }
+        
+        stage('Deploy Nginx') {
+            steps {
+                script {
+                    echo '🚀 Deploying Nginx reverse proxy container...'
+                    // Nginx expose port 80 và 443 ra ngoài
+                    sh """
+                        docker run -d \\
+                            --name ${NGINX_CONTAINER_NAME} \\
+                            --restart unless-stopped \\
+                            -p ${NGINX_HTTP_PORT}:80 \\
+                            -p ${NGINX_HTTPS_PORT}:443 \\
+                            --network ${DOCKER_NETWORK} \\
+                            ${NGINX_IMAGE_NAME}:${BUILD_NUMBER}
+                    """
                 }
             }
         }
@@ -106,7 +141,7 @@ pipeline {
                     // Kiểm tra container có chạy không
                     sh """
                         if docker ps | grep -q ${CONTAINER_NAME}; then
-                            echo "✅ Frontend container is running"
+                            echo "✅ Container is running"
                         else
                             echo "❌ Container failed to start"
                             docker logs ${CONTAINER_NAME}
@@ -114,18 +149,27 @@ pipeline {
                         fi
                     """
                     
-                    // Kiểm tra frontend container qua localhost
+                    // Kiểm tra Nginx container
+                    sh """
+                        if docker ps | grep -q ${NGINX_CONTAINER_NAME}; then
+                            echo "✅ Nginx container is running"
+                        else
+                            echo "❌ Nginx container failed to start"
+                            docker logs ${NGINX_CONTAINER_NAME} || true
+                            exit 1
+                        fi
+                    """
+                    
+                    // Kiểm tra qua Nginx reverse proxy
                     sh """
                         sleep 3
-                        curl -f http://localhost:8080/health || echo "⚠️  Health check endpoint not available"
+                        curl -f http://localhost/health || echo "⚠️  Health check endpoint not available"
                     """
                     
-                    // Kiểm tra trang chủ
+                    // Kiểm tra trang chủ qua Nginx
                     sh """
-                        curl -f http://localhost:8080/ || echo "⚠️  Homepage check failed"
+                        curl -f http://localhost/ || echo "⚠️  Homepage check failed"
                     """
-                    
-                    echo "ℹ️  Lưu ý: Nginx trên VPS cần được cấu hình thủ công để proxy đến http://localhost:8080"
                 }
             }
         }
@@ -134,9 +178,16 @@ pipeline {
             steps {
                 script {
                     echo '🧹 Cleaning up old images...'
-                    // Xóa images cũ (giữ lại 5 images gần nhất) cho frontend
+                    // Xóa images cũ (giữ lại 5 images gần nhất) cho cả frontend và nginx
                     sh """
                         docker images ${IMAGE_NAME} --format '{{.ID}} {{.Tag}}' | \\
+                        grep -v latest | \\
+                        sort -k2 -n -r | \\
+                        tail -n +6 | \\
+                        awk '{print \$1}' | \\
+                        xargs -r docker rmi || true
+                        
+                        docker images ${NGINX_IMAGE_NAME} --format '{{.ID}} {{.Tag}}' | \\
                         grep -v latest | \\
                         sort -k2 -n -r | \\
                         tail -n +6 | \\
