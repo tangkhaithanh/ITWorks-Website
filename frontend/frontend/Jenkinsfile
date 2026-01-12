@@ -9,7 +9,7 @@ pipeline {
         
         // Port mapping
         APP_PORT = '80'
-        HTTP_PORT = '80'
+        HTTP_PORT = '5173'
     }
     
     stages {
@@ -112,12 +112,12 @@ pipeline {
                     // Kiểm tra frontend container trực tiếp
                     sh """
                         sleep 3
-                        curl -f http://localhost/health || echo "⚠️  Health check endpoint not available"
+                        curl -f http://localhost:${HTTP_PORT}/health || echo "⚠️  Health check endpoint not available"
                     """
                     
                     // Kiểm tra trang chủ
                     sh """
-                        curl -f http://localhost/ || echo "⚠️  Homepage check failed"
+                        curl -f http://localhost:${HTTP_PORT}/ || echo "⚠️  Homepage check failed"
                     """
                 }
             }
