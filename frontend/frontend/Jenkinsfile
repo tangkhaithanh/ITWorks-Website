@@ -123,11 +123,11 @@ pipeline {
                 script {
                     echo '🔒 Setting up SSL certificate...'
                     
-                    // Kiểm tra SSL certificate đã tồn tại chưa
-                    def sslExists = sh(
-                        script: "test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
-                        returnStdout: true
-                    ).trim()
+                        // Kiểm tra SSL certificate đã tồn tại chưa (cần sudo để đọc)
+                        def sslExists = sh(
+                            script: "sudo test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
+                            returnStdout: true
+                        ).trim()
                     
                     if (sslExists == 'not_exists') {
                         echo "📝 SSL certificate chưa tồn tại, đang tạo mới..."
@@ -138,11 +138,11 @@ pipeline {
                             docker rm ${NGINX_CONTAINER_NAME} || true
                         """
                         
-                        // Cài đặt certbot và lấy certificate
+                        // Cài đặt certbot và lấy certificate (cần sudo)
                         sh """
-                            apt-get update -qq || true
-                            apt-get install -y -qq certbot || true
-                            certbot certonly --standalone \\
+                            sudo apt-get update -qq || true
+                            sudo apt-get install -y -qq certbot || true
+                            sudo certbot certonly --standalone \\
                                 -d ${DOMAIN} \\
                                 -d www.${DOMAIN} \\
                                 --non-interactive \\
@@ -151,9 +151,9 @@ pipeline {
                                 --preferred-challenges http || echo "⚠️  SSL certificate creation failed, will use HTTP"
                         """
                         
-                        // Kiểm tra lại SSL
+                        // Kiểm tra lại SSL (cần sudo để đọc)
                         sslExists = sh(
-                            script: "test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
+                            script: "sudo test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
                             returnStdout: true
                         ).trim()
                     }
@@ -217,34 +217,35 @@ pipeline {
                     
                     // Kiểm tra SSL có tồn tại không
                     def sslExists = sh(
-                        script: "test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
+                        script: "sudo test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
                         returnStdout: true
                     ).trim()
                     
-                    def dockerRunCmd = """
-                        docker run -d \\
-                            --name ${NGINX_CONTAINER_NAME} \\
-                            --restart unless-stopped \\
-                            -p ${NGINX_HTTP_PORT}:80 \\
-                            -p ${NGINX_HTTPS_PORT}:443 \\
-                            --network ${DOCKER_NETWORK} \\
-                    """
-                    
-                    // Mount SSL certificates nếu có
+                    // Build docker run command
                     if (sslExists == 'exists') {
-                        dockerRunCmd += """
-                            -v /etc/letsencrypt:/etc/letsencrypt:ro \\
-                        """
                         echo "✅ Deploying với SSL certificates"
+                        sh """
+                            docker run -d \\
+                                --name ${NGINX_CONTAINER_NAME} \\
+                                --restart unless-stopped \\
+                                -p ${NGINX_HTTP_PORT}:80 \\
+                                -p ${NGINX_HTTPS_PORT}:443 \\
+                                -v /etc/letsencrypt:/etc/letsencrypt:ro \\
+                                --network ${DOCKER_NETWORK} \\
+                                ${NGINX_IMAGE_NAME}:${BUILD_NUMBER}
+                        """
                     } else {
                         echo "⚠️  Deploying không có SSL (HTTP only)"
+                        sh """
+                            docker run -d \\
+                                --name ${NGINX_CONTAINER_NAME} \\
+                                --restart unless-stopped \\
+                                -p ${NGINX_HTTP_PORT}:80 \\
+                                -p ${NGINX_HTTPS_PORT}:443 \\
+                                --network ${DOCKER_NETWORK} \\
+                                ${NGINX_IMAGE_NAME}:${BUILD_NUMBER}
+                        """
                     }
-                    
-                    dockerRunCmd += """
-                            ${NGINX_IMAGE_NAME}:${BUILD_NUMBER}
-                    """
-                    
-                    sh dockerRunCmd
                 }
             }
         }
@@ -288,9 +289,9 @@ pipeline {
                         curl -f http://localhost/ || echo "⚠️  Homepage check failed"
                     """
                     
-                    // Kiểm tra HTTPS nếu có SSL
+                    // Kiểm tra HTTPS nếu có SSL (cần sudo để đọc)
                     def sslExists = sh(
-                        script: "test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
+                        script: "sudo test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
                         returnStdout: true
                     ).trim()
                     
@@ -309,9 +310,9 @@ pipeline {
                 script {
                     echo '🔄 Setting up SSL auto-renewal...'
                     
-                    // Kiểm tra SSL có tồn tại không
+                    // Kiểm tra SSL có tồn tại không (cần sudo để đọc)
                     def sslExists = sh(
-                        script: "test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
+                        script: "sudo test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
                         returnStdout: true
                     ).trim()
                     
