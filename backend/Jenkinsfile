@@ -68,14 +68,28 @@ pipeline {
             steps {
                 script {
                     withCredentials([file(credentialsId: 'backend-env-file', variable: 'ENV_FILE')]) {
+                        // Copy file vào thư mục temp (có quyền ghi)
+                        def envFilePath = sh(
+                            script: """
+                                cp '${ENV_FILE}' /tmp/backend.env.${BUILD_NUMBER}
+                                echo /tmp/backend.env.${BUILD_NUMBER}
+                            """,
+                            returnStdout: true
+                        ).trim()
+                        
+                        // Deploy container với .env file từ temp
                         sh """
-                            cp ${ENV_FILE} backend/.env
                             docker run -d \\
                                 --name ${CONTAINER_NAME} \\
                                 --restart unless-stopped \\
                                 -p ${HOST_PORT}:${APP_PORT} \\
-                                --env-file backend/.env \\
+                                --env-file ${envFilePath} \\
                                 ${IMAGE_NAME}:${BUILD_NUMBER}
+                        """
+                        
+                        // Cleanup temp file sau khi deploy
+                        sh """
+                            rm -f ${envFilePath} || true
                         """
                     }
                 }
