@@ -67,15 +67,14 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    echo '🚀 Deploying new container...'
-                    dir('backend') {
-                        // Chạy container với .env từ Jenkins credentials hoặc file
+                    withCredentials([file(credentialsId: 'backend-env-file', variable: 'ENV_FILE')]) {
                         sh """
+                            cp ${ENV_FILE} backend/.env
                             docker run -d \\
                                 --name ${CONTAINER_NAME} \\
                                 --restart unless-stopped \\
                                 -p ${HOST_PORT}:${APP_PORT} \\
-                                --env-file .env \\
+                                --env-file backend/.env \\
                                 ${IMAGE_NAME}:${BUILD_NUMBER}
                         """
                     }
