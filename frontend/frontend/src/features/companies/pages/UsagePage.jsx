@@ -16,7 +16,7 @@ import {
 
 import CompanyPlanAPI from "../CompanyPlanAPI";
 import CompanyAPI from "../CompanyAPI";
-import Button from "@/components/ui/button";
+import Button from "@/components/ui/Button";
 import { Card, CardHeader, CardBody, CardFooter } from "@/components/common/Card";
 import EmptyState from "@/components/common/EmptyState";
 import SectionHeader from "@/components/common/SectionHeader";

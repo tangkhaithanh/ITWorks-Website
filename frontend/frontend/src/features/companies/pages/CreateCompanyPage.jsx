@@ -30,7 +30,7 @@ import MultiSelect from "@/components/common/MultiSelect";
 
 // APIs
 import CompanyAPI from "@/features/companies/CompanyAPI";
-import IndustryAPI from "@/features/industry/IndustryAPI";
+import IndustryAPI from "@/features/Industry/IndustryAPI";
 import SkillAPI from "@/features/skills/SkillAPI";
 
 const MySwal = withReactContent(Swal);
