@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql" // Đã đổi từ mysql sang postgresql
   url      = env("DATABASE_URL")
 }
 
@@ -12,20 +12,19 @@ datasource db {
 // 1. Accounts
 // ===============================
 model Account {
-  id         BigInt   @id @default(autoincrement())
-  email      String   @unique
-  password   String
-  role       Role
-  status     Status   @default(active)
-  refreshToken String?
-  must_change_password Boolean @default(false)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  user          User?
-  company       Company?
-  notifications Notification[]
-  admin_logs    AdminLog[]
+  id                   BigInt         @id @default(autoincrement())
+  email                String         @unique
+  password             String
+  role                 Role
+  status               Status         @default(active)
+  refreshToken         String?
+  must_change_password Boolean        @default(false)
+  created_at           DateTime       @default(now())
+  updated_at           DateTime       @updatedAt
+  user                 User?
+  company              Company?
+  notifications        Notification[]
+  admin_logs           AdminLog[]
 }
 
 enum Role {
@@ -44,20 +43,19 @@ enum Status {
 // 2. Users
 // ===============================
 model User {
-  id         BigInt    @id @default(autoincrement())
-  account_id BigInt    @unique
-  full_name  String
-  phone      String?
-  dob        DateTime?
-  gender     Gender?
-  address    String?
-  avatar_url String?
+  id               BigInt     @id @default(autoincrement())
+  account_id       BigInt     @unique
+  full_name        String
+  phone            String?
+  dob              DateTime?
+  gender           Gender?
+  address          String?
+  avatar_url       String?
   avatar_public_id String?
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
-
-  account   Account    @relation(fields: [account_id], references: [id])
-  candidate Candidate?
+  created_at       DateTime   @default(now())
+  updated_at       DateTime   @updatedAt
+  account          Account    @relation(fields: [account_id], references: [id])
+  candidate        Candidate?
 }
 
 enum Gender {
@@ -70,90 +68,78 @@ enum Gender {
 // 3. Candidates
 // ===============================
 model Candidate {
-  id         BigInt   @id @default(autoincrement())
-  user_id    BigInt   @unique
-  
-  // Preferences for matching (optional nhưng rất có ích)
+  id                  BigInt           @id @default(autoincrement())
+  user_id             BigInt           @unique
+  // Preferences for matching
   preferred_city      String?
   preferred_work_mode WorkMode?
   preferred_category  BigInt?
   preferred_salary    Float?
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  user         User             @relation(fields: [user_id], references: [id])
-  cvs          Cv[]
-  applications Application[]
-  saved_jobs   SavedJob[]
-  skills       CandidateSkill[]
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @updatedAt
+  user                User             @relation(fields: [user_id], references: [id])
+  cvs                 Cv[]
+  applications        Application[]
+  saved_jobs          SavedJob[]
+  skills              CandidateSkill[]
 }
 
 // ===============================
 // 4. Companies
 // ===============================
 model Industry {
-  id        BigInt    @id @default(autoincrement())
-  name      String    @unique
+  id        BigInt            @id @default(autoincrement())
+  name      String            @unique
   companies CompanyIndustry[]
 }
 
 model Company {
-  id             BigInt   @id @default(autoincrement())
-  account_id     BigInt   @unique
-
+  id                      BigInt               @id @default(autoincrement())
+  account_id              BigInt               @unique
   // Profile
-  name           String
-  logo_url       String?
-  logo_public_id String?
-  website        String?
-  description    String? @db.LongText
-
+  name                    String
+  logo_url                String?
+  logo_public_id          String?
+  website                 String?
+  description             String?              // Đã xóa @db.LongText (Postgres mặc định String là Text)
   // Location & Size
-  headquarters   String?
-  address        String?
-  size           CompanySize?
-
+  headquarters            String?
+  address                 String?
+  size                    CompanySize?
   // Skills & Industries
-  industry_info  CompanyIndustry[]
-  skills         CompanySkill[]
-
+  industry_info           CompanyIndustry[]
+  skills                  CompanySkill[]
   // Legal
-  business_code           String? @unique
+  business_code           String?              @unique
   representative_name     String?
   representative_position String?
   license_file_url        String?
   license_file_public_id  String?
-
   // Contact
-  contact_email  String?
-  contact_phone  String?
-
+  contact_email           String?
+  contact_phone           String?
   // Other
-  founded_date   DateTime?
-  status         CompanyStatus @default(pending)
-  created_at     DateTime      @default(now())
-  updated_at     DateTime      @updatedAt
-
+  founded_date            DateTime?
+  status                  CompanyStatus        @default(pending)
+  created_at              DateTime             @default(now())
+  updated_at              DateTime             @updatedAt
   // Relations
-  account    Account  @relation(fields: [account_id], references: [id])
-  jobs       Job[]
-  statistics RecruiterStatistic[]
-  companyPlan        CompanyPlan?
-  companyPlanHistory CompanyPlanHistory[]
-  paymentOrders      PaymentOrder[]
-  jobBoosts          JobBoost[]
-  creditTransactions CreditTransaction[]
+  account                 Account              @relation(fields: [account_id], references: [id])
+  jobs                    Job[]
+  statistics              RecruiterStatistic[]
+  companyPlan             CompanyPlan?
+  companyPlanHistory      CompanyPlanHistory[]
+  paymentOrders           PaymentOrder[]
+  jobBoosts               JobBoost[]
+  creditTransactions      CreditTransaction[]
 }
 
-
 model CompanySkill {
-  id          BigInt @id @default(autoincrement())
-  company_id  BigInt
-  skill_id    BigInt
-
-  company Company @relation(fields: [company_id], references: [id])
-  skill   Skill   @relation(fields: [skill_id], references: [id])
+  id         BigInt @id @default(autoincrement())
+  company_id BigInt
+  skill_id   BigInt
+  company    Company @relation(fields: [company_id], references: [id])
+  skill      Skill   @relation(fields: [skill_id], references: [id])
 
   @@unique([company_id, skill_id])
 }
@@ -162,9 +148,8 @@ model CompanyIndustry {
   id          BigInt   @id @default(autoincrement())
   company_id  BigInt
   industry_id BigInt
-
-  company  Company  @relation(fields: [company_id], references: [id])
-  industry Industry @relation(fields: [industry_id], references: [id])
+  company     Company  @relation(fields: [company_id], references: [id])
+  industry    Industry @relation(fields: [industry_id], references: [id])
 
   @@unique([company_id, industry_id])
 }
@@ -186,71 +171,65 @@ enum CompanyStatus {
 // 5. Jobs
 // ===============================
 model Job {
-  id                 BigInt           @id @default(autoincrement())
+  id                 BigInt              @id @default(autoincrement())
   company_id         BigInt
   category_id        BigInt
   title              String
   salary_min         Float?
   salary_max         Float?
-  negotiable         Boolean          @default(false)
-
+  negotiable         Boolean             @default(false)
   // 🗺️ Thông tin địa điểm
-  location_city      String           // TP.HCM
-  location_district  String?          // Quận 1
-  location_ward      String?          // Phường Đa Kao
-  location_street    String?          // 29 Nguyễn Đình Chiểu
-  location_full      String?          // Ghép tự động: "29 Nguyễn Đình Chiểu, Phường Đa Kao, Quận 1, TP.HCM"
-  latitude           Float?           // 10.7769
-  longitude          Float?           // 106.7009
-
+  location_city      String
+  location_district  String?
+  location_ward      String?
+  location_street    String?
+  location_full      String?
+  latitude           Float?
+  longitude          Float?
   // 💼 Hình thức & cấp độ làm việc
-  work_modes         Json            // Ví dụ: ["onsite", "remote"]
-  experience_levels  Json            // Ví dụ: ["junior", "mid"]
-
+  work_modes         Json
+  experience_levels  Json
   // 🧾 Loại việc & trạng thái
   employment_type    EmploymentType
-  status             JobStatus        @default(active)
+  status             JobStatus           @default(active)
   deadline           DateTime?
-  created_at         DateTime         @default(now())
-  updated_at         DateTime         @updatedAt
-
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @updatedAt
   // Thông tin thống kê
-  number_of_openings Int               @default(1)   // Số lượng cần tuyển
-  views_count        Int               @default(0)   // Tổng lượt xem job
-
+  number_of_openings Int                 @default(1)
+  views_count        Int                 @default(0)
   // 🔗 Quan hệ
-  company      Company       @relation(fields: [company_id], references: [id])
-  category     JobCategory?  @relation(fields: [category_id], references: [id])
-  details      JobDetail?
-  applications Application[]
-  saved_jobs   SavedJob[]
-  skills       JobSkill[]
-  boosts       JobBoost[]
+  company            Company             @relation(fields: [company_id], references: [id])
+  category           JobCategory?        @relation(fields: [category_id], references: [id])
+  details            JobDetail?
+  applications       Application[]
+  saved_jobs         SavedJob[]
+  skills             JobSkill[]
+  boosts             JobBoost[]
   creditTransactions CreditTransaction[]
 }
 
 model JobDetail {
-  job_id       BigInt   @id
-  description  String?  @db.LongText
-  requirements String?  @db.LongText
-  job          Job      @relation(fields: [job_id], references: [id])
+  job_id       BigInt  @id
+  description  String? // Đã xóa @db.LongText
+  requirements String? // Đã xóa @db.LongText
+  job          Job     @relation(fields: [job_id], references: [id])
 }
 
 model Skill {
-  id         BigInt           @id @default(autoincrement())
-  name       String           @unique
-  jobs       JobSkill[]
-  candidates CandidateSkill[]
-  company_skills CompanySkill[]   // thêm dòng này
+  id             BigInt           @id @default(autoincrement())
+  name           String           @unique
+  jobs           JobSkill[]
+  candidates     CandidateSkill[]
+  company_skills CompanySkill[]
 }
 
 model JobSkill {
   id       BigInt @id @default(autoincrement())
   job_id   BigInt
   skill_id BigInt
-
-  job   Job   @relation(fields: [job_id], references: [id])
-  skill Skill @relation(fields: [skill_id], references: [id])
+  job      Job    @relation(fields: [job_id], references: [id])
+  skill    Skill  @relation(fields: [skill_id], references: [id])
 }
 
 enum EmploymentType {
@@ -282,14 +261,12 @@ enum ExperienceLevel {
   intern
 }
 
-
 model CandidateSkill {
-  id           BigInt      @id @default(autoincrement())
+  id           BigInt    @id @default(autoincrement())
   candidate_id BigInt
   skill_id     BigInt
-
-  candidate Candidate @relation(fields: [candidate_id], references: [id])
-  skill     Skill     @relation(fields: [skill_id], references: [id])
+  candidate    Candidate @relation(fields: [candidate_id], references: [id])
+  skill        Skill     @relation(fields: [skill_id], references: [id])
 }
 
 // ===============================
@@ -305,27 +282,26 @@ model JobCategory {
 // 7. CVs
 // ===============================
 model Cv {
-  id           BigInt   @id @default(autoincrement())
+  id           BigInt        @id @default(autoincrement())
   candidate_id BigInt
   title        String
   file_url     String?
-  file_public_id  String?
+  file_public_id String?
   template_id  BigInt?
   content      Json?
-  type         CvType   @default(ONLINE)
-  is_deleted   Boolean  @default(false)  
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
-
+  type         CvType        @default(ONLINE)
+  is_deleted   Boolean       @default(false)
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
   candidate    Candidate     @relation(fields: [candidate_id], references: [id])
   template     CvTemplate?   @relation(fields: [template_id], references: [id])
   applications Application[]
 }
+
 enum CvType {
   FILE
   ONLINE
 }
-
 
 // ===============================
 // 8. CV Templates
@@ -338,8 +314,7 @@ model CvTemplate {
   preview_url String?
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
-
-  cvs Cv[]
+  cvs         Cv[]
 }
 
 // ===============================
@@ -353,11 +328,10 @@ model Application {
   status       ApplicationStatus @default(pending)
   applied_at   DateTime          @default(now())
   updated_at   DateTime          @updatedAt
-
-  job       Job       @relation(fields: [job_id], references: [id])
-  candidate Candidate @relation(fields: [candidate_id], references: [id])
-  cv        Cv        @relation(fields: [cv_id], references: [id])
-  interviews Interview[]
+  job          Job               @relation(fields: [job_id], references: [id])
+  candidate    Candidate         @relation(fields: [candidate_id], references: [id])
+  cv           Cv                @relation(fields: [cv_id], references: [id])
+  interviews   Interview[]
 }
 
 enum ApplicationStatus {
@@ -372,14 +346,13 @@ enum ApplicationStatus {
 // 10. Saved Jobs
 // ===============================
 model SavedJob {
-  id           BigInt   @id @default(autoincrement())
+  id           BigInt    @id @default(autoincrement())
   candidate_id BigInt
   job_id       BigInt
-  saved_at     DateTime @default(now())
-  updated_at   DateTime @updatedAt
-
-  candidate Candidate @relation(fields: [candidate_id], references: [id])
-  job       Job       @relation(fields: [job_id], references: [id])
+  saved_at     DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+  candidate    Candidate @relation(fields: [candidate_id], references: [id])
+  job          Job       @relation(fields: [job_id], references: [id])
 }
 
 // ===============================
@@ -393,8 +366,7 @@ model Notification {
   is_read    Boolean          @default(false)
   created_at DateTime         @default(now())
   updated_at DateTime         @updatedAt
-
-  account Account @relation(fields: [account_id], references: [id])
+  account    Account          @relation(fields: [account_id], references: [id])
 }
 
 enum NotificationType {
@@ -414,8 +386,7 @@ model AdminLog {
   target_id   BigInt?
   created_at  DateTime   @default(now())
   updated_at  DateTime   @updatedAt
-
-  admin Account @relation(fields: [admin_id], references: [id])
+  admin       Account    @relation(fields: [admin_id], references: [id])
 }
 
 enum TargetType {
@@ -445,25 +416,24 @@ model RecruiterStatistic {
   value      Int
   date       DateTime
   updated_at DateTime @updatedAt
-
-  company Company @relation(fields: [company_id], references: [id])
+  company    Company  @relation(fields: [company_id], references: [id])
 }
+
 // ===============================
 // 15. Interviews
 // ===============================
 model Interview {
-  id              BigInt           @id @default(autoincrement())
-  application_id  BigInt
-  scheduled_at    DateTime
-  mode            InterviewMode
-  location        String?
-  meeting_link    String?
-  status          InterviewStatus  @default(scheduled)
-  notes           String?
-  created_at      DateTime         @default(now())
-  updated_at      DateTime         @updatedAt
-
-  application Application @relation(fields: [application_id], references: [id])
+  id             BigInt          @id @default(autoincrement())
+  application_id BigInt
+  scheduled_at   DateTime
+  mode           InterviewMode
+  location       String?
+  meeting_link   String?
+  status         InterviewStatus @default(scheduled)
+  notes          String?
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
+  application    Application     @relation(fields: [application_id], references: [id])
 }
 
 enum InterviewStatus {
@@ -477,95 +447,80 @@ enum InterviewMode {
   online
   offline
 }
+
 // 16. Plans:
 model Plan {
-  id             BigInt  @id @default(autoincrement())
-  name           String
-  price          BigInt
-  job_limit      Int
-  credit_amount  Int
-  duration_days  Int
-  features       String? @db.LongText
-
-  is_hidden      Boolean @default(false)
-
-  companyPlans   CompanyPlan[]
-  histories      CompanyPlanHistory[]
-  paymentOrders  PaymentOrder[]
+  id                 BigInt               @id @default(autoincrement())
+  name               String
+  price              BigInt
+  job_limit          Int
+  credit_amount      Int
+  duration_days      Int
+  features           String?              // Đã xóa @db.LongText
+  is_hidden          Boolean              @default(false)
+  companyPlans       CompanyPlan[]
+  histories          CompanyPlanHistory[]
+  paymentOrders      PaymentOrder[]
   creditTransactions CreditTransaction[]
-
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
 }
 
 // CompanyPlan:
 model CompanyPlan {
-  id            BigInt   @id @default(autoincrement())
-  company_id    BigInt   @unique
-  plan_id       BigInt
-
+  id                     BigInt        @id @default(autoincrement())
+  company_id             BigInt        @unique
+  plan_id                BigInt
   // thời gian hiệu lực của "bucket current"
-  start_date    DateTime
-  end_date      DateTime
-
+  start_date             DateTime
+  end_date               DateTime
   // SNAPSHOT tại thời điểm mua (không phụ thuộc Plan bị sửa sau này)
   purchased_price        BigInt
   job_limit_snapshot     Int
   credit_amount_snapshot Int
-
   // usage
-  jobs_left     Int
-  order_id      BigInt? @unique
-  credits_left  Int
-
-  status        PlanStatus @default(active)
-
-  company Company @relation(fields: [company_id], references: [id])
-  plan    Plan    @relation(fields: [plan_id], references: [id])
-  order    PaymentOrder? @relation(fields: [order_id], references: [id])
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  jobs_left              Int
+  order_id               BigInt?       @unique
+  credits_left           Int
+  status                 PlanStatus    @default(active)
+  company                Company       @relation(fields: [company_id], references: [id])
+  plan                   Plan          @relation(fields: [plan_id], references: [id])
+  order                  PaymentOrder? @relation(fields: [order_id], references: [id])
+  created_at             DateTime      @default(now())
+  updated_at             DateTime      @updatedAt
 
   @@index([company_id, status, end_date])
 }
-
 
 enum PlanStatus {
   active
   expired
   cancelled
 }
+
 // Company Plan History
 model CompanyPlanHistory {
-  id              BigInt   @id @default(autoincrement())
-  company_id      BigInt
-  plan_id         BigInt
-
+  id                     BigInt            @id @default(autoincrement())
+  company_id             BigInt
+  plan_id                BigInt
   // SNAPSHOT tại thời điểm mua / lúc bucket được tạo
   purchased_price        BigInt
   job_limit_snapshot     Int
   credit_amount_snapshot Int
-
-  start_date      DateTime
-  end_date        DateTime
-
+  start_date             DateTime
+  end_date               DateTime
   // usage
-  jobs_used       Int
-  credits_used    Int
-
-  status          PlanHistoryStatus
-  order_id        BigInt?
-
-  company Company @relation(fields: [company_id], references: [id])
-  plan    Plan    @relation(fields: [plan_id], references: [id])
-  order   PaymentOrder? @relation(fields: [order_id], references: [id])
-
-  created_at DateTime @default(now())
+  jobs_used              Int
+  credits_used           Int
+  status                 PlanHistoryStatus
+  order_id               BigInt?
+  company                Company           @relation(fields: [company_id], references: [id])
+  plan                   Plan              @relation(fields: [plan_id], references: [id])
+  order                  PaymentOrder?     @relation(fields: [order_id], references: [id])
+  created_at             DateTime          @default(now())
 
   @@index([company_id, status, end_date, created_at])
 }
-
 
 enum PlanHistoryStatus {
   completed
@@ -575,30 +530,24 @@ enum PlanHistoryStatus {
 
 // Payment order- phục vụ cho trang checkout:
 model PaymentOrder {
-  id              BigInt   @id @default(autoincrement())
-  company_id      BigInt
-  plan_id         BigInt
-
-  amount          BigInt
-  payment_method  PaymentMethod @default(vnpay)
-
-  status          PaymentStatus  @default(pending)
-
-  vnp_txn_ref     String?        // vnp_TxnRef
-  vnp_transaction_no String?     // mã GD VNPAY
-  vnp_response_code String?
-
-  paid_at         DateTime?
-  expired_at      DateTime?
-
-  company Company @relation(fields: [company_id], references: [id])
-  plan    Plan    @relation(fields: [plan_id], references: [id])
-  histories CompanyPlanHistory[]
-  companyPlan       CompanyPlan?
+  id                 BigInt               @id @default(autoincrement())
+  company_id         BigInt
+  plan_id            BigInt
+  amount             BigInt
+  payment_method     PaymentMethod        @default(vnpay)
+  status             PaymentStatus        @default(pending)
+  vnp_txn_ref        String? // vnp_TxnRef
+  vnp_transaction_no String? // mã GD VNPAY
+  vnp_response_code  String?
+  paid_at            DateTime?
+  expired_at         DateTime?
+  company            Company              @relation(fields: [company_id], references: [id])
+  plan               Plan                 @relation(fields: [plan_id], references: [id])
+  histories          CompanyPlanHistory[]
+  companyPlan        CompanyPlan?
   creditTransactions CreditTransaction[]
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
 }
 
 enum PaymentStatus {
@@ -612,14 +561,14 @@ enum PaymentStatus {
 enum PaymentMethod {
   vnpay
 }
+
 // Boost Job rule:
 model BoostRule {
-  id        BigInt @id @default(autoincrement())
-  tier      BoostTier
-  credits   Int
+  id            BigInt    @id @default(autoincrement())
+  tier          BoostTier
+  credits       Int
   duration_days Int
-
-  created_at DateTime @default(now())
+  created_at    DateTime  @default(now())
 }
 
 enum BoostTier {
@@ -628,23 +577,20 @@ enum BoostTier {
   top_30
   top_10
 }
+
 // Job boost history:
 model JobBoost {
-  id         BigInt @id @default(autoincrement())
+  id         BigInt      @id @default(autoincrement())
   job_id     BigInt
   company_id BigInt
-
   tier       BoostTier
   credits    Int
-
   start_at   DateTime
   end_at     DateTime
   status     BoostStatus @default(active)
-
-  job     Job     @relation(fields: [job_id], references: [id])
-  company Company @relation(fields: [company_id], references: [id])
-
-  created_at DateTime @default(now())
+  job        Job         @relation(fields: [job_id], references: [id])
+  company    Company     @relation(fields: [company_id], references: [id])
+  created_at DateTime    @default(now())
 }
 
 enum BoostStatus {
@@ -655,43 +601,36 @@ enum BoostStatus {
 
 // CREDIT TRANSACTION - log cộng trừ / cộng redit:
 model CreditTransaction {
-  id          BigInt @id @default(autoincrement())
-  company_id  BigInt
-
-  amount      Int              // + hoặc -
-  type        CreditTxnType
-  job_id      BigInt?
-  order_id    BigInt?
-  plan_id     BigInt?
-
-  created_at  DateTime @default(now())
-
-  company Company @relation(fields: [company_id], references: [id])
-  order   PaymentOrder? @relation(fields: [order_id], references: [id])
-  plan    Plan?         @relation(fields: [plan_id], references: [id])
-  job     Job?          @relation(fields: [job_id], references: [id])
+  id         BigInt        @id @default(autoincrement())
+  company_id BigInt
+  amount     Int // + hoặc -
+  type       CreditTxnType
+  job_id     BigInt?
+  order_id   BigInt?
+  plan_id    BigInt?
+  created_at DateTime      @default(now())
+  company    Company       @relation(fields: [company_id], references: [id])
+  order      PaymentOrder? @relation(fields: [order_id], references: [id])
+  plan       Plan?         @relation(fields: [plan_id], references: [id])
+  job        Job?          @relation(fields: [job_id], references: [id])
 }
 
 enum CreditTxnType {
-  grant       // cấp khi mua plan
-  boost       // trừ khi boost job
+  grant // cấp khi mua plan
+  boost // trừ khi boost job
   refund
 }
+
 // Location:
 model LocationCity {
-  id     Int            @id
-  name   String
-
-  wards  LocationWard[]
+  id    Int            @id
+  name  String
+  wards LocationWard[]
 }
 
 model LocationWard {
-  id      Int    @id
+  id      Int          @id
   name    String
-
   city_id Int
   city    LocationCity @relation(fields: [city_id], references: [id], onDelete: Cascade)
 }
-
-
-

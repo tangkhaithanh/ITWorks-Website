@@ -42,6 +42,7 @@
     "date-fns": "^4.1.0",
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
+    "mysql2": "^3.16.0",
     "nodemailer": "^7.0.6",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
@@ -80,6 +81,7 @@
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.20.0"
   },
