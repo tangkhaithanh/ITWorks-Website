@@ -272,15 +272,15 @@ pipeline {
             steps {
                 script {
                     echo '🏥 Waiting for application to start...'
-                    sleep(time: 5, unit: 'SECONDS')
+                    sleep(time: 10, unit: 'SECONDS')
                     
                     // Kiểm tra container có chạy không
                     sh """
                         if docker ps | grep -q ${CONTAINER_NAME}; then
-                            echo "✅ Container is running"
+                            echo "✅ Frontend container is running"
                         else
-                            echo "❌ Container failed to start"
-                            docker logs ${CONTAINER_NAME}
+                            echo "❌ Frontend container failed to start"
+                            docker logs ${CONTAINER_NAME} || true
                             exit 1
                         fi
                     """
@@ -289,6 +289,8 @@ pipeline {
                     sh """
                         if docker ps | grep -q ${NGINX_CONTAINER_NAME}; then
                             echo "✅ Nginx container is running"
+                            echo "📋 Nginx container logs:"
+                            docker logs --tail 20 ${NGINX_CONTAINER_NAME} || true
                         else
                             echo "❌ Nginx container failed to start"
                             docker logs ${NGINX_CONTAINER_NAME} || true
@@ -296,10 +298,31 @@ pipeline {
                         fi
                     """
                     
-                    // Kiểm tra qua Nginx reverse proxy (HTTP)
+                    // Kiểm tra port 80 có listen không
                     sh """
-                        sleep 3
-                        curl -f http://localhost/health || echo "⚠️  Health check endpoint not available"
+                        echo "🔍 Checking port 80..."
+                        netstat -tlnp | grep :80 || ss -tlnp | grep :80 || echo "⚠️  Port 80 not found in netstat"
+                    """
+                    
+                    // Kiểm tra Nginx có thể connect đến frontend không
+                    sh """
+                        echo "🔍 Testing Nginx -> Frontend connection..."
+                        docker exec ${NGINX_CONTAINER_NAME} wget -q -O- http://itworks-frontend/health || echo "⚠️  Nginx cannot connect to frontend"
+                    """
+                    
+                    // Kiểm tra qua Nginx reverse proxy (HTTP) - thử nhiều lần
+                    sh """
+                        for i in {1..5}; do
+                            sleep 2
+                            if curl -f http://localhost/health 2>/dev/null; then
+                                echo "✅ Health check endpoint is available"
+                                exit 0
+                            fi
+                            echo "⏳ Retry $i/5..."
+                        done
+                        echo "⚠️  Health check endpoint not available after 5 retries"
+                        echo "📋 Checking Nginx logs:"
+                        docker logs --tail 30 ${NGINX_CONTAINER_NAME} || true
                     """
                     
                     // Kiểm tra trang chủ qua Nginx (HTTP)
@@ -365,20 +388,35 @@ pipeline {
                 script {
                     echo '🧹 Cleaning up old images...'
                     // Xóa images cũ (giữ lại 5 images gần nhất) cho cả frontend và nginx
+                    // Chỉ xóa images không đang được sử dụng
                     sh """
+                        # Cleanup frontend images (skip images đang được sử dụng)
                         docker images ${IMAGE_NAME} --format '{{.ID}} {{.Tag}}' | \\
                         grep -v latest | \\
                         sort -k2 -n -r | \\
                         tail -n +6 | \\
                         awk '{print \$1}' | \\
-                        xargs -r docker rmi || true
+                        while read image_id; do
+                            # Kiểm tra image có đang được sử dụng không
+                            if ! docker ps -a --format '{{.Image}}' | grep -q "\${image_id}"; then
+                                docker rmi \${image_id} 2>/dev/null || true
+                            fi
+                        done || true
                         
+                        # Cleanup nginx images (skip images đang được sử dụng)
                         docker images ${NGINX_IMAGE_NAME} --format '{{.ID}} {{.Tag}}' | \\
                         grep -v latest | \\
                         sort -k2 -n -r | \\
                         tail -n +6 | \\
                         awk '{print \$1}' | \\
-                        xargs -r docker rmi || true
+                        while read image_id; do
+                            # Kiểm tra image có đang được sử dụng không
+                            if ! docker ps -a --format '{{.Image}}' | grep -q "\${image_id}"; then
+                                docker rmi \${image_id} 2>/dev/null || true
+                            fi
+                        done || true
+                        
+                        echo "✅ Cleanup completed"
                     """
                 }
             }
