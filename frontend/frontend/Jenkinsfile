@@ -13,6 +13,12 @@ pipeline {
         APP_PORT = '80'
         NGINX_HTTP_PORT = '80'
         NGINX_HTTPS_PORT = '443'
+        
+        // SSL Configuration
+        SSL_ENABLED = 'true'  // Set 'false' để disable SSL
+        DOMAIN = 'itworks.dpdns.org'
+        DOMAIN_EMAIL = 'admin@itworks.dpdns.org'  // Email cho Let's Encrypt
+        SSL_CERT_PATH = '/etc/letsencrypt'
     }
     
     stages {
@@ -53,6 +59,76 @@ pipeline {
             }
         }
         
+        stage('Setup SSL Certificates') {
+            when {
+                expression { return SSL_ENABLED == 'true' }
+            }
+            steps {
+                script {
+                    echo '🔒 Setting up SSL certificates...'
+                    
+                    // Kiểm tra xem certificates đã tồn tại chưa
+                    def certExists = sh(
+                        script: """
+                            test -f ${SSL_CERT_PATH}/live/${DOMAIN}/fullchain.pem && \\
+                            test -f ${SSL_CERT_PATH}/live/${DOMAIN}/privkey.pem
+                        """,
+                        returnStatus: true
+                    ) == 0
+                    
+                    if (!certExists) {
+                        echo "📜 SSL certificates chưa tồn tại, đang tạo mới..."
+                        
+                        // Cài đặt certbot nếu chưa có
+                        sh """
+                            which certbot || (apt-get update && apt-get install -y certbot)
+                        """
+                        
+                        // Tạo thư mục cho certificates
+                        sh """
+                            mkdir -p ${SSL_CERT_PATH}/live/${DOMAIN}
+                            mkdir -p /var/www/certbot
+                        """
+                        
+                        // Tạm thời stop nginx container nếu đang chạy để certbot có thể dùng port 80
+                        sh """
+                            docker stop ${NGINX_CONTAINER_NAME} || true
+                        """
+                        
+                        // Lấy SSL certificate từ Let's Encrypt
+                        def certResult = sh(
+                            script: """
+                                certbot certonly --standalone \\
+                                    -d ${DOMAIN} \\
+                                    -d www.${DOMAIN} \\
+                                    --non-interactive \\
+                                    --agree-tos \\
+                                    --email ${DOMAIN_EMAIL} \\
+                                    --preferred-challenges http \\
+                                    --cert-path ${SSL_CERT_PATH} || true
+                            """,
+                            returnStatus: true
+                        )
+                        
+                        if (certResult != 0) {
+                            echo "⚠️  Không thể tạo SSL certificate tự động"
+                            echo "⚠️  Có thể do domain chưa trỏ về IP hoặc port 80 đang bị chiếm"
+                            echo "⚠️  Vui lòng setup SSL thủ công hoặc disable SSL_ENABLED"
+                        } else {
+                            echo "✅ SSL certificates đã được tạo thành công"
+                        }
+                    } else {
+                        echo "✅ SSL certificates đã tồn tại"
+                        
+                        // Renew certificate nếu sắp hết hạn (trong vòng 30 ngày)
+                        sh """
+                            certbot renew --quiet --no-random-sleep-on-renew || true
+                        """
+                    }
+                }
+            }
+        }
+        
         stage('Build Nginx Image') {
             steps {
                 script {
@@ -61,6 +137,43 @@ pipeline {
                         // Build nginx image với tag
                         def nginxImageTag = "${NGINX_IMAGE_NAME}:${BUILD_NUMBER}"
                         def nginxImageLatest = "${NGINX_IMAGE_NAME}:latest"
+                        
+                        // Nếu SSL enabled, tạo nginx.conf với SSL
+                        if (SSL_ENABLED == 'true') {
+                            echo "🔒 Creating Nginx config with SSL..."
+                            sh """
+                                # Backup nginx.conf gốc
+                                cp nginx.conf nginx.conf.backup || true
+                                
+                                # Uncomment HTTPS server block
+                                sed -i 's/# server {/server {/g' nginx.conf
+                                sed -i 's/#     listen 443/    listen 443/g' nginx.conf
+                                sed -i 's/#     server_name/    server_name/g' nginx.conf
+                                sed -i 's/#     ssl_certificate/    ssl_certificate/g' nginx.conf
+                                sed -i 's/#     ssl_certificate_key/    ssl_certificate_key/g' nginx.conf
+                                sed -i 's/#     ssl_protocols/    ssl_protocols/g' nginx.conf
+                                sed -i 's/#     ssl_ciphers/    ssl_ciphers/g' nginx.conf
+                                sed -i 's/#     ssl_prefer_server_ciphers/    ssl_prefer_server_ciphers/g' nginx.conf
+                                sed -i 's/#     ssl_session_cache/    ssl_session_cache/g' nginx.conf
+                                sed -i 's/#     ssl_session_timeout/    ssl_session_timeout/g' nginx.conf
+                                sed -i 's/#     add_header/    add_header/g' nginx.conf
+                                sed -i 's/#     gzip/    gzip/g' nginx.conf
+                                sed -i 's/#     proxy_set_header/    proxy_set_header/g' nginx.conf
+                                sed -i 's/#     proxy_connect_timeout/    proxy_connect_timeout/g' nginx.conf
+                                sed -i 's/#     proxy_send_timeout/    proxy_send_timeout/g' nginx.conf
+                                sed -i 's/#     proxy_read_timeout/    proxy_read_timeout/g' nginx.conf
+                                sed -i 's/#     location/    location/g' nginx.conf
+                                sed -i 's/#         proxy_pass/        proxy_pass/g' nginx.conf
+                                sed -i 's/#         proxy_http_version/        proxy_http_version/g' nginx.conf
+                                sed -i 's/#         proxy_set_header/        proxy_set_header/g' nginx.conf
+                                sed -i 's/#         expires/        expires/g' nginx.conf
+                                sed -i 's/#         add_header/        add_header/g' nginx.conf
+                                sed -i 's/# }/}/g' nginx.conf
+                                
+                                # Enable HTTP to HTTPS redirect
+                                sed -i 's/# return 301 https/return 301 https/g' nginx.conf
+                            """
+                        }
                         
                         sh """
                             docker build -t ${nginxImageTag} -t ${nginxImageLatest} .
@@ -118,16 +231,31 @@ pipeline {
             steps {
                 script {
                     echo '🚀 Deploying Nginx reverse proxy container...'
-                    // Nginx expose port 80 và 443 ra ngoài
-                    sh """
+                    
+                    // Build docker run command với SSL mount nếu enabled
+                    def dockerRunCmd = """
                         docker run -d \\
                             --name ${NGINX_CONTAINER_NAME} \\
                             --restart unless-stopped \\
                             -p ${NGINX_HTTP_PORT}:80 \\
                             -p ${NGINX_HTTPS_PORT}:443 \\
-                            --network ${DOCKER_NETWORK} \\
+                            --network ${DOCKER_NETWORK}
+                    """
+                    
+                    // Mount SSL certificates nếu SSL enabled
+                    if (SSL_ENABLED == 'true') {
+                        dockerRunCmd += """ \\
+                            -v ${SSL_CERT_PATH}:/etc/letsencrypt:ro \\
+                            -v /var/www/certbot:/var/www/certbot:ro
+                        """
+                        echo "🔒 Mounting SSL certificates from ${SSL_CERT_PATH}"
+                    }
+                    
+                    dockerRunCmd += """ \\
                             ${NGINX_IMAGE_NAME}:${BUILD_NUMBER}
                     """
+                    
+                    sh dockerRunCmd
                 }
             }
         }
@@ -160,16 +288,30 @@ pipeline {
                         fi
                     """
                     
-                    // Kiểm tra qua Nginx reverse proxy
+                    // Kiểm tra qua Nginx reverse proxy (HTTP)
                     sh """
                         sleep 3
                         curl -f http://localhost/health || echo "⚠️  Health check endpoint not available"
                     """
                     
-                    // Kiểm tra trang chủ qua Nginx
+                    // Kiểm tra trang chủ qua Nginx (HTTP)
                     sh """
                         curl -f http://localhost/ || echo "⚠️  Homepage check failed"
                     """
+                    
+                    // Kiểm tra HTTPS nếu SSL enabled
+                    if (SSL_ENABLED == 'true') {
+                        sh """
+                            sleep 2
+                            curl -k -f https://localhost/health || echo "⚠️  HTTPS health check endpoint not available"
+                        """
+                        
+                        sh """
+                            curl -k -f https://localhost/ || echo "⚠️  HTTPS homepage check failed"
+                        """
+                        
+                        echo "✅ SSL/HTTPS is working"
+                    }
                 }
             }
         }
@@ -209,7 +351,11 @@ pipeline {
             script {
                 // Log container logs nếu fail
                 sh """
+                    echo "=== Frontend Container Logs ==="
                     docker logs ${CONTAINER_NAME} || true
+                    echo ""
+                    echo "=== Nginx Container Logs ==="
+                    docker logs ${NGINX_CONTAINER_NAME} || true
                 """
             }
         }
