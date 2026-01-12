@@ -187,7 +187,8 @@ pipeline {
                                 
                                 # Uncomment HTTPS server block
                                 sed -i 's/# server {/server {/g' nginx.conf
-                                sed -i 's/#     listen 443/    listen 443/g' nginx.conf
+                                sed -i 's/#     listen 443 ssl;/    listen 443 ssl;/g' nginx.conf
+                                sed -i 's/#     http2 on;/    http2 on;/g' nginx.conf
                                 sed -i 's/#     server_name/    server_name/g' nginx.conf
                                 sed -i 's/#     ssl_certificate/    ssl_certificate/g' nginx.conf
                                 sed -i 's/#     ssl_certificate_key/    ssl_certificate_key/g' nginx.conf
@@ -312,15 +313,18 @@ pipeline {
                     
                     // Kiểm tra qua Nginx reverse proxy (HTTP) - thử nhiều lần
                     sh """
-                        for i in {1..5}; do
+                        retry_count=0
+                        max_retries=5
+                        while [ \$retry_count -lt \$max_retries ]; do
                             sleep 2
                             if curl -f http://localhost/health 2>/dev/null; then
                                 echo "✅ Health check endpoint is available"
                                 exit 0
                             fi
-                            echo "⏳ Retry $i/5..."
+                            retry_count=\$((retry_count + 1))
+                            echo "⏳ Retry \$retry_count/\$max_retries..."
                         done
-                        echo "⚠️  Health check endpoint not available after 5 retries"
+                        echo "⚠️  Health check endpoint not available after \$max_retries retries"
                         echo "📋 Checking Nginx logs:"
                         docker logs --tail 30 ${NGINX_CONTAINER_NAME} || true
                     """
