@@ -13,6 +13,10 @@ pipeline {
         APP_PORT = '80'
         NGINX_HTTP_PORT = '80'
         NGINX_HTTPS_PORT = '443'
+        
+        // Domain và SSL
+        DOMAIN = 'itworks.dpdns.org'
+        SSL_EMAIL = 'admin@itworks.dpdns.org'
     }
     
     stages {
@@ -114,20 +118,133 @@ pipeline {
             }
         }
         
+        stage('Setup SSL') {
+            steps {
+                script {
+                    echo '🔒 Setting up SSL certificate...'
+                    
+                    // Kiểm tra SSL certificate đã tồn tại chưa
+                    def sslExists = sh(
+                        script: "test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
+                        returnStdout: true
+                    ).trim()
+                    
+                    if (sslExists == 'not_exists') {
+                        echo "📝 SSL certificate chưa tồn tại, đang tạo mới..."
+                        
+                        // Đảm bảo port 80 free (stop Nginx container nếu đang chạy)
+                        sh """
+                            docker stop ${NGINX_CONTAINER_NAME} || true
+                            docker rm ${NGINX_CONTAINER_NAME} || true
+                        """
+                        
+                        // Cài đặt certbot và lấy certificate
+                        sh """
+                            apt-get update -qq || true
+                            apt-get install -y -qq certbot || true
+                            certbot certonly --standalone \\
+                                -d ${DOMAIN} \\
+                                -d www.${DOMAIN} \\
+                                --non-interactive \\
+                                --agree-tos \\
+                                --email ${SSL_EMAIL} \\
+                                --preferred-challenges http || echo "⚠️  SSL certificate creation failed, will use HTTP"
+                        """
+                        
+                        // Kiểm tra lại SSL
+                        sslExists = sh(
+                            script: "test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
+                            returnStdout: true
+                        ).trim()
+                    }
+                    
+                    dir('frontend/frontend/nginx') {
+                        if (sslExists == 'exists') {
+                            echo "✅ SSL certificate đã tồn tại, enabling HTTPS..."
+                            
+                            // Enable HTTPS trong nginx.conf
+                            sh """
+                                # Backup nginx.conf
+                                cp nginx.conf nginx.conf.backup || true
+                                
+                                # Uncomment HTTPS server block
+                                sed -i 's/# server {/server {/g' nginx.conf
+                                sed -i 's/#     listen 443/    listen 443/g' nginx.conf
+                                sed -i 's/#     server_name/    server_name/g' nginx.conf
+                                sed -i 's/#     ssl_certificate/    ssl_certificate/g' nginx.conf
+                                sed -i 's/#     ssl_certificate_key/    ssl_certificate_key/g' nginx.conf
+                                sed -i 's/#     ssl_protocols/    ssl_protocols/g' nginx.conf
+                                sed -i 's/#     ssl_ciphers/    ssl_ciphers/g' nginx.conf
+                                sed -i 's/#     ssl_prefer_server_ciphers/    ssl_prefer_server_ciphers/g' nginx.conf
+                                sed -i 's/#     ssl_session_cache/    ssl_session_cache/g' nginx.conf
+                                sed -i 's/#     ssl_session_timeout/    ssl_session_timeout/g' nginx.conf
+                                sed -i 's/#     add_header/    add_header/g' nginx.conf
+                                sed -i 's/#     gzip/    gzip/g' nginx.conf
+                                sed -i 's/#     proxy_set_header/    proxy_set_header/g' nginx.conf
+                                sed -i 's/#     proxy_connect_timeout/    proxy_connect_timeout/g' nginx.conf
+                                sed -i 's/#     proxy_send_timeout/    proxy_send_timeout/g' nginx.conf
+                                sed -i 's/#     proxy_read_timeout/    proxy_read_timeout/g' nginx.conf
+                                sed -i 's/#     location/    location/g' nginx.conf
+                                sed -i 's/#         proxy_pass/        proxy_pass/g' nginx.conf
+                                sed -i 's/#         proxy_http_version/        proxy_http_version/g' nginx.conf
+                                sed -i 's/#         proxy_set_header/        proxy_set_header/g' nginx.conf
+                                sed -i 's/#         expires/        expires/g' nginx.conf
+                                sed -i 's/#         add_header/        add_header/g' nginx.conf
+                                sed -i 's/# }/}/g' nginx.conf
+                                
+                                # Enable HTTP to HTTPS redirect
+                                sed -i 's/# return 301 https/return 301 https/g' nginx.conf
+                            """
+                            
+                            // Rebuild Nginx image với HTTPS enabled
+                            sh """
+                                docker build -t ${NGINX_IMAGE_NAME}:${BUILD_NUMBER} -t ${NGINX_IMAGE_NAME}:latest .
+                            """
+                            
+                            echo "✅ Nginx image đã được rebuild với HTTPS enabled"
+                        } else {
+                            echo "⚠️  SSL certificate chưa được tạo, sẽ dùng HTTP only"
+                        }
+                    }
+                }
+            }
+        }
+        
         stage('Deploy Nginx') {
             steps {
                 script {
                     echo '🚀 Deploying Nginx reverse proxy container...'
-                    // Nginx expose port 80 và 443 ra ngoài
-                    sh """
+                    
+                    // Kiểm tra SSL có tồn tại không
+                    def sslExists = sh(
+                        script: "test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
+                        returnStdout: true
+                    ).trim()
+                    
+                    def dockerRunCmd = """
                         docker run -d \\
                             --name ${NGINX_CONTAINER_NAME} \\
                             --restart unless-stopped \\
                             -p ${NGINX_HTTP_PORT}:80 \\
                             -p ${NGINX_HTTPS_PORT}:443 \\
                             --network ${DOCKER_NETWORK} \\
+                    """
+                    
+                    // Mount SSL certificates nếu có
+                    if (sslExists == 'exists') {
+                        dockerRunCmd += """
+                            -v /etc/letsencrypt:/etc/letsencrypt:ro \\
+                        """
+                        echo "✅ Deploying với SSL certificates"
+                    } else {
+                        echo "⚠️  Deploying không có SSL (HTTP only)"
+                    }
+                    
+                    dockerRunCmd += """
                             ${NGINX_IMAGE_NAME}:${BUILD_NUMBER}
                     """
+                    
+                    sh dockerRunCmd
                 }
             }
         }
@@ -160,16 +277,56 @@ pipeline {
                         fi
                     """
                     
-                    // Kiểm tra qua Nginx reverse proxy
+                    // Kiểm tra qua Nginx reverse proxy (HTTP)
                     sh """
                         sleep 3
                         curl -f http://localhost/health || echo "⚠️  Health check endpoint not available"
                     """
                     
-                    // Kiểm tra trang chủ qua Nginx
+                    // Kiểm tra trang chủ qua Nginx (HTTP)
                     sh """
                         curl -f http://localhost/ || echo "⚠️  Homepage check failed"
                     """
+                    
+                    // Kiểm tra HTTPS nếu có SSL
+                    def sslExists = sh(
+                        script: "test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
+                        returnStdout: true
+                    ).trim()
+                    
+                    if (sslExists == 'exists') {
+                        sh """
+                            echo "🔒 Testing HTTPS..."
+                            curl -k -f https://localhost/health || echo "⚠️  HTTPS health check failed"
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Setup SSL Auto-Renewal') {
+            steps {
+                script {
+                    echo '🔄 Setting up SSL auto-renewal...'
+                    
+                    // Kiểm tra SSL có tồn tại không
+                    def sslExists = sh(
+                        script: "test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
+                        returnStdout: true
+                    ).trim()
+                    
+                    if (sslExists == 'exists') {
+                        // Setup cron job cho auto-renewal
+                        sh """
+                            # Tạo cron job để renew SSL và restart Nginx container
+                            (crontab -l 2>/dev/null | grep -v "certbot renew.*${NGINX_CONTAINER_NAME}"; \\
+                             echo "0 0 * * * certbot renew --quiet --deploy-hook \\"docker restart ${NGINX_CONTAINER_NAME}\\"") | crontab -
+                            
+                            echo "✅ SSL auto-renewal đã được setup"
+                        """
+                    } else {
+                        echo "⚠️  SSL chưa được setup, bỏ qua auto-renewal"
+                    }
                 }
             }
         }
