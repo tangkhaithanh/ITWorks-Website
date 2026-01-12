@@ -95,25 +95,28 @@ pipeline {
                             docker stop ${NGINX_CONTAINER_NAME} || true
                         """
                         
-                        // Lấy SSL certificate từ Let's Encrypt
+                        // Lấy SSL certificate từ Let's Encrypt với sudo và set các thư mục có thể ghi được
                         def certResult = sh(
                             script: """
-                                certbot certonly --standalone \\
+                                sudo certbot certonly --standalone \\
                                     -d ${DOMAIN} \\
                                     -d www.${DOMAIN} \\
                                     --non-interactive \\
                                     --agree-tos \\
                                     --email ${DOMAIN_EMAIL} \\
                                     --preferred-challenges http \\
-                                    --cert-path ${SSL_CERT_PATH} || true
+                                    --config-dir ${SSL_CERT_PATH} \\
+                                    --work-dir /tmp/letsencrypt-work \\
+                                    --logs-dir /tmp/letsencrypt-logs || true
                             """,
                             returnStatus: true
                         )
                         
                         if (certResult != 0) {
                             echo "⚠️  Không thể tạo SSL certificate tự động"
-                            echo "⚠️  Có thể do domain chưa trỏ về IP hoặc port 80 đang bị chiếm"
+                            echo "⚠️  Có thể do domain chưa trỏ về IP, port 80 đang bị chiếm, hoặc thiếu quyền sudo"
                             echo "⚠️  Vui lòng setup SSL thủ công hoặc disable SSL_ENABLED"
+                            echo "⚠️  Pipeline sẽ tiếp tục nhưng SSL có thể không hoạt động"
                         } else {
                             echo "✅ SSL certificates đã được tạo thành công"
                         }
@@ -122,7 +125,10 @@ pipeline {
                         
                         // Renew certificate nếu sắp hết hạn (trong vòng 30 ngày)
                         sh """
-                            certbot renew --quiet --no-random-sleep-on-renew || true
+                            sudo certbot renew --quiet --no-random-sleep-on-renew \\
+                                --config-dir ${SSL_CERT_PATH} \\
+                                --work-dir /tmp/letsencrypt-work \\
+                                --logs-dir /tmp/letsencrypt-logs || true
                         """
                     }
                 }
@@ -142,9 +148,6 @@ pipeline {
                         if (SSL_ENABLED == 'true') {
                             echo "🔒 Creating Nginx config with SSL..."
                             sh """
-                                # Backup nginx.conf gốc
-                                cp nginx.conf nginx.conf.backup || true
-                                
                                 # Uncomment HTTPS server block
                                 sed -i 's/# server {/server {/g' nginx.conf
                                 sed -i 's/#     listen 443/    listen 443/g' nginx.conf
@@ -233,29 +236,29 @@ pipeline {
                     echo '🚀 Deploying Nginx reverse proxy container...'
                     
                     // Build docker run command với SSL mount nếu enabled
-                    def dockerRunCmd = """
-                        docker run -d \\
-                            --name ${NGINX_CONTAINER_NAME} \\
-                            --restart unless-stopped \\
-                            -p ${NGINX_HTTP_PORT}:80 \\
-                            -p ${NGINX_HTTPS_PORT}:443 \\
-                            --network ${DOCKER_NETWORK}
-                    """
+                    def dockerRunArgs = [
+                        'docker', 'run', '-d',
+                        '--name', "${NGINX_CONTAINER_NAME}",
+                        '--restart', 'unless-stopped',
+                        '-p', "${NGINX_HTTP_PORT}:80",
+                        '-p', "${NGINX_HTTPS_PORT}:443",
+                        '--network', "${DOCKER_NETWORK}"
+                    ]
                     
                     // Mount SSL certificates nếu SSL enabled
                     if (SSL_ENABLED == 'true') {
-                        dockerRunCmd += """ \\
-                            -v ${SSL_CERT_PATH}:/etc/letsencrypt:ro \\
-                            -v /var/www/certbot:/var/www/certbot:ro
-                        """
+                        dockerRunArgs.addAll([
+                            '-v', "${SSL_CERT_PATH}:/etc/letsencrypt:ro",
+                            '-v', '/var/www/certbot:/var/www/certbot:ro'
+                        ])
                         echo "🔒 Mounting SSL certificates from ${SSL_CERT_PATH}"
                     }
                     
-                    dockerRunCmd += """ \\
-                            ${NGINX_IMAGE_NAME}:${BUILD_NUMBER}
-                    """
+                    // Thêm image name
+                    dockerRunArgs.add("${NGINX_IMAGE_NAME}:${BUILD_NUMBER}")
                     
-                    sh dockerRunCmd
+                    // Chạy command
+                    sh dockerRunArgs.join(' ')
                 }
             }
         }
