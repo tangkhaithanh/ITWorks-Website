@@ -123,42 +123,60 @@ pipeline {
                 script {
                     echo '🔒 Setting up SSL certificate...'
                     
-                    // Kiểm tra SSL certificate đã tồn tại chưa
-                    def sslExists = sh(
-                        script: "sudo test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
+                    // Kiểm tra quyền sudo trước
+                    def hasSudo = sh(
+                        script: "sudo -n true 2>&1 && echo 'yes' || echo 'no'",
                         returnStdout: true
                     ).trim()
                     
-                    if (sslExists == 'not_exists') {
-                        echo "📝 SSL certificate chưa tồn tại, đang tạo mới..."
-                        
-                        // Đảm bảo port 80 free (stop Nginx container nếu đang chạy)
-                        sh """
-                            docker stop ${NGINX_CONTAINER_NAME} || true
-                            docker rm ${NGINX_CONTAINER_NAME} || true
-                        """
-                        
-                        // Cài đặt certbot và lấy certificate
-                        sh """
-                            sudo apt-get update -qq || true
-                            sudo apt-get install -y -qq certbot || true
-                            sudo certbot certonly --standalone \\
-                                -d ${DOMAIN} \\
-                                -d www.${DOMAIN} \\
-                                --non-interactive \\
-                                --agree-tos \\
-                                --email ${SSL_EMAIL} \\
-                                --preferred-challenges http || echo "⚠️  SSL certificate creation failed, will use HTTP"
-                        """
-                        
-                        // Kiểm tra lại SSL
-                        sslExists = sh(
+                    if (hasSudo == 'no') {
+                        echo "⚠️  Jenkins user không có quyền sudo, bỏ qua SSL setup"
+                        echo "ℹ️  Để enable SSL, cần cấu hình sudo cho Jenkins user:"
+                        echo "   sudo visudo"
+                        echo "   Thêm dòng: jenkins ALL=(ALL) NOPASSWD: /usr/bin/apt-get, /usr/bin/certbot, /usr/bin/test"
+                        env.SSL_EXISTS = 'not_exists'
+                    } else {
+                        // Kiểm tra SSL certificate đã tồn tại chưa
+                        def sslExists = sh(
                             script: "sudo test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
                             returnStdout: true
                         ).trim()
+                        
+                        if (sslExists == 'not_exists') {
+                            echo "📝 SSL certificate chưa tồn tại, đang tạo mới..."
+                            
+                            // Đảm bảo port 80 free (stop Nginx container nếu đang chạy)
+                            sh """
+                                docker stop ${NGINX_CONTAINER_NAME} || true
+                                docker rm ${NGINX_CONTAINER_NAME} || true
+                            """
+                            
+                            // Cài đặt certbot và lấy certificate
+                            sh """
+                                sudo apt-get update -qq || true
+                                sudo apt-get install -y -qq certbot || true
+                                sudo certbot certonly --standalone \\
+                                    -d ${DOMAIN} \\
+                                    -d www.${DOMAIN} \\
+                                    --non-interactive \\
+                                    --agree-tos \\
+                                    --email ${SSL_EMAIL} \\
+                                    --preferred-challenges http || echo "⚠️  SSL certificate creation failed, will use HTTP"
+                            """
+                            
+                            // Kiểm tra lại SSL
+                            sslExists = sh(
+                                script: "sudo test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
+                                returnStdout: true
+                            ).trim()
+                        }
+                        
+                        env.SSL_EXISTS = sslExists
                     }
                     
                     dir('frontend/frontend/nginx') {
+                        def sslExists = env.SSL_EXISTS ?: 'not_exists'
+                        
                         if (sslExists == 'exists') {
                             echo "✅ SSL certificate đã tồn tại, enabling HTTPS..."
                             
@@ -215,9 +233,9 @@ pipeline {
                 script {
                     echo '🚀 Deploying Nginx reverse proxy container...'
                     
-                    // Kiểm tra SSL có tồn tại không
-                    def sslExists = sh(
-                        script: "sudo test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
+                    // Kiểm tra SSL có tồn tại không (dùng biến từ stage trước)
+                    def sslExists = env.SSL_EXISTS ?: sh(
+                        script: "sudo -n test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem 2>/dev/null && echo 'exists' || echo 'not_exists'",
                         returnStdout: true
                     ).trim()
                     
@@ -289,9 +307,9 @@ pipeline {
                         curl -f http://localhost/ || echo "⚠️  Homepage check failed"
                     """
                     
-                    // Kiểm tra HTTPS nếu có SSL
-                    def sslExists = sh(
-                        script: "sudo test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
+                    // Kiểm tra HTTPS nếu có SSL (dùng biến từ stage trước)
+                    def sslExists = env.SSL_EXISTS ?: sh(
+                        script: "sudo -n test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem 2>/dev/null && echo 'exists' || echo 'not_exists'",
                         returnStdout: true
                     ).trim()
                     
@@ -310,21 +328,31 @@ pipeline {
                 script {
                     echo '🔄 Setting up SSL auto-renewal...'
                     
-                    // Kiểm tra SSL có tồn tại không
-                    def sslExists = sh(
-                        script: "sudo test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem && echo 'exists' || echo 'not_exists'",
+                    // Kiểm tra SSL có tồn tại không (dùng biến từ stage trước)
+                    def sslExists = env.SSL_EXISTS ?: sh(
+                        script: "sudo -n test -f /etc/letsencrypt/live/${DOMAIN}/fullchain.pem 2>/dev/null && echo 'exists' || echo 'not_exists'",
                         returnStdout: true
                     ).trim()
                     
                     if (sslExists == 'exists') {
-                        // Setup cron job cho auto-renewal
-                        sh """
-                            # Tạo cron job để renew SSL và restart Nginx container
-                            (sudo crontab -l 2>/dev/null | grep -v "certbot renew.*${NGINX_CONTAINER_NAME}"; \\
-                             echo "0 0 * * * sudo certbot renew --quiet --deploy-hook \\"docker restart ${NGINX_CONTAINER_NAME}\\"") | sudo crontab -
-                            
-                            echo "✅ SSL auto-renewal đã được setup"
-                        """
+                        // Kiểm tra quyền sudo trước
+                        def hasSudo = sh(
+                            script: "sudo -n true 2>&1 && echo 'yes' || echo 'no'",
+                            returnStdout: true
+                        ).trim()
+                        
+                        if (hasSudo == 'yes') {
+                            // Setup cron job cho auto-renewal
+                            sh """
+                                # Tạo cron job để renew SSL và restart Nginx container
+                                (sudo crontab -l 2>/dev/null | grep -v "certbot renew.*${NGINX_CONTAINER_NAME}"; \\
+                                 echo "0 0 * * * sudo certbot renew --quiet --deploy-hook \\"docker restart ${NGINX_CONTAINER_NAME}\\"") | sudo crontab -
+                                
+                                echo "✅ SSL auto-renewal đã được setup"
+                            """
+                        } else {
+                            echo "⚠️  Không có quyền sudo, bỏ qua auto-renewal setup"
+                        }
                     } else {
                         echo "⚠️  SSL chưa được setup, bỏ qua auto-renewal"
                     }
