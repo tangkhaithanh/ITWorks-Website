@@ -1,147 +1,64 @@
 pipeline {
     agent any
-    
+
     environment {
-        IMAGE_NAME = 'itworks-backend'
-        CONTAINER_NAME = 'itworks-backend'
-        
-        APP_PORT = '3000'
-        HOST_PORT = '3000'
+        DOCKERHUB_REPO = 'huinhsown/itworks-backend'
+        IMAGE_TAG = "${BUILD_NUMBER}"
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
-                echo '📥 Checking out code from GitHub...'
+                echo '📥 Checkout source'
                 checkout scm
             }
         }
-        
+
         stage('Build Docker Image') {
             steps {
-                script {
-                    echo '🔨 Building Docker image...'
-                    dir('backend') {
-                        def imageTag = "${IMAGE_NAME}:${BUILD_NUMBER}"
-                        def imageLatest = "${IMAGE_NAME}:latest"
-                        
-                        sh """
-                            docker build -t ${imageTag} -t ${imageLatest} .
-                        """
-                        
-                        echo "✅ Image built: ${imageTag}"
-                    }
-                }
-            }
-        }
-        
-        stage('Test') {
-            steps {
-                script {
-                    echo '🧪 Running tests...'
-                    dir('backend') {
-                        echo '⚠️  Tests skipped (uncomment to enable)'
-                    }
-                }
-            }
-        }
-        
-        stage('Stop Old Container') {
-            steps {
-                script {
-                    echo '🛑 Stopping old container if exists...'
+                dir('backend') {
                     sh """
-                        docker stop ${CONTAINER_NAME} || true
-                        docker rm ${CONTAINER_NAME} || true
+                        docker build \
+                          -t ${DOCKERHUB_REPO}:${IMAGE_TAG} \
+                          -t ${DOCKERHUB_REPO}:latest .
                     """
                 }
             }
         }
-        
-        stage('Deploy') {
+
+        stage('Login Docker Hub') {
             steps {
-                script {
-                    withCredentials([file(credentialsId: 'backend-env-file', variable: 'ENV_FILE')]) {
-                        def envFilePath = sh(
-                            script: """
-                                cp '${ENV_FILE}' /tmp/backend.env.${BUILD_NUMBER}
-                                echo /tmp/backend.env.${BUILD_NUMBER}
-                            """,
-                            returnStdout: true
-                        ).trim()
-                        
-                        sh """
-                            docker run -d \\
-                                --name ${CONTAINER_NAME} \\
-                                --restart unless-stopped \\
-                                -p ${HOST_PORT}:${APP_PORT} \\
-                                --env-file ${envFilePath} \\
-                                ${IMAGE_NAME}:${BUILD_NUMBER}
-                        """
-                        
-                        sh """
-                            rm -f ${envFilePath} || true
-                        """
-                    }
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    '''
                 }
             }
         }
-        
-        stage('Health Check') {
+
+        stage('Push Image') {
             steps {
-                script {
-                    echo '🏥 Waiting for application to start...'
-                    sleep(time: 10, unit: 'SECONDS')
-                    
-                    sh """
-                        if docker ps | grep -q ${CONTAINER_NAME}; then
-                            echo "✅ Container is running"
-                        else
-                            echo "❌ Container failed to start"
-                            docker logs ${CONTAINER_NAME}
-                            exit 1
-                        fi
-                    """
-                    
-                    sh """
-                        sleep 5
-                        curl -f http://localhost:${HOST_PORT}/health || echo "⚠️  Health check endpoint not available"
-                    """
-                }
-            }
-        }
-        
-        stage('Cleanup') {
-            steps {
-                script {
-                    echo '🧹 Cleaning up old images...'
-                    sh """
-                        docker images ${IMAGE_NAME} --format '{{.ID}} {{.Tag}}' | \\
-                        grep -v latest | \\
-                        sort -k2 -n -r | \\
-                        tail -n +6 | \\
-                        awk '{print \$1}' | \\
-                        xargs -r docker rmi || true
-                    """
-                }
-            }
-        }
-    }
-    
-    post {
-        success {
-            echo '✅ Pipeline completed successfully!'
-        }
-        failure {
-            echo '❌ Pipeline failed!'
-            script {
                 sh """
-                    docker logs ${CONTAINER_NAME} || true
+                    docker push ${DOCKERHUB_REPO}:${IMAGE_TAG}
+                    docker push ${DOCKERHUB_REPO}:latest
                 """
             }
         }
+    }
+
+    post {
+        success {
+            echo '✅ Image pushed to Docker Hub'
+        }
+        failure {
+            echo '❌ CI failed'
+        }
         always {
-            echo '📋 Pipeline finished'
+            sh 'docker logout || true'
         }
     }
 }
