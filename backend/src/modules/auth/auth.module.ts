@@ -9,7 +9,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 
 import { PrismaModule } from '../../prisma/prisma.module';
 import { CustomMailerModule } from '../../config/mailer.module';
-import { MailModule } from 'src/common/services/mail.module';
+import { MailModule } from '@/common/services/mail/mail.module';
 
 @Module({
   imports: [

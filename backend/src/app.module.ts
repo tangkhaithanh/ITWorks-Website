@@ -21,26 +21,20 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AccountModule } from './modules/account/account.module';
 import { PlansModule } from './modules/plans/plans.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import databaseConfig from '@/config/database.config';
 import jwtConfig from '@/config/jwt.config';
 import mailerConfig from '@/config/mailer.config';
 
 @Module({
   imports: [
-    // 🟢 1. Load .env toàn cục trước
     ConfigModule.forRoot({
       isGlobal: true,
       load: [databaseConfig, jwtConfig, mailerConfig],
     }),
-
-    // 🟢 2. Load Prisma ORM
     PrismaModule,
-
-    // 🟢 3. Load Elasticsearch sớm (phải đứng TRƯỚC các module khác dùng nó)
     ElasticsearchCustomModule,
-    ScheduleModule.forRoot(), // Cho phép chạy cron jobs
-
-    // 🟢 4. Các business modules còn lại
+    ScheduleModule.forRoot(),
     AuthModule,
     CloudinaryModule,
     CompaniesModule,
@@ -58,6 +52,7 @@ import mailerConfig from '@/config/mailer.config';
     AccountModule,
     PlansModule,
     PaymentsModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

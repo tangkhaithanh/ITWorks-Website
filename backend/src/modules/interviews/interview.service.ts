@@ -11,7 +11,7 @@ import {
   InterviewStatus,
   InterviewMode,
 } from '@prisma/client';
-import { MailService } from 'src/common/services/mail.service';
+import { MailService } from '@/common/services/mail/mail.service';
 @Injectable()
 export class InterviewService {
   constructor(

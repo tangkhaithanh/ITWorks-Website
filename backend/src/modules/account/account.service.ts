@@ -7,7 +7,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { AccountQueryDto } from './dto/account-query.dto';
 import * as bcrypt from 'bcrypt';
 import { Prisma, Status } from '@prisma/client';
-import { MailService } from '@/common/services/mail.service';
+import { MailService } from '@/common/services/mail/mail.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
 @Injectable()
 export class AccountService {

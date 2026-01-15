@@ -8,7 +8,7 @@ import {
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { ApplicationStatus } from '@prisma/client';
-import { MailService } from '@/common/services/mail.service';
+import { MailService } from '@/common/services/mail/mail.service';
 import { CvHelper } from '@/common/helpers/cv.helper';
 @Injectable()
 export class ApplicationService {
