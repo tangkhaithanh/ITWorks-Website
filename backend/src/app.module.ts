@@ -22,12 +22,14 @@ import { AccountModule } from './modules/account/account.module';
 import { PlansModule } from './modules/plans/plans.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { QueueModule } from '@/modules/queue/queue.module';
 import databaseConfig from '@/config/database.config';
 import jwtConfig from '@/config/jwt.config';
 import mailerConfig from '@/config/mailer.config';
 
 @Module({
   imports: [
+    //Khi app khởi động, hãy load toàn bộ config này vào ConfigService, cho toàn app dùng.
     ConfigModule.forRoot({
       isGlobal: true,
       load: [databaseConfig, jwtConfig, mailerConfig],
@@ -53,6 +55,7 @@ import mailerConfig from '@/config/mailer.config';
     PlansModule,
     PaymentsModule,
     NotificationsModule,
+    QueueModule,
   ],
 })
 export class AppModule {}

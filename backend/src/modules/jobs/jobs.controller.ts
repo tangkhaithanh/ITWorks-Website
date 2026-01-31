@@ -21,10 +21,14 @@ import { UpdateJobDto } from './dto/update-job.dto';
 import { ResetDeadlineDto } from './dto/reset-deadline.dto';
 import { JobOwnershipGuard } from '@/common/guards/job-ownership.guard';
 import { JobDashboardQueryDto } from './dto/job-dashboard-query.dto';
+import {JobDashboardService} from '@/modules/jobs/jobs-dashboard.service';
 @Controller('jobs')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class JobsController {
-  constructor(private readonly jobsService: JobsService) {}
+  constructor(
+    private readonly jobsService: JobsService,
+    private readonly jobDashboardService: JobDashboardService,
+  ) {}
 
   @Post()
   @Roles(Role.recruiter)
@@ -133,7 +137,7 @@ export class JobsController {
   @UseGuards(JobOwnershipGuard)
   getJobDashboard(@Req() req: any, @Query() query: JobDashboardQueryDto) {
     // JobOwnershipGuard đã gắn req.job.id (BigInt)
-    return this.jobsService.getJobDashboard(req.job.id, query);
+    return this.jobDashboardService.getJobDashboard(req.job.id, query);
   }
 
   // ============================
