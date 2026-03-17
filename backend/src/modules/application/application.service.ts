@@ -10,11 +10,14 @@ import { CreateApplicationDto } from './dto/create-application.dto';
 import { ApplicationStatus } from '@prisma/client';
 import { MailService } from '@/common/services/mail/mail.service';
 import { CvHelper } from '@/common/helpers/cv.helper';
+import {NotificationsService} from '@/modules/notifications/notifications.service';
+import { NotificationType } from '@prisma/client';
 @Injectable()
 export class ApplicationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
   // === Chức năng dành cho candidate==========
   // Lấy candidate_id từ userId
@@ -34,11 +37,35 @@ export class ApplicationService {
       const jobId = BigInt(dto.job_id);
       const cvId = BigInt(dto.cv_id);
 
-      const candidateId = await this.getCandidateIdByUserId(userId);
+      // Lấy candidate và fullname:
+      const candidate = await this.prisma.candidate.findFirst({
+        where: {user_id: userId } ,
+        select: {
+          id: true,
+          user: {
+            select: {
+              full_name: true,
+            },
+          },
+        },
+      });
+      if (!candidate)
+        throw new NotFoundException('Không tìm thấy thông tin ứng viên.');
+      const candidateId = candidate.id;
+      const candidateName = candidate.user.full_name;
 
       // 1️⃣ Kiểm tra job có tồn tại và đang active
       const job = await this.prisma.job.findFirst({
         where: { id: jobId, status: 'active' },
+        select: {
+          id: true,
+          title: true,
+          company: {
+            select: {
+              account_id: true, // 👈 recruiter accountId
+            },
+          },
+        },
       });
       if (!job)
         throw new NotFoundException('Công việc không tồn tại hoặc đã bị đóng.');
@@ -62,6 +89,21 @@ export class ApplicationService {
           cv_id: cvId,
         },
       });
+
+      // Gửi thông báo:
+      const recruiterAccountId = job.company?.account_id;
+      if (recruiterAccountId) {
+        await this.notificationsService.notifyAccount({
+          accountId: recruiterAccountId,
+          type: NotificationType.application,
+          message: `Ứng viên ${candidateName} đã ứng tuyển vào vị trí "${job.title}"`,
+          realtimePayload: {
+            jobId: job.id.toString(),
+            applicationId: app.id.toString(),
+            candidateName,
+          },
+        });
+      }
       return app;
     } catch (error) {
       console.error('❌ Lỗi khi ứng tuyển:', error);

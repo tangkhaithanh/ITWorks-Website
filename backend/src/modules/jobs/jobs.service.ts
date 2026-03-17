@@ -140,8 +140,6 @@ export class JobsService {
           })),
         });
       }
-
-      // ✅ Atomic consume quota
       const quotaResult = await tx.companyPlan.updateMany({
         where: {
           id: currentPlan.id,
@@ -193,7 +191,6 @@ export class JobsService {
     });
     if (!job) throw new NotFoundException('Không tìm thấy công việc');
 
-    // ✅ DÙNG LẠI helper
     const location = await this.resolveLocationForUpdateOrThrow(job, data);
 
     const deadline = data.deadline ? new Date(data.deadline) : job.deadline;

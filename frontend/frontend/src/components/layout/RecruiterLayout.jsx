@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
+import useNotificationsRealtime from "@/features/notifications/useNotificationsRealtime.js";
 import CompanyPlanAPI from "../../features/companies/CompanyPlanAPI";
 import {
   LogOut,
@@ -11,7 +12,8 @@ import {
   Menu,
   X,
   ChevronRight,
-  Receipt
+  Receipt,
+    Bell,
 } from "lucide-react";
 import logo from "@/assets/images/logo.png";
 import { Gauge } from "lucide-react";
@@ -31,6 +33,8 @@ const NAV_ITEMS = [
 ];
 
 export default function RecruiterLayout() {
+  useNotificationsRealtime();
+  const unread = useSelector((state) => state.notifications?.unread || 0);
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
 
@@ -214,14 +218,33 @@ export default function RecruiterLayout() {
           {/* Không hiển thị tiêu đề */}
           <div />
 
-          {/* Date */}
-          <div className="hidden sm:block text-sm text-slate-500">
-            {new Date().toLocaleDateString('vi-VN', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
+          {/* Right */}
+          <div className="flex items-center gap-3">
+            {/* 🔔 Bell + badge */}
+            <div className="relative">
+              <button
+                  type="button"
+                  className="p-2 rounded-xl hover:bg-slate-100 text-slate-600"
+                  title="Thông báo"
+              >
+                <Bell className="w-5 h-5" />
+              </button>
+
+              {unread > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center">
+                  {unread > 99 ? "99+" : unread}
+                </span>
+              )}
+            </div>
+
+            <div className="hidden sm:block text-sm text-slate-500">
+              {new Date().toLocaleDateString("vi-VN", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </div>
           </div>
         </header>
 

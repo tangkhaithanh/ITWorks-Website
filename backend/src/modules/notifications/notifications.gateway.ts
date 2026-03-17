@@ -33,7 +33,7 @@ export class NotificationsGateway
   afterInit(server: Server) {
     server.use(async (socket: Socket, next) => {
       const user = await this.wsAuthService.authenticateSocket(socket);
-      
+
       if (!user) {
         return next(new Error('Unauthorized'));
       }
@@ -45,30 +45,46 @@ export class NotificationsGateway
 
   handleConnection(@ConnectedSocket() client: Socket) {
     const user = client.data.user;
-    
-    if (user && user.userId) {
-      const userId = user.userId.toString();
-      
-      if (!this.userSockets.has(userId)) {
-        this.userSockets.set(userId, new Set());
-      }
-      this.userSockets.get(userId)?.add(client.id);
-      this.logger.log(`Client connected: ${client.id} - User: ${userId}`);
-      client.join(`user:${userId}`);
+    if (!user?.accountId) {
+      this.logger.warn(`Socket ${client.id} connected without accountId`);
+      client.disconnect(true);
+      return;
     }
+
+    const accountId = user.accountId.toString();
+    if (!this.userSockets.has(accountId)) {
+      this.userSockets.set(accountId, new Set());
+    }
+    this.userSockets.get(accountId)!.add(client.id);
+    // Tạo room:
+    client.join(`account:${accountId}`);
+
+    if (Array.isArray(user.roles)) {
+      for (const role of user.roles) {
+        client.join(`role:${role}`);
+      }
+    }
+
+    this.logger.log(
+      `Client connected: ${client.id} - Account: ${accountId} - Roles: ${user.roles?.join(', ')}`,
+    );
   }
 
   handleDisconnect(@ConnectedSocket() client: Socket) {
     const user = client.data.user;
-    if (user && user.userId) {
-      const userId = user.userId.toString();
-      this.userSockets.get(userId)?.delete(client.id);
-      
-      if (this.userSockets.get(userId)?.size === 0) {
-        this.userSockets.delete(userId);
+
+    if (user?.accountId) {
+      const accountId = user.accountId.toString();
+
+      this.userSockets.get(accountId)?.delete(client.id);
+
+      if (this.userSockets.get(accountId)?.size === 0) {
+        this.userSockets.delete(accountId);
       }
 
-      this.logger.log(`Client disconnected: ${client.id} - User: ${userId}`);
+      this.logger.log(
+        `Client disconnected: ${client.id} - Account: ${accountId}`,
+      );
     }
   }
 
@@ -81,16 +97,15 @@ export class NotificationsGateway
     };
   }
 
-  sendToUser(userId: string | number, event: string, data: any) {
-    const userIdStr = userId.toString();
-    this.server.to(`user:${userIdStr}`).emit(event, data);
-    this.logger.log(`Sent ${event} to user ${userIdStr}`);
+  sendToAccount(accountId: bigint | number, event: string, data: any) {
+    const id = accountId.toString();
+    this.server.to(`account:${id}`).emit(event, data);
+
+    this.logger.log(`Sent ${event} to account ${id}`);
   }
 
-  sendToUsers(userIds: (string | number)[], event: string, data: any) {
-    userIds.forEach((userId) => {
-      this.sendToUser(userId, event, data);
-    });
+  sendToAccounts(accountIds: (bigint | number)[], event: string, data: any) {
+    accountIds.forEach((id) => this.sendToAccount(id, event, data));
   }
 
   broadcast(event: string, data: any) {
