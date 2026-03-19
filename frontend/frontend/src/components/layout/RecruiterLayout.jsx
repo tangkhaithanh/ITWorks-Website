@@ -13,13 +13,13 @@ import {
   X,
   ChevronRight,
   Receipt,
-    Bell,
+  Bell,
 } from "lucide-react";
 import logo from "@/assets/images/logo.png";
 import { Gauge } from "lucide-react";
 import { Crown } from "lucide-react";
 import { logout } from "@/features/auth/authSlice";
-
+import NotificationBell from "@/components/notifications/NotificationBell";
 // ============================
 // 📌 Menu cấu hình
 // ============================
@@ -206,8 +206,7 @@ export default function RecruiterLayout() {
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* Header (Không hiển thị tên trang) */}
-        <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/60 lg:bg-white lg:border-b-0 lg:shadow-sm">
-
+        <header className="sticky top-0 z-[100] flex items-center justify-between h-16 px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/60 lg:bg-white lg:border-b-0 lg:shadow-sm">
           <button
             onClick={() => setIsSidebarOpen(true)}
             className="lg:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-md"
@@ -215,27 +214,14 @@ export default function RecruiterLayout() {
             <Menu className="w-6 h-6" />
           </button>
 
-          {/* Không hiển thị tiêu đề */}
           <div />
 
-          {/* Right */}
           <div className="flex items-center gap-3">
-            {/* 🔔 Bell + badge */}
-            <div className="relative">
-              <button
-                  type="button"
-                  className="p-2 rounded-xl hover:bg-slate-100 text-slate-600"
-                  title="Thông báo"
-              >
-                <Bell className="w-5 h-5" />
-              </button>
-
-              {unread > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center">
-                  {unread > 99 ? "99+" : unread}
-                </span>
-              )}
-            </div>
+            <NotificationBell
+              onNotificationClick={(notification) => {
+                console.log("Notification clicked:", notification);
+              }}
+            />
 
             <div className="hidden sm:block text-sm text-slate-500">
               {new Date().toLocaleDateString("vi-VN", {

@@ -2,8 +2,10 @@ import { Outlet, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Header from "./Header";
 import Footer from "./Footer";
+import useNotificationsRealtime from "@/features/notifications/useNotificationsRealtime";
 
 const MainLayout = () => {
+  useNotificationsRealtime();
   const user = useSelector((state) => state.auth.user);
   const location = useLocation();
 

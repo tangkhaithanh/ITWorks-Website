@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import logo from "@/assets/images/logo.png";
 import { logout } from "@/features/auth/authSlice";
-
+import NotificationBell from "../notifications/NotificationBell";
+import useNotificationsRealtime from "@/features/notifications/useNotificationsRealtime";
 // ============================
 // 📌 Menu cấu hình
 // ============================
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
 ];
 
 export default function AdminLayout() {
+    useNotificationsRealtime();
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
 
@@ -157,8 +159,7 @@ export default function AdminLayout() {
             <div className="flex-1 flex flex-col min-w-0">
 
                 {/* Header (Không hiển thị tên trang) */}
-                <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/60 lg:bg-white lg:border-b-0 lg:shadow-sm">
-
+                <header className="sticky top-0 z-[100] flex items-center justify-between h-16 px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/60 lg:bg-white lg:border-b-0 lg:shadow-sm">
                     <button
                         onClick={() => setIsSidebarOpen(true)}
                         className="lg:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-md"
@@ -166,17 +167,23 @@ export default function AdminLayout() {
                         <Menu className="w-6 h-6" />
                     </button>
 
-                    {/* Không hiển thị tiêu đề */}
                     <div />
 
-                    {/* Date */}
-                    <div className="hidden sm:block text-sm text-slate-500">
-                        {new Date().toLocaleDateString('vi-VN', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                        })}
+                    <div className="flex items-center gap-3">
+                        <NotificationBell
+                            onNotificationClick={(notification) => {
+                                console.log("Notification clicked:", notification);
+                            }}
+                        />
+
+                        <div className="hidden sm:block text-sm text-slate-500">
+                            {new Date().toLocaleDateString("vi-VN", {
+                                weekday: "long",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                            })}
+                        </div>
                     </div>
                 </header>
 
