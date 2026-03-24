@@ -74,17 +74,21 @@ export class CvsController {
   // Lấy chi tiết CV của tôi:
 
   @Get(':id')
-  async getCvDetail(@Param('id', ParseIntPipe) id: number) {
-    return this.cvsService.getMyCvDetail(BigInt(id));
+  async getCvDetail(
+    @User('userId') userId: bigint,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.cvsService.getMyCvDetail(userId, BigInt(id));
   }
 
   // Cập nhật CV:
   @Put(':id')
   async updateCv(
+    @User('userId') userId: bigint,
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateCvDto,
   ) {
-    return this.cvsService.updateMyCv(BigInt(id), dto);
+    return this.cvsService.updateMyCv(userId, BigInt(id), dto);
   }
 
   // Thay thế file CV (đổi file)
@@ -99,8 +103,31 @@ export class CvsController {
 
   // Xóa CV:
   @Delete(':id')
-  async deleteCv(@Param('id', ParseIntPipe) id: number) {
-    return this.cvsService.deleteMyCv(BigInt(id));
+  async deleteCv(
+    @User('userId') userId: bigint,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.cvsService.deleteMyCv(userId, BigInt(id));
+  }
+
+  @Post('preview')
+  async previewCv(@User('userId') userId: bigint, @Body() dto: CreateCvDto) {
+    return this.cvsService.previewCv(userId, dto);
+  }
+
+  @Get(':id/export/pdf')
+  async exportCvPdf(
+    @User('userId') userId: bigint,
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.cvsService.exportCvPdf(userId, BigInt(id));
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="cv-${id}-${Date.now()}.pdf"`,
+    );
+    res.send(buffer);
   }
 
   @Get('view/:filename')

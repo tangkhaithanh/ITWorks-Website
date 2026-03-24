@@ -48,6 +48,7 @@ await prisma.user?.deleteMany?.().catch(() => {});           // nếu có
 await prisma.skill.deleteMany();
 await prisma.jobCategory.deleteMany();
 await prisma.industry.deleteMany();
+await prisma.cvTemplate.deleteMany();
 
 await prisma.account.deleteMany(); // ⬅️ Xóa Account cuối cùn
 
@@ -129,6 +130,35 @@ await prisma.account.deleteMany(); // ⬅️ Xóa Account cuối cùn
   const allSkills = await prisma.skill.findMany();
   const allCategories = await prisma.jobCategory.findMany();
   const allIndustries = await prisma.industry.findMany();
+
+  await prisma.cvTemplate.createMany({
+    data: [
+      {
+        code: 'modern-blue',
+        name: 'Modern Blue',
+        version: 1,
+        description: 'Template hien dai voi tone xanh cho nganh cong nghe',
+        preview_url:
+          'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1200&auto=format&fit=crop',
+        layout_schema: {
+          sections: ['personal', 'education', 'experience', 'skills', 'projects'],
+        },
+        style_tokens: { accentColor: '#1d4ed8', font: 'Arial' },
+      },
+      {
+        code: 'minimal-gray',
+        name: 'Minimal Gray',
+        version: 1,
+        description: 'Template toi gian, doc de, phu hop nhieu nganh nghe',
+        preview_url:
+          'https://images.unsplash.com/photo-1586281380349-632531db7ed4?q=80&w=1200&auto=format&fit=crop',
+        layout_schema: {
+          sections: ['personal', 'experience', 'skills', 'education', 'projects'],
+        },
+        style_tokens: { accentColor: '#475569', font: 'Arial' },
+      },
+    ],
+  });
 
   // 4️⃣ Companies
   const companies = [

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import CvAPI from "../CvAPI";
 import Button from "@/components/ui/Button";
 import {
@@ -16,6 +17,7 @@ import vi from "date-fns/locale/vi";
 import Swal from "sweetalert2";
 
 const MyOnlineCvs = () => {
+  const navigate = useNavigate();
   const [cvs, setCvs] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -48,9 +50,10 @@ const MyOnlineCvs = () => {
       cancelButtonText: "Hủy"
     }).then((result) => {
       if (result.isConfirmed) {
-        // await CvAPI.delete(id);
-        Swal.fire("Đã xóa!", "CV đã được xóa khỏi danh sách.", "success");
-        // Reload list...
+        CvAPI.delete(id).then(() => {
+          Swal.fire("Đã xóa!", "CV đã được xóa khỏi danh sách.", "success");
+          fetchCvs();
+        });
       }
     });
   };
@@ -67,7 +70,11 @@ const MyOnlineCvs = () => {
             Quản lý các bản CV kỹ thuật số bạn đã tạo trên hệ thống.
           </p>
         </div>
-        <Button variant="primary" className="shadow-lg shadow-indigo-200 bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2">
+        <Button
+          variant="primary"
+          className="shadow-lg shadow-indigo-200 bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
+          onClick={() => navigate("/manage-cv/online/new")}
+        >
           <Plus size={18} /> Tạo CV Mới
         </Button>
       </div>
@@ -159,7 +166,7 @@ const MyOnlineCvs = () => {
                   size="sm"
                   variant="outline"
                   className="flex-1 bg-white border-slate-200 hover:border-indigo-300 hover:text-indigo-600"
-                  onClick={() => console.log("View", cv.id)}
+                  onClick={() => navigate(`/manage-cv/online/${cv.id}`)}
                 >
                   <Eye size={16} className="mr-2" /> Xem
                 </Button>
@@ -167,7 +174,7 @@ const MyOnlineCvs = () => {
                 <Button
                   size="sm"
                   className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200"
-                  onClick={() => console.log("Edit", cv.id)}
+                  onClick={() => navigate(`/manage-cv/online/${cv.id}`)}
                 >
                   <Edit size={16} className="mr-2" /> Sửa
                 </Button>

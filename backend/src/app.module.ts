@@ -23,6 +23,7 @@ import { PlansModule } from './modules/plans/plans.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { QueueModule } from '@/modules/queue/queue.module';
+import { CvTemplatesModule } from '@/modules/cv-templates/cv-templates.module';
 import databaseConfig from '@/config/database.config';
 import jwtConfig from '@/config/jwt.config';
 import mailerConfig from '@/config/mailer.config';
@@ -56,6 +57,7 @@ import mailerConfig from '@/config/mailer.config';
     PaymentsModule,
     NotificationsModule,
     QueueModule,
+    CvTemplatesModule,
   ],
 })
 export class AppModule {}

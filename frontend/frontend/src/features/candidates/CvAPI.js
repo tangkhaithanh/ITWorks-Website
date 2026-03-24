@@ -1,6 +1,9 @@
 import apiClient from "../../service/apiClient";
 
 const CvAPI = {
+  listTemplates: () => apiClient.get("/cv-templates"),
+  getTemplateDetail: (id) => apiClient.get(`/cv-templates/${id}`),
+
   // 📄 Danh sách CV online
   getMyOnlineCvs: (page = 1, limit = 10) =>
     apiClient.get(`/cvs/my/online?page=${page}&limit=${limit}`),
@@ -14,6 +17,9 @@ const CvAPI = {
 
   // ➕ Tạo CV online
   createOnline: (data) => apiClient.post("/cvs", data),
+  previewOnline: (data) => apiClient.post("/cvs/preview", data),
+  exportOnlinePdf: (id) =>
+    apiClient.get(`/cvs/${id}/export/pdf`, { responseType: "blob" }),
 
   // 📤 Upload file CV (PDF, DOCX)
   uploadFile: (file, title) => {

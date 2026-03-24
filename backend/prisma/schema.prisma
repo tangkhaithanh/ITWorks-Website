@@ -288,6 +288,7 @@ model Cv {
   file_url     String?
   file_public_id String?
   template_id  BigInt?
+  template_version Int?
   content      Json?
   type         CvType        @default(ONLINE)
   is_deleted   Boolean       @default(false)
@@ -310,11 +311,17 @@ model CvTemplate {
   id          BigInt   @id @default(autoincrement())
   code        String   @unique
   name        String
+  version     Int      @default(1)
   description String?
   preview_url String?
+  layout_schema Json
+  style_tokens Json?
+  is_active   Boolean  @default(true)
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
   cvs         Cv[]
+
+  @@unique([code, version])
 }
 
 // ===============================

@@ -10,6 +10,7 @@ import ResetPasswordPage from "@/features/auth/pages/ResetPasswordPage";
 import JobSearchPage from "@/features/jobs/pages/JobSearchPage";
 import JobDetailPage from "@/features/jobs/pages/JobDetailPage";
 import MyCvPage from "@/features/candidates/pages/MyCvPage";
+import OnlineCvBuilderPage from "@/features/candidates/pages/OnlineCvBuilderPage";
 import ProtectedRoute from "./protectedRoute";
 import RecruiterLayout from "@/components/layout/RecruiterLayout";
 import CvManagementPage from "../features/applications/pages/CvManagementPage";
@@ -51,6 +52,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={["candidate"]}>
             <MyCvPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "manage-cv/online/:id",
+        element: (
+          <ProtectedRoute roles={["candidate"]}>
+            <OnlineCvBuilderPage />
           </ProtectedRoute>
         ),
       },
