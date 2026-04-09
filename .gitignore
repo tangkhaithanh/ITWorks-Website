@@ -1,2 +1,6 @@
-.cursor/
-openspec/
+# OpenSpec artifacts (generated workflow files)
+/openspec/
+
+# Cursor / local tooling
+/.cursor/
+

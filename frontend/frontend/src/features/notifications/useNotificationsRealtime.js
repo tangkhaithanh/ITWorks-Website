@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import {
     getNotificationsSocket,
@@ -20,6 +21,8 @@ export default function useNotificationsRealtime() {
 
     const user = useSelector((state) => state.auth.user);
     const role = user?.role;
+    const navigate = useNavigate();
+    const location = useLocation();
 
     useEffect(() => {
         if (!user) return;
@@ -39,9 +42,24 @@ export default function useNotificationsRealtime() {
             // 1️⃣ lưu redux
             dispatch(pushNotification(data));
 
-            // 2️⃣ toast (role nào cũng được)
+            const isMessage = data?.type === "message";
+            const to = role === "recruiter" ? "/recruiter/messages" : "/messages";
+            const isOnMessagesPage = location?.pathname?.startsWith(to);
+
+            // 2️⃣ toast
             toast.success(data.message, {
-                icon: "🔔",
+                icon: isMessage ? "💬" : "🔔",
+                duration: 4000,
+                onClick: () => {
+                    if (!isMessage) return;
+                    if (isOnMessagesPage) return;
+
+                    navigate(to, {
+                        state: {
+                            openConversationId: data?.payload?.conversationId || null,
+                        },
+                    });
+                },
             });
         };
 
@@ -54,7 +72,7 @@ export default function useNotificationsRealtime() {
             socket.off("connect", onConnect);
             socket.off("notification:new", onNotification);
         };
-    }, [user, role, dispatch]);
+    }, [user, role, dispatch, navigate, location]);
 
     useEffect(() => {
         if (!user) {

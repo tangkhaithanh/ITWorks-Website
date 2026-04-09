@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import MessagingAPI from "./MessagingAPI";
 import { getChatSocket, disconnectChatSocket } from "@/socket/chatSocket";
 import { Send, Loader2 } from "lucide-react";
 import Button from "@/components/ui/Button";
+import { useLocation } from "react-router-dom";
+import { resetUnread } from "./messagingSlice";
+import { useNavigate } from "react-router-dom";
+import { ExternalLink, Building2 } from "lucide-react";
 
 /**
  * Trang chat: dùng chung cho ứng viên (/messages) và recruiter (/recruiter/messages).
@@ -12,6 +16,9 @@ export default function MessagesPage() {
   const user = useSelector((s) => s.auth.user);
   /** `auth/me` trả về account — `id` là account id */
   const accountId = user?.id;
+  const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [conversations, setConversations] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -82,6 +89,22 @@ export default function MessagesPage() {
       disconnectChatSocket();
     };
   }, [loadList]);
+
+  // Reset badge khi vào trang messages
+  useEffect(() => {
+    if (!user) return;
+    dispatch(resetUnread());
+  }, [user, dispatch, location?.pathname]);
+
+  // Nếu điều hướng từ notification với openConversationId thì auto-open
+  useEffect(() => {
+    const cid = location?.state?.openConversationId;
+    if (!cid) return;
+    // tránh loop khi user đã chọn rồi
+    if (String(selectedRef.current) === String(cid)) return;
+    openConversation(cid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location?.state?.openConversationId]);
 
   const leaveRoom = (socket, cid) => {
     if (!cid) return;
@@ -214,6 +237,13 @@ export default function MessagesPage() {
     return `${jobTitle} · ${peer}`;
   };
 
+  const selectedConversation = selectedId
+    ? conversations.find((c) => String(c.id) === String(selectedId))
+    : null;
+
+  const jobId = selectedConversation?.job?.id;
+  const companyId = selectedConversation?.job?.company?.id;
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 flex gap-4 min-h-[calc(100vh-8rem)]">
       <aside className="w-full md:w-80 shrink-0 border border-slate-200 rounded-xl bg-white shadow-sm overflow-hidden flex flex-col max-h-[70vh]">
@@ -263,18 +293,60 @@ export default function MessagesPage() {
           </div>
         ) : (
           <>
-            <div className="p-3 border-b border-slate-100 flex justify-between items-center">
-              <span className="font-medium text-slate-800">Tin nhắn</span>
-              {nextCursor && (
+            <div className="p-3 border-b border-slate-100 flex justify-between items-center gap-3">
+              <div className="min-w-0">
+                <div className="font-medium text-slate-800">Tin nhắn</div>
+                {selectedConversation?.job?.title && (
+                  <div className="text-xs text-slate-500 truncate">
+                    {selectedConversation.job.title}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
-                  onClick={loadOlder}
-                  className="text-xs text-blue-600 hover:underline"
-                  disabled={loadingMsg}
+                  className={`text-xs inline-flex items-center gap-1 px-2 py-1 rounded-md border ${
+                    jobId
+                      ? "border-slate-200 hover:bg-slate-50 text-slate-700"
+                      : "border-slate-100 text-slate-300 cursor-not-allowed"
+                  }`}
+                  disabled={!jobId}
+                  onClick={() => jobId && navigate(`/jobs/${jobId}`)}
+                  title={jobId ? "Mở tin tuyển dụng" : "Không có thông tin job"}
                 >
-                  Tải thêm
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Xem tin
                 </button>
-              )}
+
+                <button
+                  type="button"
+                  className={`text-xs inline-flex items-center gap-1 px-2 py-1 rounded-md border ${
+                    companyId
+                      ? "border-slate-200 hover:bg-slate-50 text-slate-700"
+                      : "border-slate-100 text-slate-300 cursor-not-allowed"
+                  }`}
+                  disabled={!companyId}
+                  onClick={() => companyId && navigate(`/companies/${companyId}`)}
+                  title={
+                    companyId ? "Mở hồ sơ công ty" : "Không có thông tin công ty"
+                  }
+                >
+                  <Building2 className="w-3.5 h-3.5" />
+                  Công ty
+                </button>
+
+                {nextCursor && (
+                  <button
+                    type="button"
+                    onClick={loadOlder}
+                    className="text-xs text-blue-600 hover:underline"
+                    disabled={loadingMsg}
+                  >
+                    Tải thêm
+                  </button>
+                )}
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
               {loadingMsg && messages.length === 0 ? (

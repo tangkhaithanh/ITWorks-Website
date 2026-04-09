@@ -5,19 +5,22 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Prisma, Role } from '@prisma/client';
+import { NotificationType, Prisma, Role } from '@prisma/client';
 import { MESSAGE_BODY_MAX_LENGTH, MESSAGES_PAGE_SIZE } from './messaging.constants';
+import { NotificationsService } from '@/modules/notifications/notifications.service';
 
 @Injectable()
 export class MessagingService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async assertParticipant(conversationId: bigint, accountId: bigint) {
     const conv = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
       select: {
+        job_id: true,
         applicant_account_id: true,
         recruiter_account_id: true,
       },
@@ -240,7 +243,7 @@ export class MessagingService {
       throw new BadRequestException(`Tối đa ${MESSAGE_BODY_MAX_LENGTH} ký tự.`);
     }
 
-    await this.assertParticipant(conversationId, accountId);
+    const conv = await this.assertParticipant(conversationId, accountId);
 
     const msg = await this.prisma.message.create({
       data: {
@@ -263,6 +266,24 @@ export class MessagingService {
       where: { id: conversationId },
       data: { updated_at: new Date() },
     });
+
+    const recipientAccountId =
+      conv.applicant_account_id === accountId
+        ? conv.recruiter_account_id
+        : conv.applicant_account_id;
+
+    if (recipientAccountId !== accountId) {
+      await this.notificationsService.notifyAccount({
+        accountId: recipientAccountId,
+        type: 'message' as NotificationType,
+        message: 'Bạn có tin nhắn mới',
+        realtimePayload: {
+          conversationId: conversationId.toString(),
+          jobId: conv.job_id.toString(),
+          messagePreview: msg.body.slice(0, 120),
+        },
+      });
+    }
 
     return msg;
   }

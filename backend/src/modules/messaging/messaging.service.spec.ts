@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { MessagingService } from './messaging.service';
-import { MessagingGateway } from './messaging.gateway';
 import { PrismaService } from '@/prisma/prisma.service';
+import { NotificationsService } from '@/modules/notifications/notifications.service';
 
 describe('MessagingService', () => {
   let service: MessagingService;
@@ -11,7 +11,7 @@ describe('MessagingService', () => {
       findUnique: jest.fn(),
     },
   };
-  const gateway = { emitNewMessage: jest.fn() };
+  const notificationsService = { notifyAccount: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -19,7 +19,7 @@ describe('MessagingService', () => {
       providers: [
         MessagingService,
         { provide: PrismaService, useValue: prisma },
-        { provide: MessagingGateway, useValue: gateway },
+        { provide: NotificationsService, useValue: notificationsService },
       ],
     }).compile();
 

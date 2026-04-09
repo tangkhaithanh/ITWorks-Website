@@ -3,6 +3,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { NotificationType } from '@prisma/client';
 import { NotFoundException } from '@nestjs/common';
+import { serializeSocketPayload } from '@/common/utils/serialize-socket-payload';
 @Injectable()
 export class NotificationsService {
   constructor(
@@ -34,7 +35,7 @@ export class NotificationsService {
       message: notification.message,
       is_read: notification.is_read,
       created_at: notification.created_at,
-      payload: params.realtimePayload ?? null,
+      payload: serializeSocketPayload(params.realtimePayload ?? null),
     });
 
     return notification;

@@ -43,6 +43,7 @@ const NAV_ITEMS = [
 export default function RecruiterLayout() {
   useNotificationsRealtime();
   const unread = useSelector((state) => state.notifications?.unread || 0);
+  const messagingUnread = useSelector((state) => state.messaging?.unread || 0);
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
 
@@ -138,19 +139,22 @@ export default function RecruiterLayout() {
 
           {/* Navigation Menu */}
           <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
-            {NAV_ITEMS.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) => `
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) => `
                   group flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200
                   ${isActive
                     ? "bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-100"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   }
                 `}
-              >
-                {({ isActive }) => (
+            >
+              {({ isActive }) => {
+                const isMessagesItem = item.path === "/recruiter/messages";
+                const showMessageBadge = isMessagesItem && messagingUnread > 0;
+                return (
                   <>
                     <div className="flex items-center gap-3">
                       <item.icon
@@ -162,11 +166,19 @@ export default function RecruiterLayout() {
                       <span>{item.label}</span>
                     </div>
 
-                    {isActive && <ChevronRight className="w-4 h-4 text-blue-400" />}
+                    <div className="flex items-center gap-2">
+                      {showMessageBadge && (
+                        <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-semibold flex items-center justify-center shadow">
+                          {messagingUnread > 9 ? "9+" : messagingUnread}
+                        </span>
+                      )}
+                      {isActive && <ChevronRight className="w-4 h-4 text-blue-400" />}
+                    </div>
                   </>
-                )}
-              </NavLink>
-            ))}
+                );
+              }}
+            </NavLink>
+          ))}
             {currentPlan && (
               <NavLink
                 to="/recruiter/usage"

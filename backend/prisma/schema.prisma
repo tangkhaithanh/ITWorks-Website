@@ -441,6 +441,7 @@ enum NotificationType {
   system
   application
   company
+  message
 }
 
 // ===============================

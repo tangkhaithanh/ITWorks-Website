@@ -4,12 +4,15 @@ import logo from "@/assets/images/logo.png";
 import { MessageCircle } from "lucide-react";
 import UserAvatarMenu from "@/components/layout/UserAvatarMenu";
 import { logout } from "@/features/auth/authSlice";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import NotificationBell from "@/components/notifications/NotificationBell";
 
 const Header = ({ user }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const messagingUnread = useSelector(
+    (state) => state.messaging?.unread || 0
+  );
 
   const handleLogout = async () => {
     dispatch(logout());
@@ -72,6 +75,11 @@ const Header = ({ user }) => {
                   title="Tin nhắn"
                 >
                   <MessageCircle className="w-6 h-6 text-slate-600 hover:text-blue-600" />
+                  {messagingUnread > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-semibold flex items-center justify-center shadow ring-2 ring-white">
+                      {messagingUnread > 9 ? "9+" : messagingUnread}
+                    </span>
+                  )}
                 </Link>
               )}
               {user.role === "recruiter" && (
@@ -81,6 +89,11 @@ const Header = ({ user }) => {
                   title="Tin nhắn"
                 >
                   <MessageCircle className="w-6 h-6 text-slate-600 hover:text-blue-600" />
+                  {messagingUnread > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-semibold flex items-center justify-center shadow ring-2 ring-white">
+                      {messagingUnread > 9 ? "9+" : messagingUnread}
+                    </span>
+                  )}
                 </Link>
               )}
               {user.role === "admin" && (
