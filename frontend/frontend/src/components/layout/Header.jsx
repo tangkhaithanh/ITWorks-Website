@@ -65,9 +65,29 @@ const Header = ({ user }) => {
                 }}
               />
 
-              <button className="relative p-2 rounded-full hover:bg-slate-100">
-                <MessageCircle className="w-6 h-6 text-slate-600 hover:text-blue-600" />
-              </button>
+              {user.role === "candidate" && (
+                <Link
+                  to="/messages"
+                  className="relative p-2 rounded-full hover:bg-slate-100"
+                  title="Tin nhắn"
+                >
+                  <MessageCircle className="w-6 h-6 text-slate-600 hover:text-blue-600" />
+                </Link>
+              )}
+              {user.role === "recruiter" && (
+                <Link
+                  to="/recruiter/messages"
+                  className="relative p-2 rounded-full hover:bg-slate-100"
+                  title="Tin nhắn"
+                >
+                  <MessageCircle className="w-6 h-6 text-slate-600 hover:text-blue-600" />
+                </Link>
+              )}
+              {user.role === "admin" && (
+                <span className="relative p-2 rounded-full opacity-40" title="Chat không khả dụng">
+                  <MessageCircle className="w-6 h-6 text-slate-400" />
+                </span>
+              )}
 
               <UserAvatarMenu user={user} onLogout={handleLogout} />
             </>

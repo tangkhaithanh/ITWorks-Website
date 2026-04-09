@@ -39,6 +39,7 @@ import CompanySearchPage from "@/features/companies/pages/CompanySearchPage.jsx"
 import CompanyProfilePage from "@/features/companies/pages/CompanyProfilePage.jsx";
 import MatchingWorkspacePage from "@/features/matching/pages/MatchingWorkspacePage.jsx";
 import { Navigate } from "react-router-dom";
+import MessagesPage from "@/features/messaging/MessagesPage.jsx";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -89,6 +90,14 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "messages",
+        element: (
+          <ProtectedRoute roles={["candidate"]}>
+            <MessagesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: "companies",
         element: <CompanySearchPage/>,
       },
@@ -132,6 +141,7 @@ const router = createBrowserRouter([
       { path: "usage", element: <UsagePage /> },
       { path: "orders", element: <ManageOrderPage /> },
       { path: "candidate-search", element: <MatchingWorkspacePage /> },
+      { path: "messages", element: <MessagesPage /> },
     ],
   },
   {

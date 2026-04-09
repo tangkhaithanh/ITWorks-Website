@@ -25,6 +25,9 @@ model Account {
   company              Company?
   notifications        Notification[]
   admin_logs           AdminLog[]
+  conversations_as_applicant Conversation[] @relation("ConvApplicant")
+  conversations_as_recruiter Conversation[] @relation("ConvRecruiter")
+  messages_sent        Message[]          @relation("MessageSender")
 }
 
 enum Role {
@@ -216,14 +219,15 @@ model Job {
   number_of_openings  Int                 @default(1)
   views_count         Int                 @default(0)
   // 🔗 Quan hệ
-  company             Company             @relation(fields: [company_id], references: [id])
-  category            JobCategory?        @relation(fields: [category_id], references: [id])
-  details             JobDetail?
-  applications        Application[]
-  saved_jobs          SavedJob[]
-  skills              JobSkill[]
-  boosts              JobBoost[]
-  creditTransactions  CreditTransaction[]
+  company            Company             @relation(fields: [company_id], references: [id])
+  category           JobCategory?        @relation(fields: [category_id], references: [id])
+  details            JobDetail?
+  applications       Application[]
+  saved_jobs         SavedJob[]
+  skills             JobSkill[]
+  boosts             JobBoost[]
+  creditTransactions CreditTransaction[]
+  conversations      Conversation[]
 }
 
 model JobDetail {
@@ -372,6 +376,38 @@ enum ApplicationStatus {
   accepted
   rejected
   withdrawn
+}
+
+// ===============================
+// 9b. Recruiter–Applicant chat (job-scoped)
+// ===============================
+model Conversation {
+  id                     BigInt   @id @default(autoincrement())
+  job_id                 BigInt
+  applicant_account_id   BigInt
+  recruiter_account_id   BigInt
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+  job                    Job      @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  applicant_account      Account  @relation("ConvApplicant", fields: [applicant_account_id], references: [id], onDelete: Cascade)
+  recruiter_account      Account  @relation("ConvRecruiter", fields: [recruiter_account_id], references: [id], onDelete: Cascade)
+  messages               Message[]
+
+  @@unique([job_id, applicant_account_id])
+  @@index([applicant_account_id])
+  @@index([recruiter_account_id])
+}
+
+model Message {
+  id                  BigInt       @id @default(autoincrement())
+  conversation_id     BigInt
+  sender_account_id   BigInt
+  body                String
+  created_at          DateTime     @default(now())
+  conversation        Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  sender              Account      @relation("MessageSender", fields: [sender_account_id], references: [id], onDelete: Cascade)
+
+  @@index([conversation_id, created_at])
 }
 
 // ===============================

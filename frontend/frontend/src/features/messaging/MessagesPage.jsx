@@ -1,0 +1,334 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSelector } from "react-redux";
+import MessagingAPI from "./MessagingAPI";
+import { getChatSocket, disconnectChatSocket } from "@/socket/chatSocket";
+import { Send, Loader2 } from "lucide-react";
+import Button from "@/components/ui/Button";
+
+/**
+ * Trang chat: dùng chung cho ứng viên (/messages) và recruiter (/recruiter/messages).
+ */
+export default function MessagesPage() {
+  const user = useSelector((s) => s.auth.user);
+  /** `auth/me` trả về account — `id` là account id */
+  const accountId = user?.id;
+
+  const [conversations, setConversations] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [nextCursor, setNextCursor] = useState(null);
+  const [text, setText] = useState("");
+  const [loadingList, setLoadingList] = useState(true);
+  const [loadingMsg, setLoadingMsg] = useState(false);
+  const [sending, setSending] = useState(false);
+  const selectedRef = useRef(null);
+
+  // Log connect/disconnect cho chat socket
+  useEffect(() => {
+    if (!user) return;
+
+    const socket = getChatSocket();
+
+    const onConnect = () => {
+      console.log("✅ Chat WS connected:", socket.id, "| role:", user?.role);
+    };
+    const onDisconnect = (reason) => {
+      console.log("🛑 Chat WS disconnected:", reason);
+    };
+    const onConnectError = (err) => {
+      console.log("❌ Chat WS connect_error:", err?.message || err);
+    };
+    const onMessageSent = (payload) => {
+      console.log("✅ Chat message:sent (server event)", payload);
+    };
+    const onErrorEvent = (payload) => {
+      console.log("❌ Chat error (server event)", payload);
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("connect_error", onConnectError);
+    socket.on("message:sent", onMessageSent);
+    socket.on("error", onErrorEvent);
+
+    if (!socket.connected) socket.connect();
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("connect_error", onConnectError);
+      socket.off("message:sent", onMessageSent);
+      socket.off("error", onErrorEvent);
+    };
+  }, [user]);
+
+  const loadList = useCallback(async () => {
+    setLoadingList(true);
+    try {
+      const res = await MessagingAPI.list();
+      const list = res?.data?.data ?? [];
+      setConversations(Array.isArray(list) ? list : []);
+    } catch (e) {
+      console.error(e);
+      setConversations([]);
+    } finally {
+      setLoadingList(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadList();
+    return () => {
+      disconnectChatSocket();
+    };
+  }, [loadList]);
+
+  const leaveRoom = (socket, cid) => {
+    if (!cid) return;
+    socket.emit("conversation:leave", { conversationId: String(cid) });
+  };
+
+  const subscribeRoom = useCallback((conversationId) => {
+    const socket = getChatSocket();
+    if (!socket.connected) socket.connect();
+
+    socket.off("message:new");
+    socket.on("message:new", (payload) => {
+      if (String(payload.conversation_id) === String(selectedRef.current)) {
+        setMessages((prev) => {
+          const exists = prev.some((m) => String(m.id) === String(payload.id));
+          if (exists) return prev;
+          return [
+            ...prev,
+            {
+              id: payload.id,
+              body: payload.body,
+              created_at: payload.created_at,
+              sender_account_id: payload.sender_account_id,
+              sender: payload.sender,
+            },
+          ];
+        });
+      }
+      loadList();
+    });
+
+    return socket;
+  }, [loadList]);
+
+  const openConversation = async (id) => {
+    const prev = selectedRef.current;
+    selectedRef.current = id;
+    setSelectedId(id);
+    setLoadingMsg(true);
+    setMessages([]);
+    setNextCursor(null);
+
+    try {
+      const socket = getChatSocket();
+      if (prev) leaveRoom(socket, prev);
+
+      const res = await MessagingAPI.messages(id, {});
+      const payload = res?.data?.data ?? {};
+      setMessages(payload.messages ?? []);
+      setNextCursor(payload.nextCursor ?? null);
+
+      subscribeRoom(id);
+      const s = getChatSocket();
+      if (!s.connected) s.connect();
+      s.emit("conversation:join", { conversationId: String(id) });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingMsg(false);
+    }
+  };
+
+  const loadOlder = async () => {
+    if (!selectedId || !nextCursor) return;
+    setLoadingMsg(true);
+    try {
+      const res = await MessagingAPI.messages(selectedId, {
+        before: nextCursor,
+      });
+      const payload = res?.data?.data ?? {};
+      const older = payload.messages ?? [];
+      setMessages((prev) => [...older, ...prev]);
+      setNextCursor(payload.nextCursor ?? null);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingMsg(false);
+    }
+  };
+
+  const send = async () => {
+    const t = text.trim();
+    if (!t || !selectedId) return;
+    setSending(true);
+    const socket = getChatSocket();
+    if (!socket.connected) socket.connect();
+
+    console.log("➡️ Click send chat message", {
+      conversationId: String(selectedId),
+      bodyLength: t.length,
+    });
+
+    // NestJS gateway trả `message:sent` / `error` như server events, không phải socket.io ack callback.
+    // Vì vậy không chờ ack để tránh timeout giả.
+    if (socket.connected) {
+      socket.emit("message:send", {
+        conversationId: String(selectedId),
+        body: t,
+      });
+      console.log("➡️ Socket emit message:send");
+      setText("");
+      setSending(false);
+      return;
+    }
+
+    console.warn("Socket not connected, fallback HTTP");
+    try {
+      console.log("➡️ Fallback HTTP send", {
+        conversationId: String(selectedId),
+        bodyLength: t.length,
+      });
+      await MessagingAPI.send(selectedId, t);
+      setText("");
+      const res = await MessagingAPI.messages(selectedId, {});
+      setMessages(res?.data?.data?.messages ?? []);
+      console.log("✅ Fallback HTTP send success");
+    } catch (e2) {
+      console.error(e2);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const titleForConv = (c) => {
+    const jobTitle = c.job?.title || "Tin tuyển dụng";
+    const peer =
+      String(accountId) === String(c.applicant_account?.id)
+        ? c.recruiter_account?.company?.name || "Nhà tuyển dụng"
+        : c.applicant_account?.user?.full_name || "Ứng viên";
+    return `${jobTitle} · ${peer}`;
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-6 flex gap-4 min-h-[calc(100vh-8rem)]">
+      <aside className="w-full md:w-80 shrink-0 border border-slate-200 rounded-xl bg-white shadow-sm overflow-hidden flex flex-col max-h-[70vh]">
+        <div className="p-3 border-b border-slate-100 font-semibold text-slate-800">
+          Hội thoại
+        </div>
+        {loadingList ? (
+          <div className="p-6 flex justify-center">
+            <Loader2 className="animate-spin text-slate-400" />
+          </div>
+        ) : conversations.length === 0 ? (
+          <p className="p-4 text-sm text-slate-500">
+            Chưa có cuộc hội thoại. Ứng tuyển hoặc mở chat từ tin tuyển dụng.
+          </p>
+        ) : (
+          <ul className="overflow-y-auto flex-1 divide-y divide-slate-100">
+            {conversations.map((c) => (
+              <li key={String(c.id)}>
+                <button
+                  type="button"
+                  onClick={() => openConversation(c.id)}
+                  className={`w-full text-left px-3 py-3 hover:bg-slate-50 text-sm ${
+                    String(selectedId) === String(c.id)
+                      ? "bg-blue-50 border-l-4 border-blue-500"
+                      : ""
+                  }`}
+                >
+                  <div className="font-medium text-slate-800 line-clamp-2">
+                    {titleForConv(c)}
+                  </div>
+                  {c.messages?.[0] && (
+                    <div className="text-xs text-slate-500 truncate mt-1">
+                      {c.messages[0].body}
+                    </div>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </aside>
+
+      <section className="flex-1 border border-slate-200 rounded-xl bg-white shadow-sm flex flex-col min-h-[420px] max-h-[70vh]">
+        {!selectedId ? (
+          <div className="flex-1 flex items-center justify-center text-slate-500 text-sm">
+            Chọn một cuộc hội thoại bên trái
+          </div>
+        ) : (
+          <>
+            <div className="p-3 border-b border-slate-100 flex justify-between items-center">
+              <span className="font-medium text-slate-800">Tin nhắn</span>
+              {nextCursor && (
+                <button
+                  type="button"
+                  onClick={loadOlder}
+                  className="text-xs text-blue-600 hover:underline"
+                  disabled={loadingMsg}
+                >
+                  Tải thêm
+                </button>
+              )}
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
+              {loadingMsg && messages.length === 0 ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="animate-spin text-slate-400" />
+                </div>
+              ) : (
+                messages.map((m) => {
+                  const mine = String(m.sender_account_id) === String(accountId);
+                  return (
+                    <div
+                      key={String(m.id)}
+                      className={`flex ${mine ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
+                          mine
+                            ? "bg-blue-600 text-white"
+                            : "bg-white border border-slate-200 text-slate-800"
+                        }`}
+                      >
+                        {m.body}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            <div className="p-3 border-t border-slate-100 flex gap-2">
+              <input
+                className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                placeholder="Nhập tin nhắn..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    send();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={sending || !text.trim()}
+                onClick={send}
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}

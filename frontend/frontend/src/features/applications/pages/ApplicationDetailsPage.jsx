@@ -9,6 +9,8 @@ import withReactContent from "sweetalert2-react-content";
 // API & Components
 import InterviewAPI from "../InterviewAPI";
 import ApplicationAPI from "@/features/applications/ApplicationAPI";
+import MessagingAPI from "@/features/messaging/MessagingAPI";
+import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import InterviewFormModal from "@/features/applications/components/InterviewFormModal";
 
@@ -18,7 +20,8 @@ import {
   User, Mail, Phone, Calendar, Clock, MapPin, Video,
   FileText, Download, Eye, Briefcase, CheckCircle2,
   XCircle, AlertCircle, ChevronLeft, MoreHorizontal,
-  ExternalLink
+  ExternalLink,
+  MessageCircle,
 } from "lucide-react";
 
 const MySwal = withReactContent(Swal);
@@ -70,6 +73,27 @@ export default function ApplicationDetailsPage() {
   });
 
   // FETCH DATA
+  const handleChatCandidate = async () => {
+    if (!job?.id || !candidate?.account_id) {
+      toast.error("Thiếu thông tin để mở chat.");
+      return;
+    }
+    try {
+      setActionLoading(true);
+      await MessagingAPI.start(job.id, candidate.account_id);
+      toast.success("Đã mở cuộc hội thoại");
+      navigate("/recruiter/messages");
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Không thể mở chat";
+      toast.error(msg);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const fetchDetail = async () => {
     try {
       setLoading(true);
@@ -299,7 +323,17 @@ export default function ApplicationDetailsPage() {
               <div className="hidden sm:block h-6 w-px bg-slate-200"></div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                  disabled={actionLoading}
+                  onClick={handleChatCandidate}
+                >
+                  <MessageCircle className="w-4 h-4 mr-1.5" />
+                  Chat ứng viên
+                </Button>
                 {status === "pending" && (
                   <>
                     <Button

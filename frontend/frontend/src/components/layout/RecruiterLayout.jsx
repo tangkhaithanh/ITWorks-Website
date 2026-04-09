@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Receipt,
   Bell,
+  MessageCircle,
   Search,
 } from "lucide-react";
 import logo from "@/assets/images/logo.png";
@@ -26,6 +27,7 @@ import NotificationBell from "@/components/notifications/NotificationBell";
 // ============================
 const NAV_ITEMS = [
   { path: "/recruiter/dashboard", label: "Tổng quan", icon: LayoutDashboard },
+  { path: "/recruiter/messages", label: "Tin nhắn", icon: MessageCircle },
   { path: "/recruiter/cv", label: "Quản lý CV", icon: FileText },
   { path: "/recruiter/jobs", label: "Tin tuyển dụng", icon: BriefcaseBusiness },
   { path: "/recruiter/company", label: "Hồ sơ công ty", icon: Building2 },

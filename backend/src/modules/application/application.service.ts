@@ -12,6 +12,7 @@ import { MailService } from '@/common/services/mail/mail.service';
 import { CvHelper } from '@/common/helpers/cv.helper';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { NotificationType } from '@prisma/client';
+import { MessagingService } from '@/modules/messaging/messaging.service';
 import { AiSyncProducer } from '@/modules/ai-sync/ai-sync.producer';
 @Injectable()
 export class ApplicationService {
@@ -19,6 +20,7 @@ export class ApplicationService {
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
+    private readonly messagingService: MessagingService,
     private readonly aiSyncProducer: AiSyncProducer,
   ) {}
   // === Chức năng dành cho candidate==========
@@ -83,17 +85,28 @@ export class ApplicationService {
       if (application.applied)
         throw new BadRequestException('Bạn đã ứng tuyển công việc này rồi.');
 
-      // 4️⃣ Tạo đơn ứng tuyển mới
-      const app = await this.prisma.application.create({
-        data: {
-          job_id: jobId,
-          candidate_id: candidateId,
-          cv_id: cvId,
-        },
+      // 4️⃣ Tạo đơn ứng tuyển + hội thoại (cùng transaction)
+      const recruiterAccountId = job.company?.account_id;
+      const app = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.application.create({
+          data: {
+            job_id: jobId,
+            candidate_id: candidateId,
+            cv_id: cvId,
+          },
+        });
+        if (recruiterAccountId) {
+          await this.messagingService.ensureConversationOnApply(
+            tx,
+            jobId,
+            candidateId,
+            recruiterAccountId,
+          );
+        }
+        return created;
       });
 
       // Gửi thông báo:
-      const recruiterAccountId = job.company?.account_id;
       if (recruiterAccountId) {
         await this.notificationsService.notifyAccount({
           accountId: recruiterAccountId,
@@ -394,6 +407,7 @@ export class ApplicationService {
             id: true,
             user: {
               select: {
+                account_id: true,
                 full_name: true,
                 phone: true,
                 avatar_url: true,
@@ -437,6 +451,7 @@ export class ApplicationService {
       },
       candidate: {
         id: app.candidate.id,
+        account_id: app.candidate.user.account_id,
         full_name: app.candidate.user.full_name,
         email: app.candidate.user.account.email,
         phone: app.candidate.user.phone,

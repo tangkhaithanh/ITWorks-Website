@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { MapPin, Clock, DollarSign, Briefcase, Heart } from "lucide-react";
+import { MapPin, Clock, DollarSign, Briefcase, Heart, MessageCircle } from "lucide-react";
 import dayjs from "dayjs";
 import toast from "react-hot-toast";
 import Button from "@/components/ui/Button";
 import ApplyJobModal from "./ApplyJobModal";
 import { checkAppliedJob } from "@/features/candidates/candidateSlice";
 import CandidateAPI from "@/features/candidates/CandidateAPI";
+import MessagingAPI from "@/features/messaging/MessagingAPI";
 // ────────────────────────────────
 // Item hiển thị thông tin nhỏ (mức lương, địa điểm, v.v.)
 // ────────────────────────────────
@@ -115,6 +116,32 @@ const JobHeader = ({ job, isSaved = false, onToggleSave }) => {
     setOpenModal(true);
   };
 
+  const handleChatRecruiter = async () => {
+    if (!user) {
+      toast.error("Vui lòng đăng nhập để nhắn tin");
+      navigate("/login");
+      return;
+    }
+    if (user.role !== "candidate") {
+      toast.error("Chỉ ứng viên mới có thể chat với nhà tuyển dụng");
+      return;
+    }
+    try {
+      setLoading(true);
+      await MessagingAPI.open(job.id);
+      toast.success("Đã mở cuộc hội thoại");
+      navigate("/messages");
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Không thể mở chat";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!job) return null;
 
   const experienceSummary =
@@ -182,7 +209,7 @@ const JobHeader = ({ job, isSaved = false, onToggleSave }) => {
       <div className="border-t border-slate-100 my-4" />
 
       {/* --- Hàng nút hành động --- */}
-      <div className="flex flex-col sm:flex-row justify-between items-stretch gap-3">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch gap-3 flex-wrap">
         {/* Nút Ứng tuyển ngay */}
         <Button
           onClick={() => {
@@ -202,6 +229,16 @@ const JobHeader = ({ job, isSaved = false, onToggleSave }) => {
         >
           {isApplied ? "Đã ứng tuyển" : "Ứng tuyển ngay"}
     </Button>
+
+        <button
+          type="button"
+          disabled={loading}
+          onClick={handleChatRecruiter}
+          className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-3 rounded-xl font-semibold border border-slate-300 text-slate-700 hover:border-blue-400 hover:text-blue-700 hover:bg-blue-50/80 transition-all duration-300 disabled:opacity-60"
+        >
+          <MessageCircle size={20} />
+          Chat nhà tuyển dụng
+        </button>
 
         {/* Nút Lưu tin */}
         <button
