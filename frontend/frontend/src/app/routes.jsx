@@ -37,6 +37,7 @@ import ManageOrderPage from "../features/companies/pages/ManageOrderPage";
 import AdminDashboardPage from "../features/admin/pages/AdminDashboardPage";
 import CompanySearchPage from "@/features/companies/pages/CompanySearchPage.jsx";
 import CompanyProfilePage from "@/features/companies/pages/CompanyProfilePage.jsx";
+import MatchingWorkspacePage from "@/features/matching/pages/MatchingWorkspacePage.jsx";
 import { Navigate } from "react-router-dom";
 const router = createBrowserRouter([
   {
@@ -130,6 +131,7 @@ const router = createBrowserRouter([
       { path: "payment-result", element: <PaymentResultPage /> },
       { path: "usage", element: <UsagePage /> },
       { path: "orders", element: <ManageOrderPage /> },
+      { path: "candidate-search", element: <MatchingWorkspacePage /> },
     ],
   },
   {
