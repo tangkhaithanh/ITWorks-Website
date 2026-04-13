@@ -117,6 +117,13 @@ const JobHeader = ({ job, isSaved = false, onToggleSave }) => {
 
   if (!job) return null;
 
+  const experienceSummary =
+    job.experience_required !== null && job.experience_required !== undefined
+      ? `${job.experience_required} nam`
+      : Array.isArray(job.experience_levels) && job.experience_levels.length
+        ? job.experience_levels.join(", ")
+        : "Khong yeu cau";
+
   // ────────────────────────────────
   // Giao diện hiển thị
   // ────────────────────────────────

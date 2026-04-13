@@ -1,15 +1,29 @@
-// src/main.ts
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
+import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
-import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  //app.setGlobalPrefix('api');
+  // app.setGlobalPrefix('api');
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Recruitment System API')
+    .setDescription('API documentation for testing endpoints in Swagger UI')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+
+  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('docs', app, swaggerDocument, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -17,7 +31,7 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
       transform: true,
       transformOptions: {
-        enableImplicitConversion: true, // <--- dòng này rất quan trọng
+        enableImplicitConversion: true,
       },
     }),
   );
@@ -25,17 +39,17 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
 
-  // 👇 cho phép FE gọi API kèm cookie
   app.enableCors({
     origin: 'http://localhost:5173',
     credentials: true,
   });
 
-  // 👇 đọc cookie từ request
   app.use(cookieParser());
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`🚀 Server running on http://localhost:${port}`);
+  console.log(`Server running on http://localhost:${port}`);
+  console.log(`Swagger docs available at http://localhost:${port}/docs`);
 }
+
 bootstrap();

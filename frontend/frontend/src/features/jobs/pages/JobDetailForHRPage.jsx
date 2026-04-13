@@ -103,6 +103,31 @@ const formatDate = (v) => {
   }
 };
 
+const formatExperienceRequired = (value) => {
+  if (value === null || value === undefined || value === "") {
+    return "Khong yeu cau cu the";
+  }
+
+  const years = Number(value);
+  if (Number.isNaN(years)) {
+    return String(value);
+  }
+
+  return `${years} nam`;
+};
+
+const getSkillList = (job, fieldName) => {
+  if (Array.isArray(job?.[fieldName])) {
+    return job[fieldName];
+  }
+
+  if (fieldName === "required_skills" && Array.isArray(job?.skills)) {
+    return job.skills;
+  }
+
+  return [];
+};
+
 // =======================
 //  MAIN COMPONENT
 // =======================
@@ -247,6 +272,8 @@ export default function JobDetailForHRPage() {
   const statusMeta = JOB_STATUS_META[job.status] || JOB_STATUS_META.hidden;
   const experienceLevels = (job.experience_levels || []).map((e) => EXPERIENCE_LEVEL_LABELS[e] || e);
   const workModes = (job.work_modes || []).map((w) => WORK_MODE_LABELS[w] || w);
+  const requiredSkills = getSkillList(job, "required_skills");
+  const niceToHaveSkills = getSkillList(job, "nice_to_have_skills");
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-20 font-sans text-slate-600">
@@ -288,6 +315,13 @@ export default function JobDetailForHRPage() {
                   <Clock className="h-3.5 w-3.5" />
                   <span>Cập nhật: {formatDate(job.updated_at)}</span>
                 </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-400">Kinh nghiem:</span>
+                  <span className="font-medium text-slate-700">
+                    {formatExperienceRequired(job.experience_required)}
+                  </span>
+                </div>
+
               </div>
             </div>
 
@@ -392,6 +426,17 @@ export default function JobDetailForHRPage() {
                     {workModes.length > 2 && <span className="text-[10px] text-slate-400">+{workModes.length - 2}</span>}
                   </div>
                 </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block mb-1">Nice-to-have skills</span>
+                  {niceToHaveSkills.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {niceToHaveSkills.slice(0, 3).map((s, i) => (
+                        <span key={i} className="px-1.5 py-0.5 rounded border border-amber-100 bg-amber-50 text-amber-700 text-[10px]">{s}</span>
+                      ))}
+                      {niceToHaveSkills.length > 3 && <span className="text-[10px] text-slate-400 px-1">...</span>}
+                    </div>
+                  ) : <span className="text-xs text-slate-400 italic">--</span>}
+                </div>
               </div>
             </CardBody>
           </Card>
@@ -408,6 +453,12 @@ export default function JobDetailForHRPage() {
 
               <div className="space-y-3">
                 <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block mb-1">So nam kinh nghiem</span>
+                  <span className="text-xs font-medium text-slate-700">
+                    {formatExperienceRequired(job.experience_required)}
+                  </span>
+                </div>
+                <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold block mb-1">Cấp bậc</span>
                   {experienceLevels.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
@@ -420,12 +471,12 @@ export default function JobDetailForHRPage() {
 
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold block mb-1">Kỹ năng chính</span>
-                  {job.skills?.length > 0 ? (
+                  {requiredSkills.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
-                      {job.skills.slice(0, 3).map((s, i) => (
+                      {requiredSkills.slice(0, 3).map((s, i) => (
                         <span key={i} className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px]">{s}</span>
                       ))}
-                      {job.skills.length > 3 && <span className="text-[10px] text-slate-400 px-1">...</span>}
+                      {requiredSkills.length > 3 && <span className="text-[10px] text-slate-400 px-1">...</span>}
                     </div>
                   ) : <span className="text-xs text-slate-400 italic">--</span>}
                 </div>

@@ -8,10 +8,35 @@ import {
   ArrayNotEmpty,
   IsDateString,
   ValidateIf,
+  Min,
 } from 'class-validator';
 import { EmploymentType } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import { WorkMode, ExperienceLevel } from '@prisma/client';
+
+const parseJsonArrayInput = (value: unknown) => {
+  if (typeof value === 'string') {
+    return JSON.parse(value);
+  }
+
+  return value;
+};
+
+const parseBigIntArray = (value: unknown): bigint[] | undefined => {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  const resolved = parseJsonArrayInput(value);
+  if (!Array.isArray(resolved)) {
+    return undefined;
+  }
+
+  return resolved
+    .filter((item) => item !== undefined && item !== null && item !== '')
+    .map((item) => BigInt(item));
+};
+
 export class CreateJobDto {
   // --- Cơ bản ---
   @IsString()
@@ -63,7 +88,7 @@ export class CreateJobDto {
   @ArrayNotEmpty({ message: 'Phải chọn ít nhất một hình thức làm việc' })
   @IsEnum(WorkMode, { each: true, message: 'Hình thức làm việc không hợp lệ' })
   @Transform(({ value }) =>
-    typeof value === 'string' ? JSON.parse(value) : value,
+    parseJsonArrayInput(value),
   )
   work_modes: WorkMode[];
 
@@ -74,9 +99,15 @@ export class CreateJobDto {
     message: 'Cấp độ kinh nghiệm không hợp lệ',
   })
   @Transform(({ value }) =>
-    typeof value === 'string' ? JSON.parse(value) : value,
+    parseJsonArrayInput(value),
   )
   experience_levels: ExperienceLevel[];
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  experience_required?: number;
 
   @IsEnum(EmploymentType, { message: 'Loại công việc không hợp lệ' })
   employment_type: EmploymentType;
@@ -102,8 +133,18 @@ export class CreateJobDto {
   // --- Kỹ năng liên quan ---
   @IsOptional()
   @IsArray()
-  @Transform(({ value }) => value.map((v: string) => BigInt(v)))
+  @Transform(({ value }) => parseBigIntArray(value))
   skill_ids?: bigint[];
+
+  @IsOptional()
+  @IsArray()
+  @Transform(({ value }) => parseBigIntArray(value))
+  required_skill_ids?: bigint[];
+
+  @IsOptional()
+  @IsArray()
+  @Transform(({ value }) => parseBigIntArray(value))
+  nice_to_have_skill_ids?: bigint[];
   // Số lượng cần tuyển
   @IsOptional()
   @Type(() => Number)

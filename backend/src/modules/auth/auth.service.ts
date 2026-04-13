@@ -14,6 +14,7 @@ import { MailService } from '@/common/services/mail/mail.service';
 import { RegisterUserDto } from './dto/register.dto';
 import { Request } from 'express';
 import { env } from 'process';
+import { AiSyncProducer } from '@/modules/ai-sync/ai-sync.producer';
 const ACCESS_EXPIRES_MS = 15 * 60 * 1000; // 15m
 const REFRESH_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000; // 7d
 @Injectable()
@@ -23,6 +24,7 @@ export class AuthService {
     private jwtService: JwtService,
     private mailService: MailService,
     private configService: ConfigService,
+    private readonly aiSyncProducer: AiSyncProducer,
   ) {}
 
   private cookieBase(): CookieOptions {
@@ -175,7 +177,7 @@ export class AuthService {
         },
       });
 
-      await this.prisma.candidate.create({
+      const candidate = await this.prisma.candidate.create({
         data: { user_id: user.id },
       });
 
@@ -189,6 +191,7 @@ export class AuthService {
         link,
         user.full_name,
       );
+      await this.aiSyncProducer.candidateCreated(candidate.id);
       return { message: 'Please check your email to verify account' };
     } catch (error) {
       console.error(error);

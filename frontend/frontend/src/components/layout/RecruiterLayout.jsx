@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Receipt,
   Bell,
+  Search,
 } from "lucide-react";
 import logo from "@/assets/images/logo.png";
 import { Gauge } from "lucide-react";
@@ -30,6 +31,11 @@ const NAV_ITEMS = [
   { path: "/recruiter/company", label: "Hồ sơ công ty", icon: Building2 },
   { path: "/recruiter/orders", label: "Quản lý đơn hàng", icon: Receipt },
   { path: "/recruiter/upgrade-plan", label: "Nâng cấp gói", icon: Crown },
+  {
+    path: "/recruiter/candidate-search",
+    label: "Tìm kiếm & xếp hạng ứng viên",
+    icon: Search,
+  },
 ];
 
 export default function RecruiterLayout() {

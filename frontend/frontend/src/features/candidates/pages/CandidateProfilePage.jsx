@@ -10,13 +10,12 @@ import {
   Briefcase,
   DollarSign,
   GraduationCap,
-  Globe,
   User,
   Edit3,
   Camera,
   Eye,
   Upload,
-} from "lucide-react"; // Cần cài: npm install lucide-react
+} from "lucide-react";
 
 // Giả định các component UI của bạn (giữ nguyên import)
 import { Card, CardBody } from "@/components/common/Card";
@@ -45,11 +44,33 @@ const formatCurrency = (value) => {
   const num = Number(value);
   if (isNaN(num)) return "Thương lượng";
 
-  // nếu là số nguyên → 10 triệu
-  // nếu là số lẻ → 10.5 triệu
   return num % 1 === 0 
     ? `${num} triệu`
     : `${num.toString().replace(".", ",")} triệu`;
+};
+
+const hasValue = (value) => value !== null && value !== undefined && value !== "";
+
+const formatSalaryRange = (min, max, fallback) => {
+  if (hasValue(min) && hasValue(max)) {
+    return `${formatCurrency(min)} - ${formatCurrency(max)}`;
+  }
+  if (hasValue(min)) return `Từ ${formatCurrency(min)}`;
+  if (hasValue(max)) return `Tối đa ${formatCurrency(max)}`;
+  return formatCurrency(fallback);
+};
+
+const formatExperienceYears = (value) => {
+  if (!hasValue(value)) return "Chưa cập nhật";
+  const years = Number(value);
+  if (Number.isNaN(years)) return "Chưa cập nhật";
+  return years <= 0 ? "Chưa có kinh nghiệm" : `${years} năm`;
+};
+
+const formatOpenToWork = (value) => {
+  if (value === true) return "Đang sẵn sàng cho cơ hội mới";
+  if (value === false) return "Tạm thời chưa tìm việc";
+  return "Chưa cập nhật";
 };
 
 const MAPS = {
@@ -58,6 +79,14 @@ const MAPS = {
     onsite: "Tại văn phòng",
     remote: "Làm việc từ xa",
     hybrid: "Linh hoạt (Hybrid)",
+  },
+  educationLevel: {
+    high_school: "Trung học",
+    college: "Cao đẳng",
+    bachelor: "Đại học",
+    master: "Thạc sĩ",
+    doctorate: "Tiến sĩ",
+    other: "Khác",
   },
 };
 
@@ -235,12 +264,16 @@ useEffect(() => {
   const isJobPreferencesEmpty = useMemo(() => {
     if (!candidate) return true;
     return (
-      !candidate.preferred_city &&
-      !candidate.preferred_work_mode &&
-      !candidate.preferred_category &&
-      !candidate.preferred_salary &&
-      !candidate.education &&
-      !candidate.experience &&
+      !hasValue(candidate.preferred_city) &&
+      !hasValue(candidate.preferred_work_mode) &&
+      !hasValue(candidate.preferred_category) &&
+      !hasValue(candidate.preferred_salary) &&
+      !hasValue(candidate.desired_role) &&
+      !hasValue(candidate.desired_salary_min) &&
+      !hasValue(candidate.desired_salary_max) &&
+      !hasValue(candidate.education_level) &&
+      !hasValue(candidate.experience_years) &&
+      typeof candidate.open_to_work !== "boolean" &&
       skillNames.length === 0
     );
   }, [candidate, skillNames]);
@@ -462,9 +495,9 @@ useEffect(() => {
                           Chưa có thông tin nghề nghiệp
                         </h4>
                         <p className="text-slate-500 text-sm max-w-md mx-auto mb-6">
-                          Hãy cập nhật kỹ năng, mức lương và địa điểm
-                          mong muốn để chúng tôi gợi ý những cơ hội tốt
-                          nhất cho bạn.
+                          Hãy cập nhật vị trí mong muốn, kỹ năng, kinh nghiệm
+                          và mức lương kỳ vọng để hệ thống gợi ý các cơ hội
+                          phù hợp hơn cho bạn.
                         </p>
 
                         <Button
@@ -481,6 +514,11 @@ useEffect(() => {
                         {/* Grid thông tin chính */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                           <ProfileInfoItem
+                            icon={Briefcase}
+                            label="Vị trí mong muốn"
+                            value={candidate.desired_role}
+                          />
+                          <ProfileInfoItem
                             icon={MapPin}
                             label="Thành phố làm việc"
                             value={candidate.preferred_city}
@@ -495,9 +533,39 @@ useEffect(() => {
                             }
                           />
                           <ProfileInfoItem
+                            icon={Briefcase}
+                            label="Trạng thái tìm việc"
+                            value={formatOpenToWork(candidate.open_to_work)}
+                          />
+                          <ProfileInfoItem
+                            icon={GraduationCap}
+                            label="Học vấn"
+                            value={
+                              MAPS.educationLevel[
+                                candidate.education_level
+                              ] || candidate.education_level
+                            }
+                          />
+                          <ProfileInfoItem
+                            icon={Briefcase}
+                            label="Kinh nghiệm"
+                            value={formatExperienceYears(
+                              candidate.experience_years
+                            )}
+                          />
+                          <ProfileInfoItem
                             icon={DollarSign}
-                            label="Mức lương kỳ vọng"
+                            label="Mức lương tham chiếu"
                             value={formatCurrency(
+                              candidate.preferred_salary
+                            )}
+                          />
+                          <ProfileInfoItem
+                            icon={DollarSign}
+                            label="Khoảng lương mong muốn"
+                            value={formatSalaryRange(
+                              candidate.desired_salary_min,
+                              candidate.desired_salary_max,
                               candidate.preferred_salary
                             )}
                           />
@@ -556,13 +624,13 @@ useEffect(() => {
           onUpdated={handleUpdatedUser}
         />
         <EditCareerInfoModal
-        open={showCareerModal}
-        onClose={() => setShowCareerModal(false)}
-        candidate={candidate}        // nếu có thì modal sẽ fill data
-        skillOptions={skillOptions}   // bạn tự load skill list
-        categoryOptions={categories}
-        onSuccess={reloadProfile}    // gọi API reload lại
-      />
+          open={showCareerModal}
+          onClose={() => setShowCareerModal(false)}
+          candidate={candidate}
+          skillOptions={skillOptions}
+          categoryOptions={categories}
+          onSuccess={reloadProfile}
+        />
       </div>
     </div>
   );

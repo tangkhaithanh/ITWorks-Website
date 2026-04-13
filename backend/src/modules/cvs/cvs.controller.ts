@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Param,
   Query,
@@ -21,6 +22,7 @@ import { RolesGuard } from '@/common/guards/roles.guard';
 import { User } from '@/common/decorators/user.decorator';
 import { CreateCvDto } from './dto/create-cv.dto';
 import { UpdateCvDto } from './dto/update-cv.dto';
+import { UpdateCvSearchableDto } from './dto/update-cv-searchable.dto';
 import { Role } from '@prisma/client';
 import { QueryCvDto } from './dto/query-cv.dto';
 import { Roles } from '@/common/decorators/roles.decorator';
@@ -91,14 +93,18 @@ export class CvsController {
     return this.cvsService.updateMyCv(userId, BigInt(id), dto);
   }
 
-  // Thay thế file CV (đổi file)
-  @Put(':id/replace')
-  @UseInterceptors(FileInterceptor('file'))
-  async replaceCvFile(
+  // Bật/tắt chế độ searchable cho CV.
+  @Patch(':id/searchable')
+  async updateSearchableStatus(
+    @User('userId') userId: bigint,
     @Param('id', ParseIntPipe) id: number,
-    @UploadedFile() file: Express.Multer.File,
+    @Body() dto: UpdateCvSearchableDto,
   ) {
-    return this.cvsService.replaceFile(BigInt(id), file);
+    return this.cvsService.updateMyCvSearchable(
+      userId,
+      BigInt(id),
+      dto.is_searchable,
+    );
   }
 
   // Xóa CV:
@@ -108,26 +114,6 @@ export class CvsController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.cvsService.deleteMyCv(userId, BigInt(id));
-  }
-
-  @Post('preview')
-  async previewCv(@User('userId') userId: bigint, @Body() dto: CreateCvDto) {
-    return this.cvsService.previewCv(userId, dto);
-  }
-
-  @Get(':id/export/pdf')
-  async exportCvPdf(
-    @User('userId') userId: bigint,
-    @Param('id', ParseIntPipe) id: number,
-    @Res() res: Response,
-  ) {
-    const buffer = await this.cvsService.exportCvPdf(userId, BigInt(id));
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="cv-${id}-${Date.now()}.pdf"`,
-    );
-    res.send(buffer);
   }
 
   @Get('view/:filename')

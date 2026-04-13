@@ -1,9 +1,36 @@
 import { MapPin, Users, Briefcase, ClipboardList, FileBadge } from "lucide-react";
 
+const getSkillList = (job, fieldName) => {
+  if (Array.isArray(job?.[fieldName])) {
+    return job[fieldName];
+  }
+
+  if (fieldName === "required_skills" && Array.isArray(job?.skills)) {
+    return job.skills;
+  }
+
+  return [];
+};
+
+const renderSkillTags = (skills, emptyLabel, tagClassName) => {
+  if (!skills.length) {
+    return <span className="text-slate-500 text-sm">{emptyLabel}</span>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2 mt-1">
+      {skills.map((skill, index) => (
+        <span key={`${skill}-${index}`} className={tagClassName}>
+          {skill}
+        </span>
+      ))}
+    </div>
+  );
+};
+
 const JobExtraInfo = ({ job }) => {
   if (!job) return null;
 
-  // 🌐 Hiển thị hình thức làm việc
   const workModes = Array.isArray(job.work_modes)
     ? job.work_modes
         .map(
@@ -12,53 +39,93 @@ const JobExtraInfo = ({ job }) => {
               {
                 onsite: "Làm việc tại văn phòng",
                 remote: "Làm việc từ xa",
-                hybrid: "Kết hợp (Hybrid)",
+                hybrid: "Hybrid",
               }[mode] || mode
             )
         )
         .join(", ")
-    : "Không rõ";
+    : "Khong ro";
 
-  // 🧾 Dịch loại công việc (employment type)
   const employmentTypeMap = {
     fulltime: "Toàn thời gian",
     parttime: "Bán thời gian",
     intern: "Thực tập",
     contract: "Hợp đồng ngắn hạn",
   };
-  const employmentTypeLabel =
-    employmentTypeMap[job.employment_type] || "Không xác định";
 
-  // 🧠 Cấu hình các mục hiển thị
+  const requiredSkills = getSkillList(job, "required_skills");
+  const niceToHaveSkills = getSkillList(job, "nice_to_have_skills");
+
+  // ── Kinh nghiệm: null/undefined → ẩn hoàn toàn
+  const hasExperience =
+    job.experience_required !== null && job.experience_required !== undefined;
+  const experienceValue = hasExperience
+    ? `${job.experience_required} năm`
+    : null;
+
+  // ── Skills: mảng rỗng → ẩn hoàn toàn
+  const hasRequiredSkills = requiredSkills.length > 0;
+  const hasNiceToHaveSkills = niceToHaveSkills.length > 0;
+
   const infoItems = [
-    { label: "Địa chỉ làm việc", value: job.location.full || "Không rõ", icon: MapPin },
-    { label: "Số lượng tuyển", value: job.number_of_openings || "1", icon: Users },
-    { label: "Hình thức làm việc", value: workModes, icon: Briefcase },
-    { label: "Loại công việc", value: employmentTypeLabel, icon: FileBadge },
     {
-      label: "Yêu cầu kỹ năng",
-      value: (
-        <div className="flex flex-wrap gap-2 mt-1">
-          {Array.isArray(job.skills) && job.skills.length > 0 ? (
-            job.skills.map((s, idx) => {
-              const name = typeof s === "string" ? s : s.skill?.name || s.name || "";
-              return (
-                <span
-                  key={idx}
-                  className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 border border-blue-200 shadow-sm hover:bg-blue-200 hover:-translate-y-[1px] transition-all duration-200"
-                >
-                  {name}
-                </span>
-              );
-            })
-          ) : (
-            <span className="text-slate-500 text-sm">Không yêu cầu</span>
-          )}
-        </div>
-      ),
+      label: "Địa điểm làm việc",
+      value: job.location?.full || job.location_full || "Không rõ",
+      icon: MapPin,
+      show: true,
+    },
+    {
+      label: "Số lượng tuyển",
+      value: job.number_of_openings || "1",
+      icon: Users,
+      show: true,
+    },
+    {
+      label: "Hình thức làm việc",
+      value: workModes,
+      icon: Briefcase,
+      show: true,
+    },
+    {
+      label: "Loại công việc",
+      value: employmentTypeMap[job.employment_type] || "Không xác định",
+      icon: FileBadge,
+      show: true,
+    },
+    {
+      label: "Kinh nghiệm tối thiểu",
+      value: experienceValue,
       icon: ClipboardList,
+      show: hasExperience,
+    },
+    {
+      label: "Kỹ năng bắt buộc",
+      value: hasRequiredSkills
+        ? renderSkillTags(
+            requiredSkills,
+            "",
+            "px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 border border-blue-200 shadow-sm"
+          )
+        : null,
+      icon: ClipboardList,
+      show: hasRequiredSkills,
+    },
+    {
+      label: "Kỹ năng ưu tiên",
+      value: hasNiceToHaveSkills
+        ? renderSkillTags(
+            niceToHaveSkills,
+            "",
+            "px-3 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-200 shadow-sm"
+          )
+        : null,
+      icon: ClipboardList,
+      show: hasNiceToHaveSkills,
     },
   ];
+
+  // Chỉ render những item có show: true
+  const visibleItems = infoItems.filter((item) => item.show);
 
   return (
     <div className="flex flex-col bg-white rounded-2xl shadow-md border border-slate-200 p-6">
@@ -67,14 +134,16 @@ const JobExtraInfo = ({ job }) => {
       </h3>
 
       <div className="space-y-4">
-        {infoItems.map(({ label, value, icon: Icon }) => (
+        {visibleItems.map(({ label, value, icon: Icon }) => (
           <div key={label} className="flex items-start gap-3">
             <div className="p-2.5 bg-blue-50 rounded-xl flex items-center justify-center shadow-sm">
               <Icon size={18} className="text-blue-600" />
             </div>
             <div className="flex-1">
               <p className="text-xs font-semibold text-slate-500">{label}</p>
-              <div className="text-sm font-medium text-slate-800 leading-relaxed">{value}</div>
+              <div className="text-sm font-medium text-slate-800 leading-relaxed">
+                {value}
+              </div>
             </div>
           </div>
         ))}

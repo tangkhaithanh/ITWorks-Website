@@ -68,20 +68,34 @@ enum Gender {
 // 3. Candidates
 // ===============================
 model Candidate {
-  id                  BigInt           @id @default(autoincrement())
-  user_id             BigInt           @unique
-  // Preferences for matching
+  id            BigInt @id @default(autoincrement())
+  user_id       BigInt @unique
+  ai_service_id Int?   @unique
+
+  // ====== EXISTING (GIỮ NGUYÊN) ======
   preferred_city      String?
   preferred_work_mode WorkMode?
   preferred_category  BigInt?
   preferred_salary    Float?
-  created_at          DateTime         @default(now())
-  updated_at          DateTime         @updatedAt
-  user                User             @relation(fields: [user_id], references: [id])
-  cvs                 Cv[]
-  applications        Application[]
-  saved_jobs          SavedJob[]
-  skills              CandidateSkill[]
+
+  // ====== NEW (THÊM VÀO ĐỂ SYNC AI) ======
+
+  education_level  String?
+  experience_years Float?
+
+  desired_role       String?
+  desired_salary_min Float?
+  desired_salary_max Float?
+
+  open_to_work Boolean?         @default(true)
+  user         User             @relation(fields: [user_id], references: [id])
+  cvs          Cv[]
+  applications Application[]
+  saved_jobs   SavedJob[]
+  skills       CandidateSkill[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 
 // ===============================
@@ -96,12 +110,13 @@ model Industry {
 model Company {
   id                      BigInt               @id @default(autoincrement())
   account_id              BigInt               @unique
+  ai_service_id           Int?                 @unique
   // Profile
   name                    String
   logo_url                String?
   logo_public_id          String?
   website                 String?
-  description             String?              // Đã xóa @db.LongText (Postgres mặc định String là Text)
+  description             String? // Đã xóa @db.LongText (Postgres mặc định String là Text)
   // Location & Size
   headquarters            String?
   address                 String?
@@ -135,7 +150,7 @@ model Company {
 }
 
 model CompanySkill {
-  id         BigInt @id @default(autoincrement())
+  id         BigInt  @id @default(autoincrement())
   company_id BigInt
   skill_id   BigInt
   company    Company @relation(fields: [company_id], references: [id])
@@ -171,42 +186,44 @@ enum CompanyStatus {
 // 5. Jobs
 // ===============================
 model Job {
-  id                 BigInt              @id @default(autoincrement())
-  company_id         BigInt
-  category_id        BigInt
-  title              String
-  salary_min         Float?
-  salary_max         Float?
-  negotiable         Boolean             @default(false)
+  id                  BigInt              @id @default(autoincrement())
+  company_id          BigInt
+  category_id         BigInt
+  ai_service_id       Int?                @unique
+  title               String
+  salary_min          Float?
+  salary_max          Float?
+  experience_required Float?
+  negotiable          Boolean             @default(false)
   // 🗺️ Thông tin địa điểm
-  location_city      String
-  location_district  String?
-  location_ward      String?
-  location_street    String?
-  location_full      String?
-  latitude           Float?
-  longitude          Float?
+  location_city       String
+  location_district   String?
+  location_ward       String?
+  location_street     String?
+  location_full       String?
+  latitude            Float?
+  longitude           Float?
   // 💼 Hình thức & cấp độ làm việc
-  work_modes         Json
-  experience_levels  Json
+  work_modes          Json
+  experience_levels   Json
   // 🧾 Loại việc & trạng thái
-  employment_type    EmploymentType
-  status             JobStatus           @default(active)
-  deadline           DateTime?
-  created_at         DateTime            @default(now())
-  updated_at         DateTime            @updatedAt
+  employment_type     EmploymentType
+  status              JobStatus           @default(active)
+  deadline            DateTime?
+  created_at          DateTime            @default(now())
+  updated_at          DateTime            @updatedAt
   // Thông tin thống kê
-  number_of_openings Int                 @default(1)
-  views_count        Int                 @default(0)
+  number_of_openings  Int                 @default(1)
+  views_count         Int                 @default(0)
   // 🔗 Quan hệ
-  company            Company             @relation(fields: [company_id], references: [id])
-  category           JobCategory?        @relation(fields: [category_id], references: [id])
-  details            JobDetail?
-  applications       Application[]
-  saved_jobs         SavedJob[]
-  skills             JobSkill[]
-  boosts             JobBoost[]
-  creditTransactions CreditTransaction[]
+  company             Company             @relation(fields: [company_id], references: [id])
+  category            JobCategory?        @relation(fields: [category_id], references: [id])
+  details             JobDetail?
+  applications        Application[]
+  saved_jobs          SavedJob[]
+  skills              JobSkill[]
+  boosts              JobBoost[]
+  creditTransactions  CreditTransaction[]
 }
 
 model JobDetail {
@@ -224,12 +241,18 @@ model Skill {
   company_skills CompanySkill[]
 }
 
+enum JobSkillType {
+  REQUIRED
+  NICE_TO_HAVE
+}
+
 model JobSkill {
-  id       BigInt @id @default(autoincrement())
+  id       BigInt       @id @default(autoincrement())
   job_id   BigInt
   skill_id BigInt
-  job      Job    @relation(fields: [job_id], references: [id])
-  skill    Skill  @relation(fields: [skill_id], references: [id])
+  type     JobSkillType @default(REQUIRED)
+  job      Job          @relation(fields: [job_id], references: [id])
+  skill    Skill        @relation(fields: [skill_id], references: [id])
 }
 
 enum EmploymentType {
@@ -282,21 +305,23 @@ model JobCategory {
 // 7. CVs
 // ===============================
 model Cv {
-  id           BigInt        @id @default(autoincrement())
-  candidate_id BigInt
-  title        String
-  file_url     String?
-  file_public_id String?
-  template_id  BigInt?
+  id               BigInt        @id @default(autoincrement())
+  candidate_id     BigInt
+  ai_service_id    Int?          @unique
+  title            String
+  file_url         String?
+  file_public_id   String?
+  template_id      BigInt?
   template_version Int?
-  content      Json?
-  type         CvType        @default(ONLINE)
-  is_deleted   Boolean       @default(false)
-  created_at   DateTime      @default(now())
-  updated_at   DateTime      @updatedAt
-  candidate    Candidate     @relation(fields: [candidate_id], references: [id])
-  template     CvTemplate?   @relation(fields: [template_id], references: [id])
-  applications Application[]
+  content          Json?
+  type             CvType        @default(ONLINE)
+  is_deleted       Boolean       @default(false)
+  is_searchable    Boolean       @default(false)
+  created_at       DateTime      @default(now())
+  updated_at       DateTime      @updatedAt
+  candidate        Candidate     @relation(fields: [candidate_id], references: [id])
+  template         CvTemplate?   @relation(fields: [template_id], references: [id])
+  applications     Application[]
 }
 
 enum CvType {
@@ -308,18 +333,18 @@ enum CvType {
 // 8. CV Templates
 // ===============================
 model CvTemplate {
-  id          BigInt   @id @default(autoincrement())
-  code        String   @unique
-  name        String
-  version     Int      @default(1)
-  description String?
-  preview_url String?
+  id            BigInt   @id @default(autoincrement())
+  code          String   @unique
+  name          String
+  version       Int      @default(1)
+  description   String?
+  preview_url   String?
   layout_schema Json
-  style_tokens Json?
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  cvs         Cv[]
+  style_tokens  Json?
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  cvs           Cv[]
 
   @@unique([code, version])
 }
@@ -463,7 +488,7 @@ model Plan {
   job_limit          Int
   credit_amount      Int
   duration_days      Int
-  features           String?              // Đã xóa @db.LongText
+  features           String? // Đã xóa @db.LongText
   is_hidden          Boolean              @default(false)
   companyPlans       CompanyPlan[]
   histories          CompanyPlanHistory[]

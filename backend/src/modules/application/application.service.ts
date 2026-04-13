@@ -10,14 +10,16 @@ import { CreateApplicationDto } from './dto/create-application.dto';
 import { ApplicationStatus } from '@prisma/client';
 import { MailService } from '@/common/services/mail/mail.service';
 import { CvHelper } from '@/common/helpers/cv.helper';
-import {NotificationsService} from '@/modules/notifications/notifications.service';
+import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { NotificationType } from '@prisma/client';
+import { AiSyncProducer } from '@/modules/ai-sync/ai-sync.producer';
 @Injectable()
 export class ApplicationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
+    private readonly aiSyncProducer: AiSyncProducer,
   ) {}
   // === Chức năng dành cho candidate==========
   // Lấy candidate_id từ userId
@@ -39,7 +41,7 @@ export class ApplicationService {
 
       // Lấy candidate và fullname:
       const candidate = await this.prisma.candidate.findFirst({
-        where: {user_id: userId } ,
+        where: { user_id: userId },
         select: {
           id: true,
           user: {
@@ -104,6 +106,9 @@ export class ApplicationService {
           },
         });
       }
+
+      await this.aiSyncProducer.applicationApplied(app.id);
+
       return app;
     } catch (error) {
       console.error('❌ Lỗi khi ứng tuyển:', error);
@@ -363,7 +368,6 @@ export class ApplicationService {
     }
   }
   async getApplicationDetailByCompany(accountId: bigint, appId: bigint) {
-
     // Kiểm tra recruiter thuộc công ty nào
     const company = await this.prisma.company.findUnique({
       where: { account_id: accountId },

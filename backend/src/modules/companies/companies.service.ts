@@ -4,6 +4,7 @@ import {
   BadRequestException,
   InternalServerErrorException,
   HttpException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CloudinaryService } from '@/modules/cloudinary/cloudinary.service';
@@ -15,13 +16,17 @@ import { JobsService } from '@/modules/jobs/jobs.service';
 import { AdminGetCompaniesDto } from './dto/admin-get-companies.dto';
 import { JobStatus } from '@prisma/client';
 import { PlanStatus } from '@prisma/client';
+import { AiSyncProducer } from '@/modules/ai-sync/ai-sync.producer';
 @Injectable()
 export class CompaniesService {
+  private readonly logger = new Logger(CompaniesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly cloudinary: CloudinaryService,
     private readonly esCompany: ElasticsearchCompanyService,
     private readonly jobsService: JobsService,
+    private readonly aiSyncProducer: AiSyncProducer,
   ) {}
   async create(
     accountId: bigint,
@@ -297,11 +302,18 @@ export class CompaniesService {
   // Hàm cho admin:
   async approve(companyId: bigint) {
     try {
+      this.logger.log(
+        `[APPROVE_COMPANY] Start companyId=${companyId.toString()}`,
+      );
       const company = await this.prisma.company.findUnique({
         where: { id: companyId },
       });
 
       if (!company) throw new NotFoundException('Không tìm thấy công ty');
+
+      this.logger.log(
+        `[APPROVE_COMPANY] Loaded companyId=${companyId.toString()} status=${company.status} aiServiceId=${company.ai_service_id ?? 'null'}`,
+      );
 
       if (company.status !== CompanyStatus.pending) {
         throw new BadRequestException(
@@ -316,6 +328,13 @@ export class CompaniesService {
 
       const fullCompany = await this.getFullCompany(companyId);
       await this.esCompany.indexCompany(fullCompany);
+      this.logger.log(
+        `[APPROVE_COMPANY] Indexed Elasticsearch companyId=${companyId.toString()}`,
+      );
+      await this.aiSyncProducer.companyApproved(companyId);
+      this.logger.log(
+        `[APPROVE_COMPANY] Queued AI sync companyId=${companyId.toString()}`,
+      );
 
       return updated;
     } catch (error) {
@@ -446,7 +465,7 @@ export class CompaniesService {
             salary_max: true,
             negotiable: true,
             location_city: true,
-            created_at:true,
+            created_at: true,
             // ✅ THÊM PHẦN NÀY
             category: {
               select: {

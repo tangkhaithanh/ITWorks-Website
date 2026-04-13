@@ -44,6 +44,18 @@ const EMPLOYMENT_TYPE_OPTIONS = [
   { value: "contract", label: "Hợp đồng (Contract)" },
 ];
 
+const toStringArray = (value) =>
+  Array.isArray(value) ? value.map((item) => String(item)) : [];
+
+const toOptionalNumber = (value) => {
+  if (value === "" || value === null || value === undefined) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+};
+
 export default function CreateJobPage() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -62,10 +74,12 @@ export default function CreateJobPage() {
     location_street: "",
     work_modes: [],
     experience_levels: [],
+    experience_required: "",
     deadline: "",
     description: "",
     requirements: "",
-    skill_ids: [],
+    required_skill_ids: [],
+    nice_to_have_skill_ids: [],
     number_of_openings: 1,
   });
 
@@ -155,14 +169,18 @@ export default function CreateJobPage() {
           location_street: data.location_street || "",
           work_modes: data.work_modes || [],
           experience_levels: data.experience_levels || [],
+          experience_required:
+            data.experience_required !== null &&
+            data.experience_required !== undefined
+              ? String(data.experience_required)
+              : "",
           deadline: data.deadline ? data.deadline.split("T")[0] : "",
           description: data.details?.description ?? data.description ?? "",
           requirements: data.details?.requirements ?? data.requirements ?? "",
-          skill_ids: Array.isArray(data.skill_ids)
-            ? data.skill_ids.map((v) => String(v))
-            : data.skills
-              ? data.skills.map((s) => String(s.id))
-              : [],
+          required_skill_ids: toStringArray(
+            data.required_skill_ids ?? data.skill_ids
+          ),
+          nice_to_have_skill_ids: toStringArray(data.nice_to_have_skill_ids),
           number_of_openings: data.number_of_openings ?? 1,
         }));
         setSalaryType(data.negotiable ? "negotiable" : "range");
@@ -252,22 +270,21 @@ export default function CreateJobPage() {
       setSaving(true);
       const payload = {
         ...form,
-        location_city_id: form.location_city_id ? Number(form.location_city_id) : undefined,
-        location_ward_id: form.location_ward_id ? Number(form.location_ward_id) : undefined,
-        number_of_openings:
-            form.number_of_openings === "" || form.number_of_openings === null
-                ? undefined
-                : Number(form.number_of_openings),
+        location_city_id: toOptionalNumber(form.location_city_id),
+        location_ward_id: toOptionalNumber(form.location_ward_id),
+        experience_required: toOptionalNumber(form.experience_required),
+        number_of_openings: toOptionalNumber(form.number_of_openings),
 
         work_modes: form.work_modes || [],
         experience_levels: form.experience_levels || [],
-        skill_ids: form.skill_ids || [],
+        required_skill_ids: form.required_skill_ids || [],
+        nice_to_have_skill_ids: form.nice_to_have_skill_ids || [],
       };
 
       if (salaryType === "negotiable") {
         payload.negotiable = true;
-        delete payload.salary_min;
-        delete payload.salary_max;
+        payload.salary_min = null;
+        payload.salary_max = null;
       } else {
         payload.negotiable = false;
         if (payload.salary_min === "") delete payload.salary_min;
@@ -275,6 +292,7 @@ export default function CreateJobPage() {
       }
 
       if (!payload.deadline) delete payload.deadline;
+      if (payload.experience_required === undefined) delete payload.experience_required;
       if (!payload.number_of_openings) delete payload.number_of_openings;
 
       if (isEdit) {
@@ -493,6 +511,16 @@ export default function CreateJobPage() {
                     onChange={handleChange}
                   />
                 </div>
+                <TextInput
+                  label="Experience required (years)"
+                  name="experience_required"
+                  type="number"
+                  min={0}
+                  step="0.5"
+                  value={form.experience_required}
+                  onChange={handleChange}
+                  placeholder="VD: 2"
+                />
               </div>
             </div>
 
@@ -563,16 +591,25 @@ export default function CreateJobPage() {
               </h4>
               <div className="space-y-5">
                 <MultiSelect
-                  label="Kỹ năng chuyên môn"
-                  name="skill_ids"
-                  value={form.skill_ids}
+                  label="Required skills"
+                  name="required_skill_ids"
+                  value={form.required_skill_ids}
                   onChange={handleChange}
                   options={skills}
                   placeholder="Chọn kỹ năng..."
                 />
 
                 <MultiSelect
-                  label="Cấp độ kinh nghiệm"
+                  label="Nice-to-have skills"
+                  name="nice_to_have_skill_ids"
+                  value={form.nice_to_have_skill_ids}
+                  onChange={handleChange}
+                  options={skills}
+                  placeholder="Chá»n ká»¹ nÄƒng Æ°u tiÃªn..."
+                />
+
+                <MultiSelect
+                  label="Experience levels"
                   name="experience_levels"
                   value={form.experience_levels}
                   onChange={handleChange}

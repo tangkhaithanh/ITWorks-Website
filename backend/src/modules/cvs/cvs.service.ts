@@ -14,7 +14,7 @@ import { CvType } from '@prisma/client';
 import { CvHelper } from '@/common/helpers/cv.helper';
 import { CvTemplatesService } from '@/modules/cv-templates/cv-templates.service';
 import { CvRenderingService } from './cv-rendering.service';
-import PDFDocument from 'pdfkit';
+import { AiSyncProducer } from '@/modules/ai-sync/ai-sync.producer';
 @Injectable()
 export class CvsService {
   private readonly logger = new Logger(CvsService.name);
@@ -23,7 +23,8 @@ export class CvsService {
     private readonly cloudinary: CloudinaryService,
     private readonly cvTemplatesService: CvTemplatesService,
     private readonly cvRenderingService: CvRenderingService,
-  ) {}
+    private readonly aiSyncProducer: AiSyncProducer,
+  ) { }
 
   private async getCandidateIdByUserId(userId: bigint): Promise<bigint> {
     const candidate = await this.prisma.candidate.findUnique({
@@ -112,10 +113,10 @@ export class CvsService {
           include:
             type === CvType.ONLINE // lấy dữ liệu từ bảng CVTemplate nếu là CV online
               ? {
-                  template: {
-                    select: { id: true, name: true, preview_url: true },
-                  },
-                }
+                template: {
+                  select: { id: true, name: true, preview_url: true },
+                },
+              }
               : undefined,
         }),
         this.prisma.cv.count({
@@ -191,6 +192,54 @@ export class CvsService {
     });
   }
 
+  async updateMyCvSearchable(
+    userId: bigint,
+    cvId: bigint,
+    isSearchable: boolean,
+  ) {
+    const candidateId = await this.getCandidateIdByUserId(userId);
+    // Kiểm tra sự tồn tại của CV:
+    const exists = await this.prisma.cv.findFirst({
+      where: {
+        id: cvId,
+        candidate_id: candidateId,
+        is_deleted: false,
+      },
+      select: { id: true },
+    });
+
+    if (!exists) {
+      throw new NotFoundException('CV không tồn tại.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      if (isSearchable) {
+        await tx.cv.updateMany({
+          where: {
+            candidate_id: candidateId,
+            is_deleted: false,
+            id: { not: cvId },
+            is_searchable: true,
+          },
+          data: { is_searchable: false },
+        });
+      }
+
+      await tx.cv.update({
+        where: { id: cvId },
+        data: { is_searchable: isSearchable },
+      });
+    });
+
+    await this.aiSyncProducer.cvSearchableChanged(
+      candidateId,
+      cvId,
+      isSearchable,
+    );
+
+    return { success: true };
+  }
+
   // Xóa CV (soft delete)
   async deleteMyCv(userId: bigint, cvId: bigint) {
     const candidateId = await this.getCandidateIdByUserId(userId);
@@ -237,8 +286,7 @@ export class CvsService {
 
     const candidateId = await this.getCandidateIdByUserId(userId);
     const uploaded = await this.cloudinary.uploadDocument(file, 'cvs');
-
-    return this.prisma.cv.create({
+    const cv = await this.prisma.cv.create({
       data: {
         candidate_id: candidateId,
         title: overrideTitle || file.originalname,
@@ -247,126 +295,10 @@ export class CvsService {
         type: CvType.FILE,
       },
     });
-  }
 
-  // Trường hợp người dùng thay đổi file CV đã upload
-  async replaceFile(cvId: bigint, file: Express.Multer.File) {
-    if (!file) throw new BadRequestException('Không có file đính kèm.');
+    await this.aiSyncProducer.cvUploaded(cv.id);
 
-    const cv = await this.prisma.cv.findFirst({
-      where: { id: cvId, is_deleted: false },
-    });
-    if (!cv) throw new NotFoundException('CV không tồn tại.');
-
-    // 🧹 Nếu CV có file cũ => xóa trên Cloudinary
-    if (cv.file_public_id) {
-      try {
-        await this.cloudinary.deleteFile(cv.file_public_id);
-      } catch (err) {
-        console.warn(`⚠️ Lỗi khi xóa file cũ trên Cloudinary: ${err.message}`);
-      }
-    }
-
-    // 📤 Upload file mới
-    const uploaded = await this.cloudinary.uploadDocument(file, 'cvs');
-
-    return this.prisma.cv.update({
-      where: { id: cvId },
-      data: {
-        file_url: uploaded.secure_url,
-        file_public_id: uploaded.public_id,
-      },
-    });
-  }
-
-  async previewCv(userId: bigint, dto: CreateCvDto) {
-    await this.getCandidateIdByUserId(userId);
-    if (!dto.template_id) {
-      throw new BadRequestException('template_id la bat buoc de preview CV');
-    }
-    const template = await this.cvTemplatesService.getTemplateById(
-      BigInt(dto.template_id),
-    );
-    const model = this.cvRenderingService.normalizeModel(
-      template,
-      (dto.content as any) ?? {},
-    );
-    return {
-      html: this.cvRenderingService.renderHtml(model),
-      model,
-    };
-  }
-
-  async exportCvPdf(userId: bigint, cvId: bigint) {
-    const candidateId = await this.getCandidateIdByUserId(userId);
-    const cv = await this.prisma.cv.findFirst({
-      where: {
-        id: cvId,
-        candidate_id: candidateId,
-        is_deleted: false,
-        type: CvType.ONLINE,
-      },
-    });
-    if (!cv || !cv.template_id) {
-      throw new NotFoundException('Khong tim thay CV online hop le de export');
-    }
-    const template = await this.cvTemplatesService.getTemplateById(cv.template_id);
-    const model = this.cvRenderingService.normalizeModel(
-      template,
-      (cv.content as Record<string, unknown>) ?? {},
-    );
-    const personal = (model.content.personal as Record<string, string>) ?? {};
-
-    return await new Promise<Buffer>((resolve, reject) => {
-      const doc = new PDFDocument({ margin: 40 });
-      const chunks: Buffer[] = [];
-
-      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
-
-      doc.fontSize(20).text(personal.fullName || cv.title);
-      doc.moveDown(0.5);
-      doc
-        .fontSize(11)
-        .fillColor('#64748b')
-        .text([personal.email, personal.phone].filter(Boolean).join(' | '));
-      doc.moveDown();
-
-      const writeList = (title: string, items: string[]) => {
-        doc.fillColor('#0f172a').fontSize(14).text(title);
-        doc.moveDown(0.2);
-        if (!items.length) {
-          doc.fontSize(11).text('-');
-        } else {
-          items.forEach((item) => doc.fontSize(11).text(`- ${item}`));
-        }
-        doc.moveDown();
-      };
-
-      const education =
-        ((model.content.education as Array<Record<string, string>>) ?? []).map(
-          (item) =>
-            `${item.school || ''} - ${item.degree || ''} (${item.startDate || ''} - ${item.endDate || ''})`,
-        );
-      const experience =
-        ((model.content.experience as Array<Record<string, string>>) ?? []).map(
-          (item) =>
-            `${item.company || ''} - ${item.role || ''}: ${item.description || ''}`,
-        );
-      const skills = (model.content.skills as string[]) ?? [];
-      const projects =
-        ((model.content.projects as Array<Record<string, string>>) ?? []).map(
-          (item) => `${item.name || ''}: ${item.description || ''}`,
-        );
-
-      writeList('Education', education);
-      writeList('Experience', experience);
-      writeList('Skills', skills);
-      writeList('Projects', projects);
-
-      doc.end();
-    });
+    return cv;
   }
 
   async getPdfBuffer(filename: string): Promise<Buffer> {

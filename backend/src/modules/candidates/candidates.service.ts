@@ -7,10 +7,14 @@ import {
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
+import { AiSyncProducer } from '@/modules/ai-sync/ai-sync.producer';
 
 @Injectable()
 export class CandidatesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly aiSyncProducer: AiSyncProducer,
+  ) {}
 
   // Lấy hồ sơ ứng vien theo user ID
   async getCandidateByUserId(userId: bigint) {
@@ -77,27 +81,43 @@ export class CandidatesService {
   // Lưu thông tin candidate:
   async create(userId: bigint, dto: CreateCandidateDto) {
     try {
-      const candidate = await this.prisma.candidate.create({
-        data: {
-          user_id: userId,
-          preferred_city: dto.preferred_city,
-          preferred_work_mode: dto.preferred_work_mode,
-          preferred_category: dto.preferred_category
-            ? BigInt(dto.preferred_category)
-            : undefined,
-          preferred_salary: dto.preferred_salary,
-        },
+      const updateData = this.buildCandidatePayload(dto);
+      const existingCandidate = await this.prisma.candidate.findUnique({
+        where: { user_id: userId },
       });
 
-      // Handle skills
-      if (dto.skills?.length) {
-        await this.prisma.candidateSkill.createMany({
-          data: dto.skills.map((skillId) => ({
-            candidate_id: candidate.id,
-            skill_id: Number(skillId),
-          })),
-        });
-      }
+      const candidate = await this.prisma.$transaction(async (tx) => {
+        const savedCandidate = existingCandidate
+          ? await tx.candidate.update({
+              where: { id: existingCandidate.id },
+              data: updateData,
+            })
+          : await tx.candidate.create({
+              data: {
+                user_id: userId,
+                ...updateData,
+              },
+            });
+
+        if (dto.skills !== undefined) {
+          await tx.candidateSkill.deleteMany({
+            where: { candidate_id: savedCandidate.id },
+          });
+
+          if (dto.skills.length > 0) {
+            await tx.candidateSkill.createMany({
+              data: dto.skills.map((skillId) => ({
+                candidate_id: savedCandidate.id,
+                skill_id: Number(skillId),
+              })),
+            });
+          }
+        }
+
+        return savedCandidate;
+      });
+
+      await this.aiSyncProducer.candidateCreated(candidate.id);
 
       return {
         message: 'Tạo hồ sơ ứng viên thành công',
@@ -114,58 +134,46 @@ export class CandidatesService {
   async update(id: bigint, dto: UpdateCandidateDto) {
     try {
       const candidate = await this.prisma.candidate.findUnique({
-        where: { id },
+        where: { user_id: id },
       });
 
       if (!candidate) throw new NotFoundException('Không tìm thấy ứng viên');
 
-      // Tạo payload update (loại bỏ null / undefined)
-      const updatePayload: any = { ...dto };
+      const updatePayload = this.buildCandidatePayload(dto);
 
-      Object.keys(updatePayload).forEach((key) => {
-        const val = updatePayload[key];
-
-        if (val === undefined || val === null) {
-          delete updatePayload[key];
-        }
-      });
-
-      // Xử lý BigInt field
-      if (updatePayload.preferred_category !== undefined) {
-        updatePayload.preferred_category = BigInt(
-          updatePayload.preferred_category,
-        );
-      }
-
-      // Xóa skills khỏi payload vì xử lý riêng
-      delete updatePayload.skills;
-
-      // Update candidate
-      if (Object.keys(updatePayload).length > 0) {
-        await this.prisma.candidate.update({
-          where: { id },
-          data: updatePayload,
-        });
-      }
-
-      // SKILLS processing
-      if (dto.skills !== undefined) {
-        await this.prisma.candidateSkill.deleteMany({
-          where: { candidate_id: id },
-        });
-
-        if (dto.skills.length > 0) {
-          await this.prisma.candidateSkill.createMany({
-            data: dto.skills.map((skillId) => ({
-              candidate_id: id,
-              skill_id: Number(skillId),
-            })),
+      const updatedCandidate = await this.prisma.$transaction(async (tx) => {
+        if (Object.keys(updatePayload).length > 0) {
+          await tx.candidate.update({
+            where: { id: candidate.id },
+            data: updatePayload,
           });
         }
-      }
+
+        if (dto.skills !== undefined) {
+          await tx.candidateSkill.deleteMany({
+            where: { candidate_id: candidate.id },
+          });
+
+          if (dto.skills.length > 0) {
+            await tx.candidateSkill.createMany({
+              data: dto.skills.map((skillId) => ({
+                candidate_id: candidate.id,
+                skill_id: Number(skillId),
+              })),
+            });
+          }
+        }
+
+        return tx.candidate.findUnique({
+          where: { id: candidate.id },
+        });
+      });
+
+      await this.aiSyncProducer.candidateUpdated(candidate.id);
+
       return {
         message: 'Cập nhật hồ sơ ứng viên thành công',
-        candidate,
+        candidate: updatedCandidate,
       };
     } catch (error) {
       console.error('❌ Lỗi khi cập nhật hồ sơ ứng viên:', error);
@@ -212,5 +220,54 @@ export class CandidatesService {
         preferred_category_name: preferredCategoryName,
       },
     };
+  }
+
+  private buildCandidatePayload(dto: CreateCandidateDto | UpdateCandidateDto) {
+    const updatePayload: any = {};
+
+    if (dto.preferred_city !== undefined) {
+      updatePayload.preferred_city = dto.preferred_city;
+    }
+
+    if (dto.preferred_work_mode !== undefined) {
+      updatePayload.preferred_work_mode = dto.preferred_work_mode;
+    }
+
+    if (dto.preferred_salary !== undefined) {
+      updatePayload.preferred_salary = dto.preferred_salary;
+    }
+
+    if (dto.preferred_category !== undefined) {
+      updatePayload.preferred_category =
+        dto.preferred_category === null
+          ? null
+          : BigInt(dto.preferred_category);
+    }
+
+    if (dto.desired_role !== undefined) {
+      updatePayload.desired_role = dto.desired_role;
+    }
+
+    if (dto.desired_salary_min !== undefined) {
+      updatePayload.desired_salary_min = dto.desired_salary_min;
+    }
+
+    if (dto.desired_salary_max !== undefined) {
+      updatePayload.desired_salary_max = dto.desired_salary_max;
+    }
+
+    if (dto.experience_years !== undefined) {
+      updatePayload.experience_years = dto.experience_years;
+    }
+
+    if (dto.education_level !== undefined) {
+      updatePayload.education_level = dto.education_level;
+    }
+
+    if (dto.open_to_work !== undefined) {
+      updatePayload.open_to_work = dto.open_to_work;
+    }
+
+    return updatePayload;
   }
 }

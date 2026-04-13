@@ -11,8 +11,9 @@ import { LocationService } from '../location/location.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { JobStatus } from '@prisma/client';
+import { JobSkillType, JobStatus } from '@prisma/client';
 import { JobEventsQueue } from './queues/job-events.queue';
+import { AiSyncProducer } from '@/modules/ai-sync/ai-sync.producer';
 @Injectable()
 export class JobsService {
   private readonly logger = new Logger(JobsService.name);
@@ -21,6 +22,7 @@ export class JobsService {
     private readonly locationService: LocationService,
     private readonly jobEventsQueue: JobEventsQueue,
     private readonly esJob: ElasticsearchJobService,
+    private readonly aiSyncProducer: AiSyncProducer,
   ) {}
   // CREATE JOB (Recruiter) - ✅ Atomic quota like consumeJobQuota
   async create(accountId: bigint, dto: CreateJobDto) {
@@ -29,6 +31,7 @@ export class JobsService {
       const jobId = await this.createJobCore(accountId, dto);
       // 2) Đưa vào queue:
       await this.jobEventsQueue.jobCreated(jobId);
+      await this.aiSyncProducer.jobCreated(jobId);
 
       return {
         message: 'Tạo công việc thành công',
@@ -50,8 +53,20 @@ export class JobsService {
   }
   // Core create:
   private async createJobCore(accountId: bigint, dto: CreateJobDto) {
-    const { skill_ids, description, requirements, ...data } = dto;
+    const {
+      skill_ids,
+      required_skill_ids,
+      nice_to_have_skill_ids,
+      description,
+      requirements,
+      ...data
+    } = dto;
     const { category_id, ...rest } = data;
+    const normalizedSkills = this.normalizeJobSkillInput({
+      skill_ids,
+      required_skill_ids,
+      nice_to_have_skill_ids,
+    });
 
     // 1) Lấy company
     const company = await this.prisma.company.findUnique({
@@ -75,6 +90,7 @@ export class JobsService {
     });
 
     const now = new Date();
+    const negotiable = rest.negotiable ?? false;
 
     // 3) Transaction core
     const createdJobId = await this.prisma.$transaction(async (tx) => {
@@ -97,9 +113,10 @@ export class JobsService {
           company: { connect: { id: company.id } },
 
           title: rest.title,
-          salary_min: rest.salary_min,
-          salary_max: rest.salary_max,
-          negotiable: rest.negotiable,
+          salary_min: negotiable ? null : rest.salary_min ?? null,
+          salary_max: negotiable ? null : rest.salary_max ?? null,
+          experience_required: rest.experience_required,
+          negotiable,
           employment_type: rest.employment_type,
           work_modes: rest.work_modes,
           experience_levels: rest.experience_levels,
@@ -132,12 +149,10 @@ export class JobsService {
         },
       });
 
-      if (skill_ids?.length) {
+      const jobSkills = this.buildJobSkillCreateData(job.id, normalizedSkills);
+      if (jobSkills.length) {
         await tx.jobSkill.createMany({
-          data: skill_ids.map((id) => ({
-            job_id: job.id,
-            skill_id: id,
-          })),
+          data: jobSkills,
         });
       }
       const quotaResult = await tx.companyPlan.updateMany({
@@ -163,6 +178,7 @@ export class JobsService {
     try {
       const updatedJobId = await this.updateJobCore(jobId, dto);
       await this.jobEventsQueue.jobUpdated(updatedJobId);
+      await this.aiSyncProducer.jobUpdated(updatedJobId);
 
       return {
         message: 'Cập nhật công việc thành công',
@@ -183,7 +199,23 @@ export class JobsService {
     }
   }
   private async updateJobCore(jobId: bigint, dto: UpdateJobDto) {
-    const { skill_ids, description, requirements, ...data } = dto;
+    const {
+      skill_ids,
+      required_skill_ids,
+      nice_to_have_skill_ids,
+      description,
+      requirements,
+      ...data
+    } = dto;
+    const hasSkillPayload =
+      skill_ids !== undefined ||
+      required_skill_ids !== undefined ||
+      nice_to_have_skill_ids !== undefined;
+    const normalizedSkills = this.normalizeJobSkillInput({
+      skill_ids,
+      required_skill_ids,
+      nice_to_have_skill_ids,
+    });
 
     const job = await this.prisma.job.findUnique({
       where: { id: jobId },
@@ -199,15 +231,28 @@ export class JobsService {
       data.category_id !== undefined
         ? BigInt(data.category_id as any)
         : job.category_id;
+    const negotiable = data.negotiable ?? job.negotiable;
 
     await this.prisma.$transaction(async (tx) => {
       await tx.job.update({
         where: { id: jobId },
         data: {
           title: data.title ?? job.title,
-          salary_min: data.salary_min ?? job.salary_min,
-          salary_max: data.salary_max ?? job.salary_max,
-          negotiable: data.negotiable ?? job.negotiable,
+          salary_min: negotiable
+            ? null
+            : data.salary_min !== undefined
+              ? data.salary_min
+              : job.salary_min,
+          salary_max: negotiable
+            ? null
+            : data.salary_max !== undefined
+              ? data.salary_max
+              : job.salary_max,
+          experience_required:
+            data.experience_required !== undefined
+              ? data.experience_required
+              : job.experience_required,
+          negotiable,
           employment_type: data.employment_type ?? job.employment_type,
 
           // JSON fields: PATCH đúng nghĩa
@@ -244,15 +289,13 @@ export class JobsService {
       });
 
       // skills
-      if (skill_ids !== undefined) {
+      if (hasSkillPayload) {
         await tx.jobSkill.deleteMany({ where: { job_id: jobId } });
 
-        if (skill_ids.length) {
+        const jobSkills = this.buildJobSkillCreateData(jobId, normalizedSkills);
+        if (jobSkills.length) {
           await tx.jobSkill.createMany({
-            data: skill_ids.map((id) => ({
-              job_id: jobId,
-              skill_id: id,
-            })),
+            data: jobSkills,
           });
         }
       }
@@ -297,6 +340,7 @@ export class JobsService {
 
       // side-effect ES -> queue
       await this.jobEventsQueue.jobStatusChanged(jobId, status);
+      await this.aiSyncProducer.jobStatusChanged(jobId);
 
       return {
         message: 'Cập nhật trạng thái công việc thành công',
@@ -352,6 +396,10 @@ export class JobsService {
         console.error(`⚠️ Lỗi xóa job ${jobId} khỏi Elasticsearch:`, err);
       }
     }
+
+    await Promise.all(
+      jobIds.map((jobId) => this.aiSyncProducer.jobStatusChanged(jobId)),
+    );
 
     console.log(
       `🚀 Đã chuyển ${jobIds.length} job sang 'expired' và xóa khỏi Elasticsearch`,
@@ -436,6 +484,7 @@ export class JobsService {
       title: job.title,
       salary_min: job.salary_min,
       salary_max: job.salary_max,
+      experience_required: job.experience_required,
       negotiable: job.negotiable,
       employment_type: job.employment_type,
       location_city: job.location_city,
@@ -450,6 +499,12 @@ export class JobsService {
       category: job.category
         ? { id: job.category.id, name: job.category.name }
         : null,
+      required_skills: job.skills
+        .filter((js) => js.type === JobSkillType.REQUIRED)
+        .map((js) => js.skill.name),
+      nice_to_have_skills: job.skills
+        .filter((js) => js.type === JobSkillType.NICE_TO_HAVE)
+        .map((js) => js.skill.name),
       skills: job.skills.map((js) => js.skill.name),
       company: {
         id: job.company.id,
@@ -477,7 +532,15 @@ export class JobsService {
     return {
       ...baseData,
       category_id: job.category_id,
-      skill_ids: job.skills.map((js) => js.skill_id),
+      skill_ids: job.skills
+        .filter((js) => js.type === JobSkillType.REQUIRED)
+        .map((js) => js.skill_id),
+      required_skill_ids: job.skills
+        .filter((js) => js.type === JobSkillType.REQUIRED)
+        .map((js) => js.skill_id),
+      nice_to_have_skill_ids: job.skills
+        .filter((js) => js.type === JobSkillType.NICE_TO_HAVE)
+        .map((js) => js.skill_id),
       company_id: job.company_id,
       location_city: job.location_city,
       location_district: job.location_district,
@@ -603,6 +666,9 @@ export class JobsService {
         },
       });
 
+      await this.jobEventsQueue.jobStatusChanged(id, 'active');
+      await this.aiSyncProducer.jobStatusChanged(id);
+
       return {
         success: true,
         message: 'Cập nhật deadline thành công',
@@ -629,7 +695,6 @@ export class JobsService {
     }
   }
   // Hàm phục vụ cho trang thống kê:
-
 
   // -----------------------------
   // Helper: Lấy full job
@@ -788,5 +853,67 @@ export class JobsService {
       latitude,
       longitude,
     };
+  }
+
+  private normalizeJobSkillInput(input: {
+    skill_ids?: bigint[];
+    required_skill_ids?: bigint[];
+    nice_to_have_skill_ids?: bigint[];
+  }) {
+    const requiredSkillIds = this.uniqueBigIntValues([
+      ...(input.required_skill_ids ?? []),
+      ...(input.skill_ids ?? []),
+    ]);
+    const requiredSkillSet = new Set(
+      requiredSkillIds.map((id) => id.toString()),
+    );
+    const niceToHaveSkillIds = this.uniqueBigIntValues(
+      (input.nice_to_have_skill_ids ?? []).filter(
+        (id) => !requiredSkillSet.has(id.toString()),
+      ),
+    );
+
+    return {
+      requiredSkillIds,
+      niceToHaveSkillIds,
+    };
+  }
+
+  private buildJobSkillCreateData(
+    jobId: bigint,
+    skills: {
+      requiredSkillIds: bigint[];
+      niceToHaveSkillIds: bigint[];
+    },
+  ) {
+    return [
+      ...skills.requiredSkillIds.map((skillId) => ({
+        job_id: jobId,
+        skill_id: skillId,
+        type: JobSkillType.REQUIRED,
+      })),
+      ...skills.niceToHaveSkillIds.map((skillId) => ({
+        job_id: jobId,
+        skill_id: skillId,
+        type: JobSkillType.NICE_TO_HAVE,
+      })),
+    ];
+  }
+
+  private uniqueBigIntValues(values: bigint[]) {
+    const seen = new Set<string>();
+    const result: bigint[] = [];
+
+    for (const value of values) {
+      const key = value.toString();
+      if (seen.has(key)) {
+        continue;
+      }
+
+      seen.add(key);
+      result.push(value);
+    }
+
+    return result;
   }
 }

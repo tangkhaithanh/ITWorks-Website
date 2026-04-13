@@ -45,6 +45,11 @@ const CvAPI = {
 
   // 🗑️ Xóa CV
   delete: (id) => apiClient.delete(`/cvs/${id}`),
+  // Bật tắt Searchable:
+  updateSearchableStatus: (cvId, is_searchable) =>
+    apiClient.patch(`/cvs/${cvId}/searchable`, {
+      is_searchable,
+    }),
 };
 
 export default CvAPI;
