@@ -71,6 +71,38 @@ export class CloudinaryService {
     });
   }
 
+  async uploadChatAttachment(
+    file: Express.Multer.File,
+    folder = 'messaging',
+  ): Promise<UploadApiResponse> {
+    if (!file) throw new BadRequestException('Không có file nào được tải lên.');
+
+    const isImage = file.mimetype.startsWith('image/');
+
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder,
+          resource_type: isImage ? 'image' : 'raw',
+          type: 'upload',
+          use_filename: true,
+          unique_filename: true,
+          access_mode: 'public',
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          if (!result)
+            return reject(
+              new Error('Upload attachment thất bại, không có kết quả.'),
+            );
+          resolve(result);
+        },
+      );
+
+      uploadStream.end(file.buffer);
+    });
+  }
+
   async deleteFile(
     publicId: string,
   ): Promise<UploadApiResponse | UploadApiErrorResponse> {

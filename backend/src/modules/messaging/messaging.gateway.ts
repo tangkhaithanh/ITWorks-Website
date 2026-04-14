@@ -135,6 +135,7 @@ export class MessagingGateway implements OnGatewayInit {
         created_at: msg.created_at,
         sender_account_id: msg.sender_account_id.toString(),
         sender: msg.sender,
+        attachments: msg.attachments,
       });
 
       this.emitNewMessage(conversationId, payload);
@@ -158,6 +159,7 @@ export class MessagingGateway implements OnGatewayInit {
       created_at: string;
       sender_account_id: string;
       sender: unknown;
+      attachments?: unknown[];
     },
   ) {
     this.server.to(this.roomName(conversationId)).emit('message:new', payload);

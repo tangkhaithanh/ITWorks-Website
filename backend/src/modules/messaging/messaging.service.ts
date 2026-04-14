@@ -5,16 +5,45 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { NotificationType, Prisma, Role } from '@prisma/client';
-import { MESSAGE_BODY_MAX_LENGTH, MESSAGES_PAGE_SIZE } from './messaging.constants';
+import { AttachmentType, NotificationType, Prisma, Role } from '@prisma/client';
+import {
+  MESSAGE_ATTACHMENT_ALLOWED_MIME_TYPES,
+  MESSAGE_ATTACHMENT_MAX_SIZE_BYTES,
+  MESSAGE_ATTACHMENTS_MAX_FILES,
+  MESSAGE_BODY_MAX_LENGTH,
+  MESSAGES_PAGE_SIZE,
+} from './messaging.constants';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
+import { CloudinaryService } from '@/modules/cloudinary/cloudinary.service';
 
 @Injectable()
 export class MessagingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
+
+  private readonly messageInclude = {
+    sender: {
+      select: {
+        id: true,
+        user: { select: { full_name: true, avatar_url: true } },
+        company: { select: { name: true, logo_url: true } },
+      },
+    },
+    attachments: {
+      select: {
+        id: true,
+        file_name: true,
+        mime_type: true,
+        size_bytes: true,
+        file_url: true,
+        type: true,
+        created_at: true,
+      },
+    },
+  } as const;
 
   async assertParticipant(conversationId: bigint, accountId: bigint) {
     const conv = await this.prisma.conversation.findUnique({
@@ -180,7 +209,15 @@ export class MessagingService {
         messages: {
           take: 1,
           orderBy: { created_at: 'desc' },
-          select: { id: true, body: true, created_at: true, sender_account_id: true },
+          select: {
+            id: true,
+            body: true,
+            created_at: true,
+            sender_account_id: true,
+            attachments: {
+              select: { id: true, file_name: true, mime_type: true, type: true },
+            },
+          },
         },
       },
     });
@@ -212,15 +249,7 @@ export class MessagingService {
       where,
       orderBy: { id: 'desc' },
       take,
-      include: {
-        sender: {
-          select: {
-            id: true,
-            user: { select: { full_name: true, avatar_url: true } },
-            company: { select: { name: true, logo_url: true } },
-          },
-        },
-      },
+      include: this.messageInclude,
     });
 
     const chronological = [...rows].reverse();
@@ -251,15 +280,7 @@ export class MessagingService {
         sender_account_id: accountId,
         body: trimmed,
       },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            user: { select: { full_name: true, avatar_url: true } },
-            company: { select: { name: true, logo_url: true } },
-          },
-        },
-      },
+      include: this.messageInclude,
     });
 
     await this.prisma.conversation.update({
@@ -281,6 +302,121 @@ export class MessagingService {
           conversationId: conversationId.toString(),
           jobId: conv.job_id.toString(),
           messagePreview: msg.body.slice(0, 120),
+        },
+      });
+    }
+
+    return msg;
+  }
+
+  private assertValidAttachments(files: Express.Multer.File[]) {
+    if (!files?.length) {
+      throw new BadRequestException('Cần ít nhất 1 file đính kèm.');
+    }
+
+    if (files.length > MESSAGE_ATTACHMENTS_MAX_FILES) {
+      throw new BadRequestException(
+        `Tối đa ${MESSAGE_ATTACHMENTS_MAX_FILES} files mỗi tin nhắn.`,
+      );
+    }
+
+    for (const file of files) {
+      if (!MESSAGE_ATTACHMENT_ALLOWED_MIME_TYPES.includes(file.mimetype as any)) {
+        throw new BadRequestException(
+          `Định dạng file không hỗ trợ: ${file.originalname}`,
+        );
+      }
+
+      if (file.size > MESSAGE_ATTACHMENT_MAX_SIZE_BYTES) {
+        throw new BadRequestException(
+          `File quá lớn: ${file.originalname} (tối đa ${Math.floor(
+            MESSAGE_ATTACHMENT_MAX_SIZE_BYTES / (1024 * 1024),
+          )}MB)`,
+        );
+      }
+    }
+  }
+
+  private getAttachmentType(mimeType: string): AttachmentType {
+    return mimeType.startsWith('image/') ? AttachmentType.image : AttachmentType.file;
+  }
+
+  async createMessageWithAttachments(
+    conversationId: bigint,
+    accountId: bigint,
+    body: string | undefined,
+    files: Express.Multer.File[],
+  ) {
+    const trimmed = body?.trim() ?? '';
+    if (trimmed.length > MESSAGE_BODY_MAX_LENGTH) {
+      throw new BadRequestException(`Tối đa ${MESSAGE_BODY_MAX_LENGTH} ký tự.`);
+    }
+    if (!trimmed && (!files || files.length === 0)) {
+      throw new BadRequestException('Tin nhắn phải có nội dung hoặc file đính kèm.');
+    }
+
+    if (files?.length) {
+      this.assertValidAttachments(files);
+    }
+
+    const conv = await this.assertParticipant(conversationId, accountId);
+
+    const uploaded = await Promise.all(
+      (files || []).map(async (file) => {
+        const result = await this.cloudinaryService.uploadChatAttachment(
+          file,
+          'messaging/attachments',
+        );
+
+        return {
+          file_name: file.originalname,
+          mime_type: file.mimetype,
+          size_bytes: file.size,
+          file_url: result.secure_url,
+          file_public_id: result.public_id,
+          type: this.getAttachmentType(file.mimetype),
+        };
+      }),
+    );
+
+    const msg = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.message.create({
+        data: {
+          conversation_id: conversationId,
+          sender_account_id: accountId,
+          body: trimmed,
+          attachments:
+            uploaded.length > 0
+              ? {
+                  create: uploaded,
+                }
+              : undefined,
+        },
+        include: this.messageInclude,
+      });
+
+      await tx.conversation.update({
+        where: { id: conversationId },
+        data: { updated_at: new Date() },
+      });
+
+      return created;
+    });
+
+    const recipientAccountId =
+      conv.applicant_account_id === accountId
+        ? conv.recruiter_account_id
+        : conv.applicant_account_id;
+
+    if (recipientAccountId !== accountId) {
+      await this.notificationsService.notifyAccount({
+        accountId: recipientAccountId,
+        type: 'message' as NotificationType,
+        message: 'Bạn có tin nhắn mới',
+        realtimePayload: {
+          conversationId: conversationId.toString(),
+          jobId: conv.job_id.toString(),
+          messagePreview: msg.body?.slice(0, 120) || '[Attachment]',
         },
       });
     }

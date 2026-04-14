@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import MessagingAPI from "./MessagingAPI";
 import { getChatSocket, disconnectChatSocket } from "@/socket/chatSocket";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, Paperclip, X, FileText } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { useLocation } from "react-router-dom";
 import { resetUnread } from "./messagingSlice";
@@ -28,7 +28,20 @@ export default function MessagesPage() {
   const [loadingList, setLoadingList] = useState(true);
   const [loadingMsg, setLoadingMsg] = useState(false);
   const [sending, setSending] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const selectedRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const ATTACHMENT_MAX_FILES = 5;
+  const ATTACHMENT_MAX_SIZE = 10 * 1024 * 1024;
+  const ALLOWED_ATTACHMENT_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ];
 
   // Log connect/disconnect cho chat socket
   useEffect(() => {
@@ -129,6 +142,7 @@ export default function MessagesPage() {
               created_at: payload.created_at,
               sender_account_id: payload.sender_account_id,
               sender: payload.sender,
+              attachments: payload.attachments || [],
             },
           ];
         });
@@ -187,7 +201,7 @@ export default function MessagesPage() {
 
   const send = async () => {
     const t = text.trim();
-    if (!t || !selectedId) return;
+    if ((!t && selectedFiles.length === 0) || !selectedId) return;
     setSending(true);
     const socket = getChatSocket();
     if (!socket.connected) socket.connect();
@@ -196,6 +210,23 @@ export default function MessagesPage() {
       conversationId: String(selectedId),
       bodyLength: t.length,
     });
+
+    if (selectedFiles.length > 0) {
+      try {
+        await MessagingAPI.sendWithAttachments(selectedId, t, selectedFiles);
+        setText("");
+        setSelectedFiles([]);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        const res = await MessagingAPI.messages(selectedId, {});
+        setMessages(res?.data?.data?.messages ?? []);
+        loadList();
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
 
     // NestJS gateway trả `message:sent` / `error` như server events, không phải socket.io ack callback.
     // Vì vậy không chờ ack để tránh timeout giả.
@@ -226,6 +257,36 @@ export default function MessagesPage() {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleFileSelect = (event) => {
+    const inputFiles = Array.from(event.target.files || []);
+    if (inputFiles.length === 0) return;
+
+    const validated = [];
+    for (const file of inputFiles) {
+      if (!ALLOWED_ATTACHMENT_TYPES.includes(file.type)) {
+        alert(`Định dạng không hỗ trợ: ${file.name}`);
+        continue;
+      }
+      if (file.size > ATTACHMENT_MAX_SIZE) {
+        alert(`File quá lớn (tối đa 10MB): ${file.name}`);
+        continue;
+      }
+      validated.push(file);
+    }
+
+    setSelectedFiles((prev) => {
+      const next = [...prev, ...validated].slice(0, ATTACHMENT_MAX_FILES);
+      if (prev.length + validated.length > ATTACHMENT_MAX_FILES) {
+        alert(`Tối đa ${ATTACHMENT_MAX_FILES} files mỗi tin nhắn.`);
+      }
+      return next;
+    });
+  };
+
+  const removeSelectedFile = (index) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const titleForConv = (c) => {
@@ -368,7 +429,45 @@ export default function MessagesPage() {
                             : "bg-white border border-slate-200 text-slate-800"
                         }`}
                       >
-                        {m.body}
+                        {m.body ? <div>{m.body}</div> : null}
+                        {Array.isArray(m.attachments) && m.attachments.length > 0 && (
+                          <div className={`mt-2 space-y-2 ${mine ? "text-white" : "text-slate-700"}`}>
+                            {m.attachments.map((attachment) => {
+                              const isImage = attachment.type === "image";
+                              return (
+                                <div
+                                  key={String(attachment.id)}
+                                  className={`rounded-lg p-2 ${mine ? "bg-blue-500/60" : "bg-slate-100"}`}
+                                >
+                                  {isImage ? (
+                                    <a
+                                      href={attachment.file_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="block"
+                                    >
+                                      <img
+                                        src={attachment.file_url}
+                                        alt={attachment.file_name}
+                                        className="max-h-48 rounded-md object-cover"
+                                      />
+                                    </a>
+                                  ) : (
+                                    <a
+                                      href={attachment.file_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="flex items-center gap-2 underline text-xs"
+                                    >
+                                      <FileText className="w-4 h-4" />
+                                      {attachment.file_name}
+                                    </a>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -376,6 +475,24 @@ export default function MessagesPage() {
               )}
             </div>
             <div className="p-3 border-t border-slate-100 flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                multiple
+                accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx"
+                onChange={handleFileSelect}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={sending || selectedFiles.length >= ATTACHMENT_MAX_FILES}
+                title="Đính kèm file"
+              >
+                <Paperclip className="w-4 h-4" />
+              </Button>
               <input
                 className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 placeholder="Nhập tin nhắn..."
@@ -392,12 +509,34 @@ export default function MessagesPage() {
                 type="button"
                 variant="primary"
                 size="sm"
-                disabled={sending || !text.trim()}
+                disabled={sending || (!text.trim() && selectedFiles.length === 0)}
                 onClick={send}
               >
                 <Send className="w-4 h-4" />
               </Button>
             </div>
+            {selectedFiles.length > 0 && (
+              <div className="px-3 pb-3">
+                <div className="flex flex-wrap gap-2">
+                  {selectedFiles.map((file, index) => (
+                    <div
+                      key={`${file.name}-${file.size}-${index}`}
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs"
+                    >
+                      <span className="max-w-[220px] truncate">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeSelectedFile(index)}
+                        className="text-slate-500 hover:text-red-500"
+                        aria-label="Xóa file"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
       </section>

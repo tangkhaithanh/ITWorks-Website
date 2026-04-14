@@ -5,8 +5,11 @@ import {
   Param,
   Post,
   Query,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
@@ -18,6 +21,7 @@ import { StartConversationDto } from './dto/start-conversation.dto';
 import { OpenConversationDto } from './dto/open-conversation.dto';
 import { MessagingGateway } from './messaging.gateway';
 import { serializeSocketPayload } from '@/common/utils/serialize-socket-payload';
+import { CreateMessageWithAttachmentsDto } from './dto/create-message-with-attachments.dto';
 
 @Controller('conversations')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -108,6 +112,39 @@ export class MessagingController {
       created_at: msg.created_at,
       sender_account_id: msg.sender_account_id.toString(),
       sender: msg.sender,
+      attachments: msg.attachments,
+    });
+
+    this.messagingGateway.emitNewMessage(conversationId, payload);
+
+    return msg;
+  }
+
+  @Post(':id/messages/with-attachments')
+  @Roles(Role.candidate, Role.recruiter)
+  @UseInterceptors(FilesInterceptor('files', 5))
+  async createMessageWithAttachments(
+    @Param('id') id: string,
+    @User('accountId') accountId: bigint,
+    @Body() dto: CreateMessageWithAttachmentsDto,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    const conversationId = BigInt(id);
+    const msg = await this.messagingService.createMessageWithAttachments(
+      conversationId,
+      accountId,
+      dto.body,
+      files ?? [],
+    );
+
+    const payload = serializeSocketPayload({
+      id: msg.id.toString(),
+      conversation_id: conversationId.toString(),
+      body: msg.body,
+      created_at: msg.created_at,
+      sender_account_id: msg.sender_account_id.toString(),
+      sender: msg.sender,
+      attachments: msg.attachments,
     });
 
     this.messagingGateway.emitNewMessage(conversationId, payload);
