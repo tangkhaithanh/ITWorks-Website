@@ -260,6 +260,7 @@ function MatchingResultsPanel({
   onReject,
   onManageApplication,
   onOpenCv,
+  onSaveToTalentPool,
 }) {
   return (
     <div className="space-y-5">
@@ -353,7 +354,8 @@ function MatchingResultsPanel({
               onViewDetail={onViewDetail}
               onReject={onReject}
               onManageApplication={onManageApplication}
-              onOpenCv={onOpenCv}
+               onOpenCv={onOpenCv}
+               onSaveToTalentPool={onSaveToTalentPool}
             />
           ))}
         </div>
@@ -386,6 +388,7 @@ export default function MatchingWorkspaceView({
   onReject,
   onManageApplication,
   onOpenCv,
+  onSaveToTalentPool,
   onBackToJobs,
 }) {
   const [jobDrawerOpen, setJobDrawerOpen] = useState(false);
@@ -541,6 +544,7 @@ export default function MatchingWorkspaceView({
           onReject={onReject}
           onManageApplication={onManageApplication}
           onOpenCv={onOpenCv}
+          onSaveToTalentPool={onSaveToTalentPool}
         />
       </div>
     </div>

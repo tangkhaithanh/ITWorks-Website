@@ -25,6 +25,7 @@ export default function MatchCard({
   onReject,
   onManageApplication,
   onOpenCv,
+  onSaveToTalentPool,
 }) {
   const overallTone = getScoreTone(item.overall_score);
   const isApplicantMode = mode === "job_rank_applicants";
@@ -176,7 +177,12 @@ export default function MatchCard({
               <Mail className="h-4 w-4" />
               Mời ứng tuyển
             </Button>
-            <Button size="sm" variant="outline" className="border-slate-200 text-slate-500" disabled>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-slate-200 text-slate-500 hover:border-emerald-200 hover:text-emerald-600"
+              onClick={() => onSaveToTalentPool?.(item)}
+            >
               <Bookmark className="h-4 w-4" />
               Lưu talent
             </Button>

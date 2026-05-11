@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { RefreshCw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { saveCandidate } from "@/features/talent-pool/talentPoolSlice";
 import ApplicationAPI from "@/features/applications/ApplicationAPI";
 import JobAPI from "@/features/jobs/JobAPI";
 import MatchDetailDrawer from "@/features/matching/components/MatchDetailDrawer";
@@ -42,6 +44,7 @@ function MatchingWorkspaceLoadingState() {
 
 export default function MatchingWorkspacePage() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
   const selectedJobId = searchParams.get("jobId");
   const isWorkspaceView = Boolean(selectedJobId);
@@ -312,6 +315,33 @@ export default function MatchingWorkspacePage() {
     navigate(`/recruiter/applications/${applicationId}`);
   };
 
+  const handleSaveToTalentPool = async (match) => {
+    const candidateId = match.source_candidate_id || match.candidate_id || match.id;
+    if (!candidateId) {
+      toast.error("Không thể xác định ứng viên để lưu.");
+      return;
+    }
+
+    try {
+      const result = await dispatch(
+        saveCandidate({
+          candidateId: String(candidateId),
+          jobId: selectedJob?.id ? String(selectedJob.id) : undefined,
+          matchScore: match.overall_score ?? undefined,
+          matchedSkills: match.matched_skills || [],
+          missingSkills: match.missing_skills || [],
+        })
+      ).unwrap();
+      toast.success(`Đã lưu ${match.displayName || "ứng viên"} vào Talent Pool.`);
+    } catch (error) {
+      if (error?.message === "ALREADY_SAVED" || error?.error === "ALREADY_SAVED") {
+        toast.error("Ứng viên này đã có trong Talent Pool.");
+      } else {
+        toast.error("Không thể lưu ứng viên vào Talent Pool.");
+      }
+    }
+  };
+
   const handleReject = async (match) => {
     const applicationId = getMatchApplicationId(match);
     if (!applicationId) {
@@ -471,6 +501,7 @@ export default function MatchingWorkspacePage() {
                 onReject={handleReject}
                 onManageApplication={handleManageApplication}
                 onOpenCv={handleOpenCv}
+                onSaveToTalentPool={handleSaveToTalentPool}
                 onBackToJobs={() => navigate("/recruiter/candidate-search")}
               />
             )}

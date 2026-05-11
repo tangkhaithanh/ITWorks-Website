@@ -38,6 +38,8 @@ import AdminDashboardPage from "../features/admin/pages/AdminDashboardPage";
 import CompanySearchPage from "@/features/companies/pages/CompanySearchPage.jsx";
 import CompanyProfilePage from "@/features/companies/pages/CompanyProfilePage.jsx";
 import MatchingWorkspacePage from "@/features/matching/pages/MatchingWorkspacePage.jsx";
+import TalentPoolListPage from "@/features/talent-pool/pages/TalentPoolListPage.jsx";
+import CandidateDetailPage from "@/features/talent-pool/pages/CandidateDetailPage.jsx";
 import { Navigate } from "react-router-dom";
 import MessagesPage from "@/features/messaging/MessagesPage.jsx";
 const router = createBrowserRouter([
@@ -141,6 +143,8 @@ const router = createBrowserRouter([
       { path: "usage", element: <UsagePage /> },
       { path: "orders", element: <ManageOrderPage /> },
       { path: "candidate-search", element: <MatchingWorkspacePage /> },
+      { path: "talent-pool", element: <TalentPoolListPage /> },
+      { path: "talent-pool/:id", element: <CandidateDetailPage /> },
       { path: "messages", element: <MessagesPage /> },
     ],
   },
