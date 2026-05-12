@@ -1,23 +1,22 @@
-import { useState } from "react";
 import { Search, FilterX } from "lucide-react";
 import Button from "@/components/ui/Button";
 import SelectInput from "@/components/ui/SelectInput";
 
 const STATUS_OPTIONS = [
-  { value: "", label: "All Statuses" },
-  { value: "SAVED", label: "Saved" },
-  { value: "CONTACTED", label: "Contacted" },
-  { value: "INTERESTED", label: "Interested" },
-  { value: "INTERVIEW_SCHEDULED", label: "Interview Scheduled" },
-  { value: "NOT_INTERESTED", label: "Not Interested" },
-  { value: "HIRED", label: "Hired" },
+  { value: "", label: "Tất cả trạng thái" },
+  { value: "SAVED", label: "Đã lưu" },
+  { value: "CONTACTED", label: "Đã liên hệ" },
+  { value: "INTERESTED", label: "Quan tâm" },
+  { value: "INTERVIEW_SCHEDULED", label: "Đã hẹn phỏng vấn" },
+  { value: "NOT_INTERESTED", label: "Không phù hợp" },
+  { value: "HIRED", label: "Đã tuyển" },
 ];
 
 const PRIORITY_OPTIONS = [
-  { value: "", label: "All Priorities" },
-  { value: "LOW", label: "Low" },
-  { value: "MEDIUM", label: "Medium" },
-  { value: "HIGH", label: "High" },
+  { value: "", label: "Tất cả ưu tiên" },
+  { value: "LOW", label: "Thấp" },
+  { value: "MEDIUM", label: "Trung bình" },
+  { value: "HIGH", label: "Cao" },
 ];
 
 export default function SearchFilterBar({ filters, onFilterChange, onReset }) {
@@ -27,7 +26,7 @@ export default function SearchFilterBar({ filters, onFilterChange, onReset }) {
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
           type="text"
-          placeholder="Search by name or email..."
+          placeholder="Tìm theo tên hoặc email..."
           value={filters.search || ""}
           onChange={(e) =>
             onFilterChange({ ...filters, search: e.target.value })
@@ -54,6 +53,16 @@ export default function SearchFilterBar({ filters, onFilterChange, onReset }) {
         className="min-w-[140px]"
       />
 
+      <input
+        type="text"
+        placeholder="Nhãn..."
+        value={filters.tags || ""}
+        onChange={(e) =>
+          onFilterChange({ ...filters, tags: e.target.value })
+        }
+        className="min-w-[160px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+      />
+
       <Button
         size="sm"
         variant="outline"
@@ -61,7 +70,7 @@ export default function SearchFilterBar({ filters, onFilterChange, onReset }) {
         className="border-slate-200 text-slate-500"
       >
         <FilterX className="h-4 w-4" />
-        Reset
+        Đặt lại
       </Button>
     </div>
   );

@@ -57,7 +57,7 @@ export default function MatchCard({
                     : "border-violet-200 bg-violet-50 text-violet-700"
                 }`}
               >
-                {isApplicantMode ? "Applied" : "Talent Pool"}
+                {isApplicantMode ? "Đã ứng tuyển" : "Kho ứng viên"}
               </span>
             </div>
 
@@ -101,7 +101,7 @@ export default function MatchCard({
       <div className="mt-5 grid gap-3 lg:grid-cols-2">
         <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-emerald-700">
-            Matched Skills
+            Kỹ năng phù hợp
           </p>
           <div className="flex flex-wrap gap-2">
             {(item.matched_skills || []).length > 0 ? (
@@ -123,7 +123,7 @@ export default function MatchCard({
 
         <div className="rounded-2xl border border-rose-100 bg-rose-50/70 p-4">
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-rose-700">
-            Missing Skills
+            Kỹ năng còn thiếu
           </p>
           <div className="flex flex-wrap gap-2">
             {(item.missing_skills || []).length > 0 ? (

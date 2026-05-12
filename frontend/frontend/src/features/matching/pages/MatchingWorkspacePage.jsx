@@ -47,6 +47,7 @@ export default function MatchingWorkspacePage() {
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
   const selectedJobId = searchParams.get("jobId");
+  const requestedMode = searchParams.get("mode");
   const isWorkspaceView = Boolean(selectedJobId);
 
   const [jobSearch, setJobSearch] = useState("");
@@ -83,6 +84,10 @@ export default function MatchingWorkspacePage() {
   const totalJobPages = Math.max(1, Math.ceil(jobsTotal / PAGE_SIZE));
   const availableSkills = getJobSkills(selectedJob);
   const hasLoadedCurrentMode = loadedModes[activeMode];
+  const initialMode =
+    requestedMode === "job_find_talent" || requestedMode === "job_rank_applicants"
+      ? requestedMode
+      : "job_rank_applicants";
 
   const resetMatchingState = () => {
     setActiveMode("job_rank_applicants");
@@ -272,6 +277,16 @@ export default function MatchingWorkspacePage() {
     await loadMatchingResults(selectedJob, activeMode, !hasLoadedCurrentMode);
   };
 
+  const handleOpenTalentPool = () => {
+    if (!selectedJob?.id) return;
+    navigate(`/recruiter/jobs/${selectedJob.id}/talent-pool`, {
+      state: {
+        backTo: `/recruiter/candidate-search?jobId=${selectedJob.id}&mode=${activeMode}`,
+        backLabel: "Matching",
+      },
+    });
+  };
+
   const handleOpenDetail = async (match) => {
     const applicationId = getMatchApplicationId(match);
     setSelectedMatch(match);
@@ -323,7 +338,7 @@ export default function MatchingWorkspacePage() {
     }
 
     try {
-      const result = await dispatch(
+      await dispatch(
         saveCandidate({
           candidateId: String(candidateId),
           jobId: selectedJob?.id ? String(selectedJob.id) : undefined,
@@ -332,12 +347,26 @@ export default function MatchingWorkspacePage() {
           missingSkills: match.missing_skills || [],
         })
       ).unwrap();
-      toast.success(`Đã lưu ${match.displayName || "ứng viên"} vào Talent Pool.`);
+      toast((t) => (
+        <div className="flex flex-col gap-2">
+          <span>Đã lưu {match.displayName || "ứng viên"} vào kho ứng viên.</span>
+          <button
+            type="button"
+            onClick={() => {
+              toast.dismiss(t.id);
+              handleOpenTalentPool();
+            }}
+            className="text-left text-sm font-semibold text-blue-600 hover:text-blue-700"
+          >
+            Xem kho ứng viên
+          </button>
+        </div>
+      ));
     } catch (error) {
       if (error?.message === "ALREADY_SAVED" || error?.error === "ALREADY_SAVED") {
-        toast.error("Ứng viên này đã có trong Talent Pool.");
+        toast.error("Ứng viên này đã có trong kho ứng viên.");
       } else {
-        toast.error("Không thể lưu ứng viên vào Talent Pool.");
+        toast.error("Không thể lưu ứng viên vào kho ứng viên.");
       }
     }
   };
@@ -345,7 +374,7 @@ export default function MatchingWorkspacePage() {
   const handleReject = async (match) => {
     const applicationId = getMatchApplicationId(match);
     if (!applicationId) {
-      toast("Hiện chưa có API reject cho talent pool.");
+      toast("Hiện chưa có API từ chối cho kho ứng viên.");
       return;
     }
 
@@ -425,6 +454,7 @@ export default function MatchingWorkspacePage() {
       try {
         setSelectedJobLoading(true);
         resetMatchingState();
+        setActiveMode(initialMode);
         const detailRes = await JobAPI.getJobToEdit(selectedJobId);
 
         if (cancelled) return;
@@ -447,7 +477,7 @@ export default function MatchingWorkspacePage() {
     return () => {
       cancelled = true;
     };
-  }, [navigate, selectedJobId]);
+  }, [initialMode, navigate, selectedJobId]);
 
   return (
     <div className="min-h-screen bg-slate-50/60 pb-16">
@@ -502,6 +532,7 @@ export default function MatchingWorkspacePage() {
                 onManageApplication={handleManageApplication}
                 onOpenCv={handleOpenCv}
                 onSaveToTalentPool={handleSaveToTalentPool}
+                onOpenTalentPool={handleOpenTalentPool}
                 onBackToJobs={() => navigate("/recruiter/candidate-search")}
               />
             )}

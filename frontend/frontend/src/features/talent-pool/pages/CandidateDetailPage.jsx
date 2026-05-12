@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-hot-toast";
 import {
@@ -10,28 +10,31 @@ import {
 } from "@/features/talent-pool/talentPoolSlice";
 import SelectInput from "@/components/ui/SelectInput";
 import Button from "@/components/ui/Button";
+import CandidateInfoSummary from "@/features/talent-pool/components/CandidateInfoSummary";
 import { Loader2, ArrowLeft, Trash2 } from "lucide-react";
 
 const STATUS_OPTIONS = [
-  { value: "SAVED", label: "Saved" },
-  { value: "CONTACTED", label: "Contacted" },
-  { value: "INTERESTED", label: "Interested" },
-  { value: "INTERVIEW_SCHEDULED", label: "Interview Scheduled" },
-  { value: "NOT_INTERESTED", label: "Not Interested" },
-  { value: "HIRED", label: "Hired" },
+  { value: "SAVED", label: "Đã lưu" },
+  { value: "CONTACTED", label: "Đã liên hệ" },
+  { value: "INTERESTED", label: "Quan tâm" },
+  { value: "INTERVIEW_SCHEDULED", label: "Đã hẹn phỏng vấn" },
+  { value: "NOT_INTERESTED", label: "Không phù hợp" },
+  { value: "HIRED", label: "Đã tuyển" },
 ];
 
 const PRIORITY_OPTIONS = [
-  { value: "LOW", label: "Low" },
-  { value: "MEDIUM", label: "Medium" },
-  { value: "HIGH", label: "High" },
+  { value: "LOW", label: "Thấp" },
+  { value: "MEDIUM", label: "Trung bình" },
+  { value: "HIGH", label: "Cao" },
 ];
 
 export default function CandidateDetailPage() {
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { selectedCandidate, loading } = useSelector((state) => state.talentPool);
+  const backTo = location.state?.backTo || "/recruiter/talent-pool";
 
   const [note, setNote] = useState("");
   const [tags, setTags] = useState("");
@@ -74,12 +77,12 @@ export default function CandidateDetailPage() {
     setSaving(true);
     try {
       await dispatch(updateCandidate({ id, data })).unwrap();
-      toast.success("Candidate updated.");
+      toast.success("Đã cập nhật ứng viên.");
     } catch (error) {
       if (error?.followUpDate) {
-        toast.error("Follow-up date must be today or later.");
+        toast.error("Ngày theo dõi phải là hôm nay hoặc sau hôm nay.");
       } else {
-        toast.error("Failed to update candidate.");
+        toast.error("Không thể cập nhật ứng viên.");
       }
     } finally {
       setSaving(false);
@@ -87,13 +90,13 @@ export default function CandidateDetailPage() {
   };
 
   const handleRemove = async () => {
-    if (!window.confirm("Remove this candidate from talent pool?")) return;
+    if (!window.confirm("Xóa ứng viên này khỏi kho ứng viên?")) return;
     try {
       await dispatch(removeCandidate(id)).unwrap();
-      toast.success("Candidate removed.");
-      navigate("/recruiter/talent-pool");
+      toast.success("Đã xóa ứng viên.");
+      navigate(backTo);
     } catch {
-      toast.error("Failed to remove candidate.");
+      toast.error("Không thể xóa ứng viên.");
     }
   };
 
@@ -106,7 +109,7 @@ export default function CandidateDetailPage() {
   }
 
   const candidateName =
-    selectedCandidate.candidate?.user?.full_name || `Candidate #${selectedCandidate.candidate_id}`;
+    selectedCandidate.candidate?.user?.full_name || `Ứng viên #${selectedCandidate.candidate_id}`;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -114,10 +117,10 @@ export default function CandidateDetailPage() {
         <Button
           size="sm"
           variant="outline"
-          onClick={() => navigate("/recruiter/talent-pool")}
+          onClick={() => navigate(backTo)}
         >
           <ArrowLeft className="h-4 w-4" />
-          Back
+          Quay lại
         </Button>
         <h1 className="text-2xl font-bold text-slate-900">{candidateName}</h1>
       </div>
@@ -125,8 +128,17 @@ export default function CandidateDetailPage() {
       <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
         <div className="grid gap-5">
           <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Thông tin liên hệ & hồ sơ nhanh
+            </label>
+            <CandidateInfoSummary candidate={selectedCandidate.candidate} />
+          </div>
+
+          <hr className="border-slate-200" />
+
+          <div>
             <label className="mb-1 block text-sm font-semibold text-slate-700">
-              Match Score
+              Điểm phù hợp
             </label>
             <p className="text-sm text-slate-500">
               {selectedCandidate.match_score !== null
@@ -137,7 +149,7 @@ export default function CandidateDetailPage() {
 
           <div>
             <label className="mb-1 block text-sm font-semibold text-slate-700">
-              Matched Skills
+              Kỹ năng phù hợp
             </label>
             <div className="flex flex-wrap gap-2">
               {(selectedCandidate.matched_skills || []).length > 0
@@ -149,13 +161,13 @@ export default function CandidateDetailPage() {
                       {s}
                     </span>
                   ))
-                : <span className="text-sm text-slate-400">None</span>}
+                : <span className="text-sm text-slate-400">Không có</span>}
             </div>
           </div>
 
           <div>
             <label className="mb-1 block text-sm font-semibold text-slate-700">
-              Missing Skills
+              Kỹ năng còn thiếu
             </label>
             <div className="flex flex-wrap gap-2">
               {(selectedCandidate.missing_skills || []).length > 0
@@ -167,7 +179,7 @@ export default function CandidateDetailPage() {
                       {s}
                     </span>
                   ))
-                : <span className="text-sm text-slate-400">None</span>}
+                : <span className="text-sm text-slate-400">Không có</span>}
             </div>
           </div>
 
@@ -175,20 +187,20 @@ export default function CandidateDetailPage() {
 
           <div>
             <label className="mb-1 block text-sm font-semibold text-slate-700">
-              Note
+              Ghi chú
             </label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={3}
               className="w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-              placeholder="Internal note (not visible to candidates)..."
+              placeholder="Ghi chú nội bộ, ứng viên không nhìn thấy..."
             />
           </div>
 
           <div>
             <label className="mb-1 block text-sm font-semibold text-slate-700">
-              Tags (comma-separated)
+              Nhãn (phân tách bằng dấu phẩy)
             </label>
             <input
               type="text"
@@ -202,7 +214,7 @@ export default function CandidateDetailPage() {
           <div className="grid gap-5 sm:grid-cols-3">
             <div>
               <label className="mb-1 block text-sm font-semibold text-slate-700">
-                Status
+                Trạng thái
               </label>
               <SelectInput
                 value={status}
@@ -212,7 +224,7 @@ export default function CandidateDetailPage() {
             </div>
             <div>
               <label className="mb-1 block text-sm font-semibold text-slate-700">
-                Priority
+                Mức ưu tiên
               </label>
               <SelectInput
                 value={priority}
@@ -222,7 +234,7 @@ export default function CandidateDetailPage() {
             </div>
             <div>
               <label className="mb-1 block text-sm font-semibold text-slate-700">
-                Follow-up Date
+                Ngày theo dõi
               </label>
               <input
                 type="date"
@@ -242,10 +254,10 @@ export default function CandidateDetailPage() {
             onClick={handleRemove}
           >
             <Trash2 className="h-4 w-4" />
-            Remove from Pool
+            Xóa khỏi kho
           </Button>
           <Button size="sm" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? "Đang lưu..." : "Lưu thay đổi"}
           </Button>
         </div>
       </div>

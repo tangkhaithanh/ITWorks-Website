@@ -1,6 +1,7 @@
 import {
   Injectable,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
@@ -48,6 +49,12 @@ export class PotentialCandidatesService {
       deleted_at: null,
     };
 
+    if (query.jobId) {
+      const jobId = BigInt(query.jobId);
+      await this.assertCanViewJobPool(jobId, recruiterId);
+      where.job_id = jobId;
+    }
+
     if (status) where.status = status;
     if (priority) where.priority = priority;
 
@@ -72,6 +79,13 @@ export class PotentialCandidatesService {
       this.prisma.potentialCandidate.findMany({
         where,
         include: {
+          job: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+            },
+          },
           candidate: {
             include: {
               user: {
@@ -102,10 +116,39 @@ export class PotentialCandidatesService {
     };
   }
 
+  private async assertCanViewJobPool(jobId: bigint, recruiterId: bigint) {
+    const job = await this.prisma.job.findUnique({
+      where: { id: jobId },
+      select: {
+        id: true,
+        company: {
+          select: {
+            account_id: true,
+          },
+        },
+      },
+    });
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    if (job.company.account_id !== recruiterId) {
+      throw new ForbiddenException('You cannot view this job talent pool');
+    }
+  }
+
   async findOne(id: bigint, recruiterId: bigint) {
     const item = await this.prisma.potentialCandidate.findFirst({
       where: { id, recruiter_id: recruiterId, deleted_at: null },
       include: {
+        job: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+          },
+        },
         candidate: {
           include: {
             user: {

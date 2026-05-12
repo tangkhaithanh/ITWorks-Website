@@ -2,6 +2,29 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import TalentPoolAPI from "./talentPoolAPI";
 import { logout } from "@/features/auth/authSlice";
 
+const unwrapApiData = (payload) => {
+  if (payload?.success && Object.prototype.hasOwnProperty.call(payload, "data")) {
+    return payload.data;
+  }
+  return payload;
+};
+
+const normalizeListPayload = (payload) => {
+  const data = unwrapApiData(payload);
+
+  if (Array.isArray(data)) {
+    return {
+      items: data,
+      meta: initialState.meta,
+    };
+  }
+
+  return {
+    items: Array.isArray(data?.data) ? data.data : [],
+    meta: data?.meta || initialState.meta,
+  };
+};
+
 export const saveCandidate = createAsyncThunk(
   "talentPool/saveCandidate",
   async (data, { rejectWithValue }) => {
@@ -18,7 +41,10 @@ export const fetchTalentPool = createAsyncThunk(
   "talentPool/fetchTalentPool",
   async (params, { rejectWithValue }) => {
     try {
-      const response = await TalentPoolAPI.getAll(params);
+      const { jobId, ...rest } = params || {};
+      const response = jobId
+        ? await TalentPoolAPI.getByJob(jobId, rest)
+        : await TalentPoolAPI.getAll(rest);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
@@ -90,7 +116,7 @@ const talentPoolSlice = createSlice({
       })
       .addCase(saveCandidate.fulfilled, (state, action) => {
         state.saving = false;
-        state.items.unshift(action.payload);
+        state.items.unshift(unwrapApiData(action.payload));
       })
       .addCase(saveCandidate.rejected, (state, action) => {
         state.saving = false;
@@ -101,9 +127,10 @@ const talentPoolSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchTalentPool.fulfilled, (state, action) => {
+        const { items, meta } = normalizeListPayload(action.payload);
         state.loading = false;
-        state.items = action.payload.data || [];
-        state.meta = action.payload.meta || initialState.meta;
+        state.items = items;
+        state.meta = meta;
       })
       .addCase(fetchTalentPool.rejected, (state, action) => {
         state.loading = false;
@@ -115,20 +142,21 @@ const talentPoolSlice = createSlice({
       })
       .addCase(fetchCandidateDetail.fulfilled, (state, action) => {
         state.loading = false;
-        state.selectedCandidate = action.payload;
+        state.selectedCandidate = unwrapApiData(action.payload);
       })
       .addCase(fetchCandidateDetail.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
       .addCase(updateCandidate.fulfilled, (state, action) => {
+        const updatedCandidate = unwrapApiData(action.payload);
         const index = state.items.findIndex(
-          (item) => item.id === action.payload.id
+          (item) => item.id === updatedCandidate.id
         );
         if (index !== -1) {
-          state.items[index] = action.payload;
+          state.items[index] = updatedCandidate;
         }
-        state.selectedCandidate = action.payload;
+        state.selectedCandidate = updatedCandidate;
       })
       .addCase(removeCandidate.fulfilled, (state, action) => {
         state.items = state.items.filter(

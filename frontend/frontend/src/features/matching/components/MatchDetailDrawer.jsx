@@ -44,7 +44,7 @@ export default function MatchDetailDrawer({
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/95 px-6 py-4 backdrop-blur">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-              Candidate Detail
+              Chi tiết ứng viên
             </p>
             <h2 className="mt-1 text-xl font-bold text-slate-900">
               {candidate?.full_name || match.displayName}
@@ -161,7 +161,7 @@ export default function MatchDetailDrawer({
                 {applicationId ? (
                   <Button size="sm" variant="outline" onClick={() => onOpenApplication(match)}>
                     <ExternalLink className="h-4 w-4" />
-                    Xem Application
+                    Xem đơn ứng tuyển
                   </Button>
                 ) : null}
 
@@ -174,11 +174,11 @@ export default function MatchDetailDrawer({
                     disabled={normalizeStatus(match.applicationStatus) === "rejected"}
                   >
                     <XCircle className="h-4 w-4" />
-                    Reject
+                    Từ chối
                   </Button>
                 ) : (
                   <div className="rounded-2xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-700">
-                    Ứng viên talent pool hiện chưa có `application_id`.
+                    Ứng viên trong kho hiện chưa có `application_id`.
                   </div>
                 )}
               </div>

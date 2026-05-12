@@ -1,4 +1,11 @@
-import { IsOptional, IsString, IsEnum, IsInt, Min } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsEnum,
+  IsInt,
+  Min,
+  Matches,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import {
   PotentialCandidateStatus,
@@ -6,6 +13,11 @@ import {
 } from '@prisma/client';
 
 export class QueryPotentialCandidateDto {
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d+$/, { message: 'jobId must be a numeric string' })
+  jobId?: string;
+
   @IsOptional()
   @IsString()
   search?: string;

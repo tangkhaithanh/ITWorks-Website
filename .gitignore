@@ -42,3 +42,5 @@ Thumbs.db
 specs/
 AGENTS.md
 potential.md
+.agents/
+.codex

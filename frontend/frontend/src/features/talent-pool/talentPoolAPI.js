@@ -5,6 +5,11 @@ const TalentPoolAPI = {
 
   getAll: (params = {}) => apiClient.get("/potential-candidates", { params }),
 
+  getByJob: (jobId, params = {}) =>
+    apiClient.get("/potential-candidates", {
+      params: { ...params, jobId },
+    }),
+
   getById: (id) => apiClient.get(`/potential-candidates/${id}`),
 
   update: (id, data) => apiClient.put(`/potential-candidates/${id}`, data),

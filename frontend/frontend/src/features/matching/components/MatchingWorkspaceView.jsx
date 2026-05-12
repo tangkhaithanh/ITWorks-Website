@@ -238,7 +238,7 @@ function MatchingFiltersPanel({
           </Button>
           <Button size="sm" variant="outline" onClick={onResetFilters}>
             <FilterX className="h-4 w-4" />
-            Reset
+            Đặt lại
           </Button>
         </div>
       </div>
@@ -389,6 +389,7 @@ export default function MatchingWorkspaceView({
   onManageApplication,
   onOpenCv,
   onSaveToTalentPool,
+  onOpenTalentPool,
   onBackToJobs,
 }) {
   const [jobDrawerOpen, setJobDrawerOpen] = useState(false);
@@ -433,6 +434,15 @@ export default function MatchingWorkspaceView({
               >
                 <PanelLeftOpen className="h-4 w-4" />
                 Xem JD
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onOpenTalentPool}
+                className="border-blue-200 text-blue-700 hover:bg-blue-50"
+              >
+                <Users className="h-4 w-4" />
+                Kho ứng viên
               </Button>
             </div>
 
@@ -516,6 +526,16 @@ export default function MatchingWorkspaceView({
                   ? "Chạy lại matching"
                   : "Bắt đầu matching"}
             </Button>
+
+            {activeMode === "job_find_talent" && (
+              <button
+                type="button"
+                onClick={onOpenTalentPool}
+                className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-left text-sm font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-100"
+              >
+                Mở kho ứng viên của job này để xem các ứng viên đã lưu
+              </button>
+            )}
           </div>
         </div>
       </div>
