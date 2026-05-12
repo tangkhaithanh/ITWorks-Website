@@ -168,7 +168,12 @@ export default function MatchCard({
           </>
         ) : (
           <>
-            <Button size="sm" variant="secondary" onClick={() => onOpenCv(item)} disabled={!item.cvPath}>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => onOpenCv(item)}
+              disabled={!(item.file_url || item.cvPath)}
+            >
               <FileText className="h-4 w-4" />
               Xem CV
             </Button>

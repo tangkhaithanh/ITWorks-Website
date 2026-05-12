@@ -12,7 +12,6 @@ import MatchScoreBar from "@/features/matching/components/MatchScoreBar";
 import MatchStatusBadge from "@/features/matching/components/MatchStatusBadge";
 import {
   formatExactPercent,
-  getCvViewPath,
   getMatchApplicationId,
   getScoreTone,
   normalizeStatus,
@@ -33,7 +32,7 @@ export default function MatchDetailDrawer({
 
   const explanationLines = parseExplanationLines(match.explanation);
   const candidate = detail?.candidate;
-  const cvPath = detail?.cv ? getCvViewPath(detail.cv) : match.cvPath;
+  const cvPath = match.file_url || match.cvPath;
   const applicationId = getMatchApplicationId(match);
 
   return (

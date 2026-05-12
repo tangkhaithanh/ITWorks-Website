@@ -33,4 +33,8 @@ export class SkillsService {
     if (!skill) throw new NotFoundException('Skill không tồn tại');
     return this.prisma.skill.delete({ where: { id } });
   }
+
+  async deleteMany(ids: bigint[]) {
+    return this.prisma.skill.deleteMany({ where: { id: { in: ids } } });
+  }
 }

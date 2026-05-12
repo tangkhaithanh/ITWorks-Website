@@ -13,9 +13,7 @@ import {
   PAGE_SIZE,
 } from "@/features/matching/constants/matchingWorkspace.constants";
 import {
-  buildBackendUrl,
   formatExperienceRequired,
-  getCvViewPath,
   getJobSkills,
   getMatchApplicationId,
   matchHasSelectedSkills,
@@ -151,7 +149,7 @@ export default function MatchingWorkspacePage() {
     allApplications.forEach((item) => {
       const candidateId = Number(item?.candidate?.id);
       if (!candidateId || candidateMap.has(candidateId)) return;
-      candidateMap.set(candidateId, { candidate: item.candidate, cv_url: item.cv_url });
+      candidateMap.set(candidateId, { candidate: item.candidate });
     });
 
     return matches.map((match, index) => {
@@ -171,7 +169,7 @@ export default function MatchingWorkspacePage() {
         experienceLabel: formatExperienceRequired(job),
         subtitle: `Ứng viên đã apply cho ${job?.title || "job này"}`,
         applicationStatus: application?.status || normalizeStatus(match.status),
-        cvPath: application?.cv_url || fallbackCandidate?.cv_url || null,
+        cvPath: match.file_url || null,
         resolvedApplicationId,
       };
     });
@@ -183,7 +181,7 @@ export default function MatchingWorkspacePage() {
     allApplications.forEach((item) => {
       const candidateId = Number(item?.candidate?.id);
       if (!candidateId || candidateMap.has(candidateId)) return;
-      candidateMap.set(candidateId, { candidate: item.candidate, cv_url: item.cv_url });
+      candidateMap.set(candidateId, { candidate: item.candidate });
     });
 
     return matches.map((match, index) => {
@@ -201,7 +199,7 @@ export default function MatchingWorkspacePage() {
         experienceLabel: formatExperienceRequired(job),
         subtitle: "Ứng viên từ CV pool",
         applicationStatus: null,
-        cvPath: fallbackCandidate?.cv_url || null,
+        cvPath: match.file_url || null,
       };
     });
   };
@@ -293,13 +291,14 @@ export default function MatchingWorkspacePage() {
   };
 
   const handleOpenCv = (match) => {
-    const cvPath = match?.cvPath || getCvViewPath(drawerDetail?.cv);
+    const cvPath = match?.file_url || match?.cvPath;
+
     if (!cvPath) {
       toast("CV hiện chưa có đường dẫn xem trực tiếp.");
       return;
     }
 
-    window.open(buildBackendUrl(cvPath), "_blank", "noopener,noreferrer");
+    window.open(cvPath, "_blank", "noopener,noreferrer");
   };
 
   const handleManageApplication = (match) => {

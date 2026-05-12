@@ -206,6 +206,68 @@ export class AiSyncService {
     return synced.id;
   }
 
+  async rankApplicants(sourceJobId: number) {
+    const result = await this.aiSyncClient.rankApplicants(sourceJobId);
+    return this.enrichMatchesWithCvFileUrls(result);
+  }
+
+  async findTalent(sourceJobId: number) {
+    const result = await this.aiSyncClient.findTalent(sourceJobId);
+    return this.enrichMatchesWithCvFileUrls(result);
+  }
+
+  private async enrichMatchesWithCvFileUrls(result: any) {
+    const matches = Array.isArray(result?.matches) ? result.matches : [];
+
+    if (!Array.isArray(result?.matches)) {
+      return result;
+    }
+
+    const sourceCvIdsByKey = new Map<string, bigint>();
+
+    matches.forEach((match: any) => {
+      const sourceCvId = this.toPositiveBigInt(match?.source_cv_id);
+
+      if (sourceCvId) {
+        sourceCvIdsByKey.set(sourceCvId.toString(), sourceCvId);
+      }
+    });
+
+    const fileUrlsBySourceCvId = new Map<string, string | null>();
+
+    if (sourceCvIdsByKey.size > 0) {
+      const cvs = await this.prisma.cv.findMany({
+        where: {
+          id: {
+            in: Array.from(sourceCvIdsByKey.values()),
+          },
+        },
+        select: {
+          id: true,
+          file_url: true,
+        },
+      });
+
+      cvs.forEach((cv) => {
+        fileUrlsBySourceCvId.set(cv.id.toString(), cv.file_url);
+      });
+    }
+
+    return {
+      ...result,
+      matches: matches.map((match: any) => {
+        const sourceCvId = this.toPositiveBigInt(match?.source_cv_id);
+
+        return {
+          ...match,
+          file_url: sourceCvId
+            ? (fileUrlsBySourceCvId.get(sourceCvId.toString()) ?? null)
+            : null,
+        };
+      }),
+    };
+  }
+
   private async ensureCompanySynced(companyId: bigint) {
     return this.syncCompany(companyId);
   }
@@ -482,6 +544,23 @@ export class AiSyncService {
 
   private toNumber(value: bigint) {
     return Number(value);
+  }
+
+  private toPositiveBigInt(value: unknown) {
+    if (typeof value === 'bigint') {
+      return value > 0n ? value : null;
+    }
+
+    if (typeof value === 'number') {
+      return Number.isInteger(value) && value > 0 ? BigInt(value) : null;
+    }
+
+    if (typeof value === 'string' && /^\d+$/.test(value)) {
+      const parsed = BigInt(value);
+      return parsed > 0n ? parsed : null;
+    }
+
+    return null;
   }
 
   private toIsoString(value: Date | null | undefined) {
