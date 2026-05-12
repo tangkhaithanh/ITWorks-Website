@@ -4,6 +4,7 @@ import { RefreshCw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { saveCandidate } from "@/features/talent-pool/talentPoolSlice";
+import TalentPoolAPI from "@/features/talent-pool/talentPoolAPI";
 import ApplicationAPI from "@/features/applications/ApplicationAPI";
 import JobAPI from "@/features/jobs/JobAPI";
 import MatchDetailDrawer from "@/features/matching/components/MatchDetailDrawer";
@@ -20,6 +21,7 @@ import {
   getCvViewPath,
   getJobSkills,
   getMatchApplicationId,
+  getMatchCandidateId,
   matchHasSelectedSkills,
   normalizeStatus,
   parseCityLabel,
@@ -41,6 +43,40 @@ function MatchingWorkspaceLoadingState() {
     </div>
   );
 }
+
+const unwrapTalentPoolList = (response) => {
+  let current = response?.data;
+
+  for (let depth = 0; depth < 4; depth += 1) {
+    if (!current || typeof current !== "object" || Array.isArray(current)) {
+      break;
+    }
+
+    if (Array.isArray(current.data)) {
+      return current.data;
+    }
+
+    if (Array.isArray(current.items)) {
+      return current.items;
+    }
+
+    current = current.data;
+  }
+
+  return [];
+};
+
+const buildSavedTalentMap = (items) =>
+  new Map(
+    items
+      .map((item) => {
+        const candidateId = Number(item?.candidate_id ?? item?.candidate?.id);
+        return Number.isFinite(candidateId) && candidateId > 0
+          ? [candidateId, item]
+          : null;
+      })
+      .filter(Boolean),
+  );
 
 export default function MatchingWorkspacePage() {
   const navigate = useNavigate();
@@ -185,7 +221,7 @@ export default function MatchingWorkspacePage() {
     });
   };
 
-  const enrichTalentMatches = (matches, allApplications, job) => {
+  const enrichTalentMatches = (matches, allApplications, job, savedTalentMap = new Map()) => {
     const candidateMap = new Map();
 
     allApplications.forEach((item) => {
@@ -197,6 +233,8 @@ export default function MatchingWorkspacePage() {
     return matches.map((match, index) => {
       const fallbackCandidate = candidateMap.get(Number(match.source_candidate_id || match.candidate_id));
       const candidateUser = fallbackCandidate?.candidate?.user;
+      const candidateId = getMatchCandidateId(match);
+      const savedRecord = candidateId ? savedTalentMap.get(candidateId) : null;
 
       return {
         ...match,
@@ -210,6 +248,8 @@ export default function MatchingWorkspacePage() {
         subtitle: "Ứng viên từ CV pool",
         applicationStatus: null,
         cvPath: fallbackCandidate?.cv_url || null,
+        isSavedToTalentPool: Boolean(savedRecord),
+        savedTalentPoolId: savedRecord?.id || null,
       };
     });
   };
@@ -238,16 +278,18 @@ export default function MatchingWorkspacePage() {
         );
         setRankTotal(Number(rankData.total ?? rankMatchesData.length ?? 0));
       } else {
-        const [talentRes, allApplicationsRes] = await Promise.all([
+        const [talentRes, allApplicationsRes, talentPoolRes] = await Promise.all([
           MatchingAPI.findTalent(job.id),
           ApplicationAPI.getByCompany({ page: 1, limit: 200 }),
+          TalentPoolAPI.getByJob(job.id, { page: 1, limit: 500 }),
         ]);
 
         const talentData = unwrapApiPayload(talentRes);
         const allApplications = allApplicationsRes.data?.data?.items || [];
+        const savedTalentMap = buildSavedTalentMap(unwrapTalentPoolList(talentPoolRes));
         const talentMatchesData = Array.isArray(talentData.matches) ? talentData.matches : [];
 
-        setTalentMatches(enrichTalentMatches(talentMatchesData, allApplications, job));
+        setTalentMatches(enrichTalentMatches(talentMatchesData, allApplications, job, savedTalentMap));
         setTalentTotal(Number(talentData.total ?? talentMatchesData.length ?? 0));
       }
 
@@ -331,7 +373,12 @@ export default function MatchingWorkspacePage() {
   };
 
   const handleSaveToTalentPool = async (match) => {
-    const candidateId = match.source_candidate_id || match.candidate_id || match.id;
+    if (match.isSavedToTalentPool) {
+      toast("Ứng viên này đã có trong kho ứng viên.");
+      return;
+    }
+
+    const candidateId = getMatchCandidateId(match);
     if (!candidateId) {
       toast.error("Không thể xác định ứng viên để lưu.");
       return;
@@ -347,6 +394,14 @@ export default function MatchingWorkspacePage() {
           missingSkills: match.missing_skills || [],
         })
       ).unwrap();
+      const updateMatch = (item) =>
+        getMatchCandidateId(item) === Number(candidateId)
+          ? { ...item, isSavedToTalentPool: true }
+          : item;
+
+      setTalentMatches((prev) => prev.map(updateMatch));
+      setRankMatches((prev) => prev.map(updateMatch));
+
       toast((t) => (
         <div className="flex flex-col gap-2">
           <span>Đã lưu {match.displayName || "ứng viên"} vào kho ứng viên.</span>
@@ -363,7 +418,20 @@ export default function MatchingWorkspacePage() {
         </div>
       ));
     } catch (error) {
-      if (error?.message === "ALREADY_SAVED" || error?.error === "ALREADY_SAVED") {
+      const errorMessage = String(error?.message || error?.error || "").toLowerCase();
+      if (
+        error?.statusCode === 409 ||
+        error?.status === 409 ||
+        errorMessage.includes("already saved") ||
+        errorMessage.includes("đã có")
+      ) {
+        const updateMatch = (item) =>
+          getMatchCandidateId(item) === Number(candidateId)
+            ? { ...item, isSavedToTalentPool: true }
+            : item;
+
+        setTalentMatches((prev) => prev.map(updateMatch));
+        setRankMatches((prev) => prev.map(updateMatch));
         toast.error("Ứng viên này đã có trong kho ứng viên.");
       } else {
         toast.error("Không thể lưu ứng viên vào kho ứng viên.");

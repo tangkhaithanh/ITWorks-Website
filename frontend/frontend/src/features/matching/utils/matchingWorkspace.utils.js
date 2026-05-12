@@ -233,6 +233,11 @@ export const getMatchApplicationId = (match) => {
   return Number.isFinite(resolvedId) && resolvedId > 0 ? resolvedId : null;
 };
 
+export const getMatchCandidateId = (match) => {
+  const resolvedId = Number(match?.source_candidate_id ?? match?.candidate_id ?? match?.id);
+  return Number.isFinite(resolvedId) && resolvedId > 0 ? resolvedId : null;
+};
+
 export const getCvViewPath = (cv) => {
   if (!cv || cv.type !== "file" || !cv.file_public_id) return null;
   const filename = String(cv.file_public_id).replace(/^cvs\//, "");

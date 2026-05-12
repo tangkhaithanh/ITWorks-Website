@@ -1,5 +1,6 @@
 import {
   Bookmark,
+  BookmarkCheck,
   Briefcase,
   Eye,
   FileText,
@@ -180,11 +181,20 @@ export default function MatchCard({
             <Button
               size="sm"
               variant="outline"
-              className="border-slate-200 text-slate-500 hover:border-emerald-200 hover:text-emerald-600"
+              className={
+                item.isSavedToTalentPool
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-slate-200 text-slate-500 hover:border-emerald-200 hover:text-emerald-600"
+              }
               onClick={() => onSaveToTalentPool?.(item)}
+              disabled={item.isSavedToTalentPool}
             >
-              <Bookmark className="h-4 w-4" />
-              Lưu talent
+              {item.isSavedToTalentPool ? (
+                <BookmarkCheck className="h-4 w-4" />
+              ) : (
+                <Bookmark className="h-4 w-4" />
+              )}
+              {item.isSavedToTalentPool ? "Đã lưu" : "Lưu talent"}
             </Button>
           </>
         )}
