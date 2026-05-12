@@ -22,12 +22,16 @@ import { CreatePotentialCandidateDto } from './dto/create-potential-candidate.dt
 import { UpdatePotentialCandidateDto } from './dto/update-potential-candidate.dto';
 import { QueryPotentialCandidateDto } from './dto/query-potential-candidate.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
+import { RolesGuard } from '@/common/guards/roles.guard';
+import { Roles } from '@/common/decorators/roles.decorator';
 import { User } from '@/common/decorators/user.decorator';
+import { Role } from '@prisma/client';
 
 @ApiTags('Potential Candidates')
 @ApiBearerAuth()
 @Controller('potential-candidates')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.recruiter)
 export class PotentialCandidatesController {
   constructor(private readonly service: PotentialCandidatesService) {}
 

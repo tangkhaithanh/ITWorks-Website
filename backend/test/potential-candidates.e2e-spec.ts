@@ -237,4 +237,19 @@ describe('Potential candidates job-scoped pool (e2e)', () => {
 
     expect(prisma.potentialCandidate.findMany).not.toHaveBeenCalled();
   });
+
+  it('does not save a candidate when recruiter cannot manage the job', async () => {
+    prisma.job.findUnique.mockResolvedValue({
+      id: BigInt(300),
+      company: { account_id: BigInt(777) },
+    });
+
+    await request(app.getHttpServer())
+      .post('/potential-candidates')
+      .send({ candidateId: '501', jobId: '300' })
+      .expect(403);
+
+    expect(prisma.potentialCandidate.findFirst).not.toHaveBeenCalled();
+    expect(prisma.potentialCandidate.create).not.toHaveBeenCalled();
+  });
 });

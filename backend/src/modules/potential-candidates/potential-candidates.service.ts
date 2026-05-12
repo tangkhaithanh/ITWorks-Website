@@ -15,11 +15,16 @@ export class PotentialCandidatesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreatePotentialCandidateDto, recruiterId: bigint) {
+    const jobId = BigInt(dto.jobId);
+    const candidateId = BigInt(dto.candidateId);
+
+    await this.assertCanViewJobPool(jobId, recruiterId);
+
     const existing = await this.prisma.potentialCandidate.findFirst({
       where: {
         recruiter_id: recruiterId,
-        candidate_id: BigInt(dto.candidateId),
-        job_id: BigInt(dto.jobId),
+        candidate_id: candidateId,
+        job_id: jobId,
         deleted_at: null,
       },
     });
@@ -30,8 +35,8 @@ export class PotentialCandidatesService {
 
     return this.prisma.potentialCandidate.create({
       data: {
-        candidate_id: BigInt(dto.candidateId),
-        job_id: BigInt(dto.jobId),
+        candidate_id: candidateId,
+        job_id: jobId,
         recruiter_id: recruiterId,
         match_score: dto.matchScore ?? null,
         matched_skills: dto.matchedSkills ?? [],
