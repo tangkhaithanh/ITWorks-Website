@@ -38,6 +38,9 @@ import AdminDashboardPage from "../features/admin/pages/AdminDashboardPage";
 import CompanySearchPage from "@/features/companies/pages/CompanySearchPage.jsx";
 import CompanyProfilePage from "@/features/companies/pages/CompanyProfilePage.jsx";
 import MatchingWorkspacePage from "@/features/matching/pages/MatchingWorkspacePage.jsx";
+import TalentPoolListPage from "@/features/talent-pool/pages/TalentPoolListPage.jsx";
+import CandidateDetailPage from "@/features/talent-pool/pages/CandidateDetailPage.jsx";
+import JobTalentPoolPage from "@/features/talent-pool/pages/JobTalentPoolPage.jsx";
 import { Navigate } from "react-router-dom";
 import MessagesPage from "@/features/messaging/MessagesPage.jsx";
 const router = createBrowserRouter([
@@ -133,6 +136,7 @@ const router = createBrowserRouter([
       { path: "company/:id/edit", element: <CreateCompanyPage /> },
       { path: "jobs", element: <ManageJobPage /> },
       { path: "jobs/:id", element: <JobDetailForHRPage /> },
+      { path: "jobs/:jobId/talent-pool", element: <JobTalentPoolPage /> },
       { path: "jobs/create", element: <CreateJobPage /> },
       { path: "jobs/:id/edit", element: <CreateJobPage /> },
       { path: "jobs/:id/dashboard", element: <JobDashboardForHRPage /> },
@@ -141,6 +145,8 @@ const router = createBrowserRouter([
       { path: "usage", element: <UsagePage /> },
       { path: "orders", element: <ManageOrderPage /> },
       { path: "candidate-search", element: <MatchingWorkspacePage /> },
+      { path: "talent-pool", element: <TalentPoolListPage /> },
+      { path: "talent-pool/:id", element: <CandidateDetailPage /> },
       { path: "messages", element: <MessagesPage /> },
     ],
   },

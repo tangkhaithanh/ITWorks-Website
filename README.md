@@ -2,7 +2,7 @@
 
 Dự án bao gồm **2 ứng dụng chính** trong một **mono-repo**:
 
-* **Backend (NestJS + Prisma + MySQL)** → `backend/`
+* **Backend (NestJS + Prisma + PostgreSQL)** → `backend/`
 * **Frontend (React + Vite + Redux Toolkit + TailwindCSS)** → `frontend/`
 
 ---
@@ -13,7 +13,7 @@ Dự án bao gồm **2 ứng dụng chính** trong một **mono-repo**:
 | ---------- | --------------------- |
 | Node.js    | >= 18.x               |
 | npm        | >= 9                  |
-| MySQL      | 8.x hoặc 5.7          |
+| PostgreSQL | 16.x                  |
 | Git        | Mới nhất              |
 
 ---
@@ -68,16 +68,16 @@ frontend/
 
 ## 🗄️ 4. Chuẩn bị cơ sở dữ liệu
 
-1. **Tạo database trong MySQL:**
+1. **Tạo database trong PostgreSQL:**
 
    ```sql
-   CREATE DATABASE recruitment;
+   CREATE DATABASE recruitment_db;
    ```
 
 2. **Cập nhật biến kết nối trong file `.env` của backend:**
 
    ```bash
-   DATABASE_URL="mysql://root:password@localhost:3306/recruitment"
+   DATABASE_URL="postgresql://postgres:Postgres%40123@localhost:5432/recruitment_db"
    JWT_SECRET="your_jwt_secret"
    CLOUDINARY_CLOUD_NAME=...
    CLOUDINARY_API_KEY=...
@@ -101,7 +101,7 @@ frontend/
 
 ```bash
 PORT=8080
-DATABASE_URL="mysql://root:password@localhost:3306/recruitment"
+DATABASE_URL="postgresql://postgres:Postgres%40123@localhost:5432/recruitment_db"
 
 JWT_SECRET=supersecret
 FRONTEND_ORIGIN=http://localhost:5173
@@ -226,7 +226,7 @@ npm run preview
 
 | Lỗi                | Nguyên nhân & Cách xử lý                           |
 | ------------------ | -------------------------------------------------- |
-| ❌ Không kết nối DB | Kiểm tra `DATABASE_URL` và đảm bảo MySQL đang chạy |
+| ❌ Không kết nối DB | Kiểm tra `DATABASE_URL` và đảm bảo PostgreSQL đang chạy |
 | ⚠️ Lỗi upload file | Kiểm tra cấu hình Cloudinary trong `.env`          |
 | 🚫 CORS blocked    | Cập nhật `FRONTEND_ORIGIN` trong backend `.env`    |
 | 🧱 Port đang dùng  | Đổi `PORT` hoặc dừng tiến trình đang chiếm port    |
@@ -245,5 +245,3 @@ npm run preview
 | Build toàn dự án  | `npm run build`                      |
 
 ---
-
-

@@ -30,6 +30,7 @@ import jwtConfig from '@/config/jwt.config';
 import mailerConfig from '@/config/mailer.config';
 import aiServiceConfig from '@/config/ai-service.config';
 import { AiSyncModule } from '@/modules/ai-sync/ai-sync.module';
+import { PotentialCandidatesModule } from '@/modules/potential-candidates/potential-candidates.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { AiSyncModule } from '@/modules/ai-sync/ai-sync.module';
     AiSyncModule,
     CvTemplatesModule,
     MessagingModule,
+    PotentialCandidatesModule,
   ],
 })
 export class AppModule {}

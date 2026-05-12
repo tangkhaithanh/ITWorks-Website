@@ -1,5 +1,6 @@
 import {
   Bookmark,
+  BookmarkCheck,
   Briefcase,
   Eye,
   FileText,
@@ -25,6 +26,7 @@ export default function MatchCard({
   onReject,
   onManageApplication,
   onOpenCv,
+  onSaveToTalentPool,
 }) {
   const overallTone = getScoreTone(item.overall_score);
   const isApplicantMode = mode === "job_rank_applicants";
@@ -56,7 +58,7 @@ export default function MatchCard({
                     : "border-violet-200 bg-violet-50 text-violet-700"
                 }`}
               >
-                {isApplicantMode ? "Applied" : "Talent Pool"}
+                {isApplicantMode ? "Đã ứng tuyển" : "Kho ứng viên"}
               </span>
             </div>
 
@@ -100,7 +102,7 @@ export default function MatchCard({
       <div className="mt-5 grid gap-3 lg:grid-cols-2">
         <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-emerald-700">
-            Matched Skills
+            Kỹ năng phù hợp
           </p>
           <div className="flex flex-wrap gap-2">
             {(item.matched_skills || []).length > 0 ? (
@@ -122,7 +124,7 @@ export default function MatchCard({
 
         <div className="rounded-2xl border border-rose-100 bg-rose-50/70 p-4">
           <p className="mb-2 text-xs font-bold uppercase tracking-wide text-rose-700">
-            Missing Skills
+            Kỹ năng còn thiếu
           </p>
           <div className="flex flex-wrap gap-2">
             {(item.missing_skills || []).length > 0 ? (
@@ -181,9 +183,23 @@ export default function MatchCard({
               <Mail className="h-4 w-4" />
               Mời ứng tuyển
             </Button>
-            <Button size="sm" variant="outline" className="border-slate-200 text-slate-500" disabled>
-              <Bookmark className="h-4 w-4" />
-              Lưu talent
+            <Button
+              size="sm"
+              variant="outline"
+              className={
+                item.isSavedToTalentPool
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-slate-200 text-slate-500 hover:border-emerald-200 hover:text-emerald-600"
+              }
+              onClick={() => onSaveToTalentPool?.(item)}
+              disabled={item.isSavedToTalentPool}
+            >
+              {item.isSavedToTalentPool ? (
+                <BookmarkCheck className="h-4 w-4" />
+              ) : (
+                <Bookmark className="h-4 w-4" />
+              )}
+              {item.isSavedToTalentPool ? "Đã lưu" : "Lưu talent"}
             </Button>
           </>
         )}

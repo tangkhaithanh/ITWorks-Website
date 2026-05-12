@@ -28,7 +28,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
-  Layers
+  Layers,
+  UsersRound,
 } from "lucide-react";
 
 // =======================
@@ -172,7 +173,7 @@ export default function JobDetailForHRPage() {
       await JobAPI.hide(job.id);
       await fetchJob();
       Swal.fire({ icon: "success", title: "Đã ẩn job!", timer: 1000, showConfirmButton: false });
-    } catch (err) {
+    } catch {
       Swal.fire({ icon: "error", title: "Lỗi", text: "Không thể ẩn job." });
     }
   };
@@ -192,7 +193,7 @@ export default function JobDetailForHRPage() {
       await JobAPI.unhide(job.id);
       await fetchJob();
       Swal.fire({ icon: "success", title: "Job đã hiển thị!", timer: 1000, showConfirmButton: false });
-    } catch (err) {
+    } catch {
       Swal.fire({ icon: "error", title: "Lỗi", text: "Không thể hiện lại job." });
     }
   };
@@ -213,7 +214,7 @@ export default function JobDetailForHRPage() {
       await JobAPI.close(job.id);
       await fetchJob();
       Swal.fire({ icon: "success", title: "Đã đóng job!", timer: 1000, showConfirmButton: false });
-    } catch (err) {
+    } catch {
       Swal.fire({ icon: "error", title: "Lỗi", text: "Không thể đóng job." });
     }
   };
@@ -242,7 +243,7 @@ export default function JobDetailForHRPage() {
       setExtendOpen(false);
       await fetchJob();
       Swal.fire({ icon: "success", title: "Gia hạn thành công!", timer: 1200, showConfirmButton: false });
-    } catch (err) {
+    } catch {
       Swal.fire({ icon: "error", title: "Lỗi", text: "Không thể gia hạn" });
     }
   };
@@ -333,6 +334,19 @@ export default function JobDetailForHRPage() {
                 onClick={() => navigate(`/recruiter/jobs/${job.id}/dashboard`)}
               >
                 <BarChart3 className="h-3.5 w-3.5" /> Thống kê
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  navigate(`/recruiter/jobs/${job.id}/talent-pool`, {
+                    state: { backTo: `/recruiter/jobs/${job.id}`, backLabel: "Job" },
+                  })
+                }
+                className="h-8 text-xs gap-1.5 border-blue-200 text-blue-700 hover:bg-blue-50"
+              >
+                <UsersRound className="h-3.5 w-3.5" /> Kho ứng viên
               </Button>
 
               {job.status !== "closed" && (
