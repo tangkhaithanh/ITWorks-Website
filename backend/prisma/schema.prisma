@@ -736,7 +736,7 @@ enum PotentialCandidatePriority {
 model PotentialCandidate {
   id             BigInt                     @id @default(autoincrement())
   candidate_id   BigInt
-  job_id         BigInt?
+  job_id         BigInt
   recruiter_id   BigInt
   match_score    Float?
   matched_skills String[]
@@ -751,10 +751,10 @@ model PotentialCandidate {
   deleted_at     DateTime?
 
   candidate Candidate @relation(fields: [candidate_id], references: [id])
-  job       Job?      @relation(fields: [job_id], references: [id])
+  job       Job       @relation(fields: [job_id], references: [id])
   recruiter Account   @relation(fields: [recruiter_id], references: [id])
 
-  @@unique([recruiter_id, candidate_id])
+  @@unique([recruiter_id, candidate_id, job_id])
 }
 
 // Location:

@@ -18,18 +18,19 @@ export class PotentialCandidatesService {
       where: {
         recruiter_id: recruiterId,
         candidate_id: BigInt(dto.candidateId),
+        job_id: BigInt(dto.jobId),
         deleted_at: null,
       },
     });
 
     if (existing) {
-      throw new ConflictException('ALREADY_SAVED');
+      throw new ConflictException('Candidate is already saved for this job');
     }
 
     return this.prisma.potentialCandidate.create({
       data: {
         candidate_id: BigInt(dto.candidateId),
-        job_id: dto.jobId ? BigInt(dto.jobId) : null,
+        job_id: BigInt(dto.jobId),
         recruiter_id: recruiterId,
         match_score: dto.matchScore ?? null,
         matched_skills: dto.matchedSkills ?? [],

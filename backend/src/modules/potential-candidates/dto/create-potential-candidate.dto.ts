@@ -1,12 +1,12 @@
-import { IsString, IsNumber, IsOptional, IsArray, Min } from 'class-validator';
+import { IsString, IsNumber, IsNotEmpty, IsOptional, IsArray, Min } from 'class-validator';
 
 export class CreatePotentialCandidateDto {
   @IsString()
   candidateId: string;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  jobId?: string;
+  jobId: string;
 
   @IsOptional()
   @IsNumber()
