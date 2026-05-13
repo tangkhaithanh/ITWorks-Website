@@ -20,7 +20,12 @@ import { JobEventsConsumer } from './consumers/job-events.consumer';
     }),
   ],
   controllers: [JobsController],
-  providers: [JobsService, JobEventsQueue, JobDashboardService, JobEventsConsumer ],
+  providers: [
+    JobsService,
+    JobEventsQueue,
+    JobDashboardService,
+    JobEventsConsumer,
+  ],
   exports: [JobsService, JobEventsQueue, JobDashboardService],
 })
 export class JobsModule {}

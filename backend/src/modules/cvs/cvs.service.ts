@@ -24,7 +24,7 @@ export class CvsService {
     private readonly cvTemplatesService: CvTemplatesService,
     private readonly cvRenderingService: CvRenderingService,
     private readonly aiSyncProducer: AiSyncProducer,
-  ) { }
+  ) {}
 
   private async getCandidateIdByUserId(userId: bigint): Promise<bigint> {
     const candidate = await this.prisma.candidate.findUnique({
@@ -113,10 +113,10 @@ export class CvsService {
           include:
             type === CvType.ONLINE // lấy dữ liệu từ bảng CVTemplate nếu là CV online
               ? {
-                template: {
-                  select: { id: true, name: true, preview_url: true },
-                },
-              }
+                  template: {
+                    select: { id: true, name: true, preview_url: true },
+                  },
+                }
               : undefined,
         }),
         this.prisma.cv.count({

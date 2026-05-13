@@ -18,8 +18,15 @@ import {
 } from './ai-sync.client';
 import { AiSyncRequestError } from './ai-sync.errors';
 import { buildAiJobDescription } from './job-text.utils';
+import type {
+  RecommendationResponse,
+  RecommendationRecord,
+  EnrichedRecommendation,
+} from './dto/recommendation.types';
 
-type CompanySyncRecord = Awaited<ReturnType<AiSyncService['getCompanyForSync']>>;
+type CompanySyncRecord = Awaited<
+  ReturnType<AiSyncService['getCompanyForSync']>
+>;
 type JobSyncRecord = Awaited<ReturnType<AiSyncService['getJobForSync']>>;
 type CandidateSyncRecord = Awaited<
   ReturnType<AiSyncService['getCandidateForSync']>
@@ -40,7 +47,7 @@ export class AiSyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly aiSyncClient: AiSyncClient,
-  ) { }
+  ) {}
 
   async syncCompany(companyId: bigint) {
     this.logger.log(
@@ -204,6 +211,110 @@ export class AiSyncService {
     );
 
     return synced.id;
+  }
+
+  async getRecommendations(
+    accountId: bigint,
+    topK: number = 10,
+  ): Promise<RecommendationResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { account_id: accountId },
+      include: { candidate: { select: { id: true } } },
+    });
+
+    if (!user?.candidate) {
+      throw new AiSyncRequestError(
+        'Candidate profile not found. Please complete your profile.',
+        false,
+      );
+    }
+
+    const sourceCandidateId = this.toNumber(user.candidate.id);
+    const result = await this.aiSyncClient.getRecommendations(
+      sourceCandidateId,
+      topK,
+    );
+
+    const rawMatches: RecommendationRecord[] = Array.isArray(result?.matches)
+      ? result.matches
+      : [];
+    const jobIds = rawMatches.map((m) => m.job_id).filter(Boolean);
+
+
+    const [jobsMap, appliedJobs, savedJobs] = await Promise.all([
+      this.fetchJobsByIds(jobIds),
+      this.fetchAppliedJobIds(user.candidate.id, jobIds),
+      this.fetchSavedJobIds(user.candidate.id, jobIds),
+    ]);
+
+
+    const matches: EnrichedRecommendation[] = rawMatches.map((match) => {
+      const job = jobsMap.get(match.job_id);
+      return {
+        ...match,
+        job_title: job?.title ?? 'Unknown Job',
+        company_name: job?.company?.name ?? 'Unknown Company',
+        company_logo: job?.company?.logo_url ?? null,
+        location_city: job?.location_city ?? '',
+        salary_range: {
+          min: job?.salary_min ?? null,
+          max: job?.salary_max ?? null,
+        },
+        applied: appliedJobs.has(match.job_id),
+        saved: savedJobs.has(match.job_id),
+      };
+    });
+
+    console.log(`Returning ${matches.length} recommendations for candidateId=${user.candidate.id.toString()}`);
+    console.log('Sample enriched recommendation:', matches[0]);
+
+    return {
+      candidate_id: sourceCandidateId,
+      source_candidate_id: result?.source_candidate_id ?? sourceCandidateId,
+      total: matches.length,
+      matches,
+    };
+  }
+
+  private async fetchJobsByIds(jobIds: number[]) {
+    if (jobIds.length === 0) return new Map<number, any>();
+
+    const jobs = await this.prisma.job.findMany({
+      where: { id: { in: jobIds.map(BigInt) } },
+      include: { company: { select: { name: true, logo_url: true } } },
+    });
+
+    const map = new Map<number, any>();
+    for (const job of jobs) {
+      map.set(this.toNumber(job.id), job);
+    }
+    return map;
+  }
+
+  private async fetchAppliedJobIds(candidateId: bigint, jobIds: number[]) {
+    if (jobIds.length === 0) return new Set<number>();
+
+    const apps = await this.prisma.application.findMany({
+      where: {
+        candidate_id: candidateId,
+        job_id: { in: jobIds.map(BigInt) },
+      },
+      select: { job_id: true },
+    });
+    return new Set(apps.map((a) => this.toNumber(a.job_id)));
+  }
+
+  private async fetchSavedJobIds(candidateId: bigint, jobIds: number[]) {
+    if (jobIds.length === 0) return new Set<number>();
+
+    const saved = await this.prisma.savedJob.findMany({
+      where: {
+        candidate_id: candidateId,
+        job_id: { in: jobIds.map(BigInt) },
+      },
+      select: { job_id: true },
+    });
+    return new Set(saved.map((s) => this.toNumber(s.job_id)));
   }
 
   async rankApplicants(sourceJobId: number) {
@@ -424,10 +535,7 @@ export class AiSyncService {
       salaryMax: job.salary_max ?? null,
       experienceRequired: this.getJobExperienceYears(job),
       skillsRequired: this.getJobSkillsByType(job, JobSkillType.REQUIRED),
-      skillsNiceToHave: this.getJobSkillsByType(
-        job,
-        JobSkillType.NICE_TO_HAVE,
-      ),
+      skillsNiceToHave: this.getJobSkillsByType(job, JobSkillType.NICE_TO_HAVE),
       employmentType: this.mapEmploymentType(job.employment_type),
     };
 
@@ -594,7 +702,8 @@ export class AiSyncService {
       response = await fetch(fileUrl);
     } catch (error) {
       throw new AiSyncRequestError(
-        `Failed to download CV file from ${fileUrl}: ${error instanceof Error ? error.message : String(error)
+        `Failed to download CV file from ${fileUrl}: ${
+          error instanceof Error ? error.message : String(error)
         }`,
       );
     }
@@ -614,10 +723,7 @@ export class AiSyncService {
     };
   }
 
-  private resolveCvFilename(
-    cv: NonNullable<CvSyncRecord>,
-    mimeType: string,
-  ) {
+  private resolveCvFilename(cv: NonNullable<CvSyncRecord>, mimeType: string) {
     const extensionFromUrl = cv.file_url
       ? this.getFilenameFromUrl(cv.file_url)?.split('.').pop()
       : null;

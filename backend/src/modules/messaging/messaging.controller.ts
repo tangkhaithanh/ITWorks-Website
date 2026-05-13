@@ -66,10 +66,7 @@ export class MessagingController {
 
   @Get(':id')
   @Roles(Role.candidate, Role.recruiter)
-  async getOne(
-    @Param('id') id: string,
-    @User('accountId') accountId: bigint,
-  ) {
+  async getOne(@Param('id') id: string, @User('accountId') accountId: bigint) {
     return this.messagingService.getConversationById(BigInt(id), accountId);
   }
 

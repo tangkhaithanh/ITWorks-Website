@@ -9,7 +9,7 @@ export class NotificationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gateway: NotificationsGateway,
-  ) { }
+  ) {}
   /**
    * Gửi notification cho 1 account (realtime + DB)
    */
@@ -118,7 +118,6 @@ export class NotificationsService {
     }
   }
 
-
   // Lấy toàn bộ thông báo của 1 user:
   async getAllNotificationsByAccountId(
     accountId: bigint,
@@ -139,11 +138,11 @@ export class NotificationsService {
       take: limit + 1,
       ...(options?.cursor
         ? {
-          cursor: {
-            id: BigInt(options.cursor),
-          },
-          skip: 1,
-        }
+            cursor: {
+              id: BigInt(options.cursor),
+            },
+            skip: 1,
+          }
         : {}),
     });
     const hasMore = notifications.length > limit;

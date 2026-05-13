@@ -39,6 +39,7 @@ import CompanySearchPage from "@/features/companies/pages/CompanySearchPage.jsx"
 import CompanyProfilePage from "@/features/companies/pages/CompanyProfilePage.jsx";
 import MatchingWorkspacePage from "@/features/matching/pages/MatchingWorkspacePage.jsx";
 import TalentPoolListPage from "@/features/talent-pool/pages/TalentPoolListPage.jsx";
+import JobRecommendationPage from "@/features/recommendations/pages/JobRecommendationPage.jsx";
 import CandidateDetailPage from "@/features/talent-pool/pages/CandidateDetailPage.jsx";
 import JobTalentPoolPage from "@/features/talent-pool/pages/JobTalentPoolPage.jsx";
 import { Navigate } from "react-router-dom";
@@ -97,6 +98,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={["candidate"]}>
             <MessagesPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "recommendations",
+        element: (
+          <ProtectedRoute roles={["candidate"]}>
+            <JobRecommendationPage />
           </ProtectedRoute>
         ),
       },

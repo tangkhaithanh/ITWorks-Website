@@ -246,6 +246,16 @@ export class AiSyncClient {
     );
   }
 
+  async getRecommendations(sourceCandidateId: number, topK?: number) {
+    return this.request<any>(
+      'get',
+      `/api/v1/candidates/${sourceCandidateId}/recommendations`,
+      {
+        params: { top_k: topK ?? 10 },
+      },
+    );
+  }
+
   async rankApplicants(sourceJobId: number) {
     return this.request<any>(
       'post',

@@ -26,7 +26,9 @@ export class AiSyncController {
     @Req() req: any,
     @Param('id', ParseIntPipe) sourceJobId: number,
   ) {
-    return this.aiSyncService.rankApplicants(Number(req.job?.id ?? sourceJobId));
+    return this.aiSyncService.rankApplicants(
+      Number(req.job?.id ?? sourceJobId),
+    );
   }
 
   @Get(':id/find-talent')

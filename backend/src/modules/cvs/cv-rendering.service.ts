@@ -20,16 +20,21 @@ export class CvRenderingService {
 
   renderHtml(model: ReturnType<CvRenderingService['normalizeModel']>) {
     const personal = (model.content.personal as Record<string, string>) ?? {};
-    const education = (model.content.education as Array<Record<string, string>>) ?? [];
-    const experience = (model.content.experience as Array<Record<string, string>>) ?? [];
-    const projects = (model.content.projects as Array<Record<string, string>>) ?? [];
+    const education =
+      (model.content.education as Array<Record<string, string>>) ?? [];
+    const experience =
+      (model.content.experience as Array<Record<string, string>>) ?? [];
+    const projects =
+      (model.content.projects as Array<Record<string, string>>) ?? [];
     const skills = (model.content.skills as string[]) ?? [];
 
     const section = (title: string, body: string) =>
       `<section><h2>${title}</h2>${body || '<p>-</p>'}</section>`;
 
     const asList = (items: string[]) =>
-      items.length ? `<ul>${items.map((i) => `<li>${i}</li>`).join('')}</ul>` : '<p>-</p>';
+      items.length
+        ? `<ul>${items.map((i) => `<li>${i}</li>`).join('')}</ul>`
+        : '<p>-</p>';
 
     return `
 <!doctype html>
@@ -52,11 +57,20 @@ export class CvRenderingService {
   <hr />
   ${section(
     'Education',
-    asList(education.map((e) => `${e.school || ''} - ${e.degree || ''} (${e.startDate || ''} - ${e.endDate || ''})`)),
+    asList(
+      education.map(
+        (e) =>
+          `${e.school || ''} - ${e.degree || ''} (${e.startDate || ''} - ${e.endDate || ''})`,
+      ),
+    ),
   )}
   ${section(
     'Experience',
-    asList(experience.map((e) => `${e.company || ''} - ${e.role || ''}: ${e.description || ''}`)),
+    asList(
+      experience.map(
+        (e) => `${e.company || ''} - ${e.role || ''}: ${e.description || ''}`,
+      ),
+    ),
   )}
   ${section('Skills', asList(skills))}
   ${section(

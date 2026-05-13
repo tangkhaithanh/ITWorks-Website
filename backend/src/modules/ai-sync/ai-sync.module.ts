@@ -8,6 +8,7 @@ import { AiSyncProducer } from './ai-sync.producer';
 import { AiSyncService } from './ai-sync.service';
 import { AiSyncConsumer } from './consumers/ai-sync.consumer';
 import { AiSyncController } from './ai-sync.controller';
+import { RecommendationsController } from './recommendations.controller';
 
 @Global()
 @Module({
@@ -17,7 +18,7 @@ import { AiSyncController } from './ai-sync.controller';
       name: QUEUES.AI_SYNC,
     }),
   ],
-  controllers: [AiSyncController],
+  controllers: [AiSyncController, RecommendationsController],
   providers: [AiSyncClient, AiSyncProducer, AiSyncService, AiSyncConsumer],
   exports: [AiSyncClient, AiSyncProducer, AiSyncService],
 })

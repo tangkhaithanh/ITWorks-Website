@@ -1,4 +1,11 @@
-import { IsString, IsNumber, IsNotEmpty, IsOptional, IsArray, Min } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsNotEmpty,
+  IsOptional,
+  IsArray,
+  Min,
+} from 'class-validator';
 
 export class CreatePotentialCandidateDto {
   @IsString()

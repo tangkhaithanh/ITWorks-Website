@@ -51,6 +51,14 @@ const Header = ({ user }) => {
             >
               CV của tôi
             </Link>
+            {user?.role === "candidate" && (
+              <Link
+                to="/recommendations"
+                className="px-3 py-1.5 rounded-lg hover:text-blue-600"
+              >
+                Đề xuất việc làm
+              </Link>
+            )}
           </nav>
         </div>
 

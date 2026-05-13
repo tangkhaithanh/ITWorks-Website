@@ -58,7 +58,8 @@ export class MessagingService {
     const ok =
       conv.applicant_account_id === accountId ||
       conv.recruiter_account_id === accountId;
-    if (!ok) throw new ForbiddenException('Bạn không thuộc cuộc hội thoại này.');
+    if (!ok)
+      throw new ForbiddenException('Bạn không thuộc cuộc hội thoại này.');
     return conv;
   }
 
@@ -215,7 +216,12 @@ export class MessagingService {
             created_at: true,
             sender_account_id: true,
             attachments: {
-              select: { id: true, file_name: true, mime_type: true, type: true },
+              select: {
+                id: true,
+                file_name: true,
+                mime_type: true,
+                type: true,
+              },
             },
           },
         },
@@ -261,13 +267,10 @@ export class MessagingService {
     return { messages: chronological, nextCursor };
   }
 
-  async createMessage(
-    conversationId: bigint,
-    accountId: bigint,
-    body: string,
-  ) {
+  async createMessage(conversationId: bigint, accountId: bigint, body: string) {
     const trimmed = body?.trim();
-    if (!trimmed) throw new BadRequestException('Nội dung tin nhắn không được để trống.');
+    if (!trimmed)
+      throw new BadRequestException('Nội dung tin nhắn không được để trống.');
     if (trimmed.length > MESSAGE_BODY_MAX_LENGTH) {
       throw new BadRequestException(`Tối đa ${MESSAGE_BODY_MAX_LENGTH} ký tự.`);
     }
@@ -321,7 +324,9 @@ export class MessagingService {
     }
 
     for (const file of files) {
-      if (!MESSAGE_ATTACHMENT_ALLOWED_MIME_TYPES.includes(file.mimetype as any)) {
+      if (
+        !MESSAGE_ATTACHMENT_ALLOWED_MIME_TYPES.includes(file.mimetype as any)
+      ) {
         throw new BadRequestException(
           `Định dạng file không hỗ trợ: ${file.originalname}`,
         );
@@ -338,7 +343,9 @@ export class MessagingService {
   }
 
   private getAttachmentType(mimeType: string): AttachmentType {
-    return mimeType.startsWith('image/') ? AttachmentType.image : AttachmentType.file;
+    return mimeType.startsWith('image/')
+      ? AttachmentType.image
+      : AttachmentType.file;
   }
 
   async createMessageWithAttachments(
@@ -352,7 +359,9 @@ export class MessagingService {
       throw new BadRequestException(`Tối đa ${MESSAGE_BODY_MAX_LENGTH} ký tự.`);
     }
     if (!trimmed && (!files || files.length === 0)) {
-      throw new BadRequestException('Tin nhắn phải có nội dung hoặc file đính kèm.');
+      throw new BadRequestException(
+        'Tin nhắn phải có nội dung hoặc file đính kèm.',
+      );
     }
 
     if (files?.length) {

@@ -129,5 +129,4 @@ export class CvsController {
       res.status(status).send(error.message || 'Lỗi không xác định');
     }
   }
-  
 }

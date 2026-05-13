@@ -28,7 +28,7 @@ export class WsAuthService {
 
       const cookies = this.parseCookies(cookieHeader);
       const token = cookies['access_token'];
-      
+
       if (!token) {
         return null;
       }
@@ -54,14 +54,14 @@ export class WsAuthService {
 
   private parseCookies(cookieHeader: string): Record<string, string> {
     const cookies: Record<string, string> = {};
-    
+
     cookieHeader.split(';').forEach((cookie) => {
       const [key, value] = cookie.trim().split('=');
       if (key && value) {
         cookies[key] = decodeURIComponent(value);
       }
     });
-    
+
     return cookies;
   }
 }

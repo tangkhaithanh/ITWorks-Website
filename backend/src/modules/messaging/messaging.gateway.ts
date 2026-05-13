@@ -63,7 +63,10 @@ export class MessagingGateway implements OnGatewayInit {
     }
 
     try {
-      await this.messagingService.assertParticipant(conversationId, user.accountId);
+      await this.messagingService.assertParticipant(
+        conversationId,
+        user.accountId,
+      );
     } catch (e: any) {
       return { event: 'error', data: { message: e?.message || 'Forbidden' } };
     }
@@ -103,7 +106,10 @@ export class MessagingGateway implements OnGatewayInit {
     const convIdRaw = body?.conversationId;
     const text = body?.body;
     if (!convIdRaw || text === undefined || text === null) {
-      return { event: 'error', data: { message: 'conversationId và body là bắt buộc' } };
+      return {
+        event: 'error',
+        data: { message: 'conversationId và body là bắt buộc' },
+      };
     }
     if (typeof text !== 'string' || text.trim().length === 0) {
       return { event: 'error', data: { message: 'Nội dung không hợp lệ' } };

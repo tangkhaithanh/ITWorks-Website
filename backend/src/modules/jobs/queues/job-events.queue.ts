@@ -13,8 +13,8 @@ export class JobEventsQueue {
   private defaultJobOptions = {
     attempts: 5, // Thử lại tối đa 5 lần nếu thất bại
     backoff: { type: 'exponential', delay: 1000 }, // Thời gian chờ giữa các lần thử lại
-    removeOnComplete: 200,// Giữ lại 200 job đã hoàn thành gần nhất
-    removeOnFail: 500,// Giữ lại 500 job thất bại gần nhất
+    removeOnComplete: 200, // Giữ lại 200 job đã hoàn thành gần nhất
+    removeOnFail: 500, // Giữ lại 500 job thất bại gần nhất
   };
 
   async jobCreated(jobId: bigint) {

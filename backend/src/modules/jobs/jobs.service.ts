@@ -113,8 +113,8 @@ export class JobsService {
           company: { connect: { id: company.id } },
 
           title: rest.title,
-          salary_min: negotiable ? null : rest.salary_min ?? null,
-          salary_max: negotiable ? null : rest.salary_max ?? null,
+          salary_min: negotiable ? null : (rest.salary_min ?? null),
+          salary_max: negotiable ? null : (rest.salary_max ?? null),
           experience_required: rest.experience_required,
           negotiable,
           employment_type: rest.employment_type,

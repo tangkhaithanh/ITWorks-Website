@@ -87,9 +87,7 @@ export class CreateJobDto {
   @IsArray()
   @ArrayNotEmpty({ message: 'Phải chọn ít nhất một hình thức làm việc' })
   @IsEnum(WorkMode, { each: true, message: 'Hình thức làm việc không hợp lệ' })
-  @Transform(({ value }) =>
-    parseJsonArrayInput(value),
-  )
+  @Transform(({ value }) => parseJsonArrayInput(value))
   work_modes: WorkMode[];
 
   @IsArray()
@@ -98,9 +96,7 @@ export class CreateJobDto {
     each: true,
     message: 'Cấp độ kinh nghiệm không hợp lệ',
   })
-  @Transform(({ value }) =>
-    parseJsonArrayInput(value),
-  )
+  @Transform(({ value }) => parseJsonArrayInput(value))
   experience_levels: ExperienceLevel[];
 
   @IsOptional()

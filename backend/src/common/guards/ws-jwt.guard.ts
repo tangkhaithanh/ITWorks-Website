@@ -8,9 +8,9 @@ export class WsJwtGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const client: Socket = context.switchToWs().getClient();
-    
+
     const user = await this.wsAuthService.authenticateSocket(client);
-    
+
     if (!user) {
       client.disconnect();
       return false;

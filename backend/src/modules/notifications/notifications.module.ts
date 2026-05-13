@@ -6,7 +6,7 @@ import { NotificationsService } from '@/modules/notifications/notifications.serv
 import { NotificationsController } from './notifications.controller';
 @Module({
   imports: [WsAuthModule],
-  providers: [NotificationsGateway, WsJwtGuard , NotificationsService],
+  providers: [NotificationsGateway, WsJwtGuard, NotificationsService],
   exports: [NotificationsGateway, NotificationsService],
   controllers: [NotificationsController],
 })

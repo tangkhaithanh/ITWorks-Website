@@ -28,9 +28,9 @@ describe('MessagingService', () => {
 
   it('assertParticipant throws NotFound when conversation missing', async () => {
     prisma.conversation.findUnique.mockResolvedValue(null);
-    await expect(
-      service.assertParticipant(1n, 2n),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.assertParticipant(1n, 2n)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 
   it('assertParticipant throws Forbidden when account not participant', async () => {
@@ -38,9 +38,9 @@ describe('MessagingService', () => {
       applicant_account_id: 3n,
       recruiter_account_id: 4n,
     });
-    await expect(
-      service.assertParticipant(1n, 2n),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.assertParticipant(1n, 2n)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
 
   it('assertParticipant returns when account is applicant', async () => {
@@ -48,8 +48,6 @@ describe('MessagingService', () => {
       applicant_account_id: 2n,
       recruiter_account_id: 4n,
     });
-    await expect(
-      service.assertParticipant(1n, 2n),
-    ).resolves.toBeDefined();
+    await expect(service.assertParticipant(1n, 2n)).resolves.toBeDefined();
   });
 });

@@ -1,4 +1,8 @@
-import { CanActivate, ExecutionContext, INestApplication } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  INestApplication,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
@@ -39,7 +43,11 @@ describe('Online CV flow (e2e)', () => {
       title: 'Backend Developer CV',
       template_id: 1,
       content: {
-        personal: { fullName: 'Test User', email: 'test@example.com', phone: '0900000000' },
+        personal: {
+          fullName: 'Test User',
+          email: 'test@example.com',
+          phone: '0900000000',
+        },
         education: [],
         experience: [],
         skills: [],
@@ -96,7 +104,11 @@ describe('Online CV flow (e2e)', () => {
       title: 'My Online CV',
       template_id: 1,
       content: {
-        personal: { fullName: 'Nguyen Van A', email: 'a@example.com', phone: '0900000000' },
+        personal: {
+          fullName: 'Nguyen Van A',
+          email: 'a@example.com',
+          phone: '0900000000',
+        },
         education: [],
         experience: [],
         skills: ['React'],
@@ -105,8 +117,14 @@ describe('Online CV flow (e2e)', () => {
     };
 
     await request(app.getHttpServer()).post('/cvs').send(payload).expect(201);
-    await request(app.getHttpServer()).post('/cvs/preview').send(payload).expect(201);
-    await request(app.getHttpServer()).put('/cvs/101').send({ title: 'Updated CV' }).expect(200);
+    await request(app.getHttpServer())
+      .post('/cvs/preview')
+      .send(payload)
+      .expect(201);
+    await request(app.getHttpServer())
+      .put('/cvs/101')
+      .send({ title: 'Updated CV' })
+      .expect(200);
     await request(app.getHttpServer()).get('/cvs/101/export/pdf').expect(200);
     await request(app.getHttpServer()).delete('/cvs/101').expect(200);
   });

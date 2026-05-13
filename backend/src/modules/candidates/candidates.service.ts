@@ -239,9 +239,7 @@ export class CandidatesService {
 
     if (dto.preferred_category !== undefined) {
       updatePayload.preferred_category =
-        dto.preferred_category === null
-          ? null
-          : BigInt(dto.preferred_category);
+        dto.preferred_category === null ? null : BigInt(dto.preferred_category);
     }
 
     if (dto.desired_role !== undefined) {

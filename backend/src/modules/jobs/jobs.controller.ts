@@ -21,7 +21,7 @@ import { UpdateJobDto } from './dto/update-job.dto';
 import { ResetDeadlineDto } from './dto/reset-deadline.dto';
 import { JobOwnershipGuard } from '@/common/guards/job-ownership.guard';
 import { JobDashboardQueryDto } from './dto/job-dashboard-query.dto';
-import {JobDashboardService} from '@/modules/jobs/jobs-dashboard.service';
+import { JobDashboardService } from '@/modules/jobs/jobs-dashboard.service';
 @Controller('jobs')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class JobsController {

@@ -16,4 +16,3 @@ export function serializeSocketPayload(value: any): any {
 
   return value;
 }
-
