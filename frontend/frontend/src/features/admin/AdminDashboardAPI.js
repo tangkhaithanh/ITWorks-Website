@@ -6,6 +6,12 @@ const AdminDashboardAPI = {
      * query: { range?: '7d'|'30d'|'3m'|'1y', from?: 'YYYY-MM-DD', to?: 'YYYY-MM-DD' }
      */
     getDashboard: (params) => apiClient.get("/dashboard/admin", { params }),
+
+    /**
+     * GET /revenue/top-companies
+     * query: { range?: '7d'|'30d'|'3m'|'1y', from?: 'YYYY-MM-DD', to?: 'YYYY-MM-DD', limit?: number }
+     */
+    getTopRevenueCompanies: (params) => apiClient.get("/revenue/top-companies", { params }),
 };
 
 export default AdminDashboardAPI;

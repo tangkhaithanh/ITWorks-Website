@@ -3,7 +3,7 @@
 Dự án bao gồm **2 ứng dụng chính** trong một **mono-repo**:
 
 * **Backend (NestJS + Prisma + PostgreSQL)** → `backend/`
-* **Frontend (React + Vite + Redux Toolkit + TailwindCSS)** → `frontend/`
+* **Frontend (React + Vite + Redux Toolkit + TailwindCSS)** → `frontend/frontend/`
 
 ---
 
@@ -40,7 +40,7 @@ backend/
 ### **Frontend (React + Vite)**
 
 ```
-frontend/
+frontend/frontend/
 ├── public/
 ├── src/
 │   ├── app/              # store, routes, rootReducer, hooks
@@ -117,7 +117,7 @@ SMTP_PASS=app_password
 SMTP_FROM="Recruitment System <example@gmail.com>"
 ```
 
-### **Frontend (`frontend/.env`)**
+### **Frontend (`frontend/frontend/.env`)**
 
 ```bash
 VITE_API_URL=http://localhost:8080/api
@@ -138,7 +138,7 @@ npm install
 ### **Frontend**
 
 ```bash
-cd frontend
+cd frontend/frontend
 npm install
 ```
 
@@ -158,7 +158,7 @@ Truy cập API tại: [http://localhost:8080/api](http://localhost:8080/api)
 ### **Frontend (React + Vite)**
 
 ```bash
-cd frontend
+cd frontend/frontend
 npm run dev
 ```
 
@@ -215,7 +215,7 @@ npm run build
 npm run start:prod
 
 # Frontend
-cd frontend
+cd frontend/frontend
 npm run build
 npm run preview
 ```
@@ -239,7 +239,7 @@ npm run preview
 | Mục đích          | Lệnh                                 |
 | ----------------- | ------------------------------------ |
 | Chạy backend dev  | `cd backend && npm run start:dev`    |
-| Chạy frontend dev | `cd frontend && npm run dev`         |
+| Chạy frontend dev | `cd frontend/frontend && npm run dev` |
 | Tạo migration     | `npx prisma migrate dev --name init` |
 | Seed dữ liệu      | `npx prisma db seed`                 |
 | Build toàn dự án  | `npm run build`                      |

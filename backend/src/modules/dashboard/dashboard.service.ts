@@ -1,8 +1,13 @@
 // src/dashboard/dashboard.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
 import { RecruiterDashboardQueryDto } from './dto/recruiter-dashboard-query.dto';
 import { AdminDashboardQueryDto } from './dto/admin-dashboard-query.dto';
+import { TopCompaniesQueryDto } from './dto/top-companies-query.dto';
 type RevenueBucket = 'day' | 'month';
 @Injectable()
 export class DashboardService {
@@ -438,12 +443,14 @@ export class DashboardService {
     const now = new Date();
     const { startDate, endDate } = this.resolveAdminRange(query, now);
 
-    const [kpis, revenueTimeline, orderStatus, topPlans] = await Promise.all([
-      this.buildAdminKpis(now),
-      this.buildAdminRevenueTimeline(startDate, endDate),
-      this.buildAdminOrderStatus(startDate, endDate),
-      this.buildAdminTopPlans(startDate, endDate),
-    ]);
+    const [kpis, revenueTimeline, orderStatus, topPlans, topCompanies] =
+      await Promise.all([
+        this.buildAdminKpis(now),
+        this.buildAdminRevenueTimeline(startDate, endDate),
+        this.buildAdminOrderStatus(startDate, endDate),
+        this.buildAdminTopPlans(startDate, endDate),
+        this.buildAdminTopCompanies(startDate, endDate, 5, now),
+      ]);
 
     return {
       range: {
@@ -455,7 +462,29 @@ export class DashboardService {
         revenueTimeline,
         orderStatus,
         topPlans,
+        topCompanies,
       },
+    };
+  }
+
+  async getTopRevenueCompanies(query: TopCompaniesQueryDto) {
+    const now = new Date();
+    const { startDate, endDate } = this.resolveAdminRange(query, now);
+    const limit = this.resolveTopCompaniesLimit(query.limit);
+    const data = await this.buildAdminTopCompanies(
+      startDate,
+      endDate,
+      limit,
+      now,
+    );
+
+    return {
+      range: {
+        from: startDate.toISOString().slice(0, 10),
+        to: endDate.toISOString().slice(0, 10),
+      },
+      limit,
+      data,
     };
   }
 
@@ -596,8 +625,7 @@ export class DashboardService {
    * - nếu range dài (>= ~62 ngày) => group theo tháng
    */
   private async buildAdminRevenueTimeline(startDate: Date, endDate: Date) {
-    const days =
-      Math.ceil((endDate.getTime() - startDate.getTime()) / 86_400_000) + 1;
+    const days = this.getInclusiveDayCount(startDate, endDate);
     const bucket: RevenueBucket = days >= 62 ? 'month' : 'day';
 
     // Lấy paid orders trong range
@@ -611,8 +639,8 @@ export class DashboardService {
 
     const keyOf = (d: Date) => {
       if (bucket === 'day') return d.toISOString().slice(0, 10); // yyyy-MM-dd
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
       return `${y}-${m}`; // yyyy-MM
     };
 
@@ -621,27 +649,32 @@ export class DashboardService {
 
     if (bucket === 'day') {
       const cursor = new Date(startDate);
-      cursor.setHours(0, 0, 0, 0);
+      cursor.setUTCHours(0, 0, 0, 0);
       const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      end.setUTCHours(23, 59, 59, 999);
 
       while (cursor <= end) {
         map.set(cursor.toISOString().slice(0, 10), 0);
-        cursor.setDate(cursor.getDate() + 1);
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
       }
     } else {
-      const cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-      const end = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+      const cursor = new Date(
+        Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), 1),
+      );
+      const end = new Date(
+        Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), 1),
+      );
 
       while (cursor <= end) {
         map.set(keyOf(cursor), 0);
-        cursor.setMonth(cursor.getMonth() + 1);
+        cursor.setUTCMonth(cursor.getUTCMonth() + 1);
       }
     }
 
     // Sum revenue
     for (const o of orders) {
-      const k = keyOf(o.paid_at ?? new Date());
+      if (!o.paid_at) continue;
+      const k = keyOf(o.paid_at);
       if (!map.has(k)) map.set(k, 0);
       map.set(k, (map.get(k) ?? 0) + Number(o.amount ?? 0));
     }
@@ -666,7 +699,10 @@ export class DashboardService {
       _count: { _all: true },
     });
 
-    const base = {
+    const base: Record<
+      'paid' | 'pending' | 'failed' | 'expired' | 'cancelled',
+      number
+    > = {
       paid: 0,
       pending: 0,
       failed: 0,
@@ -675,8 +711,9 @@ export class DashboardService {
     };
 
     for (const r of rows) {
-      // @ts-ignore
-      base[r.status] = r._count._all;
+      if (r.status in base) {
+        base[r.status as keyof typeof base] = r._count._all;
+      }
     }
 
     return {
@@ -704,11 +741,18 @@ export class DashboardService {
       _sum: {
         amount: true,
       },
-      orderBy: {
-        _count: {
-          id: 'desc', // 👈 ORDER BY COUNT(id)
+      orderBy: [
+        {
+          _count: {
+            id: 'desc', // 👈 ORDER BY COUNT(id)
+          },
         },
-      },
+        {
+          _sum: {
+            amount: 'desc',
+          },
+        },
+      ],
       take: 10,
     });
 
@@ -728,6 +772,70 @@ export class DashboardService {
     }));
   }
 
+  private async buildAdminTopCompanies(
+    startDate: Date,
+    endDate: Date,
+    limit: number,
+    now: Date,
+  ) {
+    const grouped = await this.prisma.paymentOrder.groupBy({
+      by: ['company_id'],
+      where: {
+        status: 'paid',
+        paid_at: { gte: startDate, lte: endDate },
+      },
+      _count: { id: true },
+      _sum: { amount: true },
+      _max: { paid_at: true },
+      orderBy: [
+        { _sum: { amount: 'desc' } },
+        { _count: { id: 'desc' } },
+        { company_id: 'asc' },
+      ],
+      take: limit,
+    });
+
+    const companyIds = grouped.map((g) => g.company_id);
+    const companies = await this.prisma.company.findMany({
+      where: { id: { in: companyIds } },
+      select: {
+        id: true,
+        name: true,
+        companyPlan: {
+          select: {
+            status: true,
+            end_date: true,
+            plan: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const companyMap = new Map(companies.map((c) => [c.id.toString(), c]));
+
+    return grouped.map((g) => {
+      const company = companyMap.get(g.company_id.toString());
+      const activePlan =
+        company?.companyPlan?.status === 'active' &&
+        company.companyPlan.end_date > now
+          ? company.companyPlan.plan?.name
+          : null;
+
+      return {
+        company_id: g.company_id.toString(),
+        company_name: company?.name ?? 'Unknown',
+        paidOrdersCount: g._count.id,
+        revenue: Number(g._sum.amount ?? 0),
+        latestPaidAt: g._max.paid_at?.toISOString() ?? null,
+        currentActivePlanName: activePlan ?? null,
+      };
+    });
+  }
+
   /**
    * Range resolver:
    * - nếu from/to có -> ưu tiên
@@ -736,12 +844,15 @@ export class DashboardService {
   private resolveAdminRange(query: AdminDashboardQueryDto, now: Date) {
     if (query.from || query.to) {
       const start = query.from
-        ? new Date(`${query.from}T00:00:00`)
-        : new Date(now);
-      const end = query.to ? new Date(`${query.to}T23:59:59`) : new Date(now);
+        ? this.parseAdminDate(query.from, 'from', false)
+        : this.startOfDay(now);
+      const end = query.to
+        ? this.parseAdminDate(query.to, 'to', true)
+        : this.endOfDay(now);
 
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
+      if (start > end) {
+        throw new BadRequestException('from must be less than or equal to to');
+      }
 
       return { startDate: start, endDate: end };
     }
@@ -759,5 +870,54 @@ export class DashboardService {
     else if (range === '1y') start.setFullYear(start.getFullYear() - 1);
 
     return { startDate: start, endDate: end };
+  }
+
+  private resolveTopCompaniesLimit(limit?: number) {
+    return Math.min(limit ?? 10, 50);
+  }
+
+  private parseAdminDate(
+    value: string,
+    field: 'from' | 'to',
+    endOfDay: boolean,
+  ) {
+    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+    if (!datePattern.test(value)) {
+      throw new BadRequestException(`${field} must be in YYYY-MM-DD format`);
+    }
+
+    const [year, month, day] = value.split('-').map(Number);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException(`${field} must be a valid date`);
+    }
+
+    if (
+      parsed.getUTCFullYear() !== year ||
+      parsed.getUTCMonth() !== month - 1 ||
+      parsed.getUTCDate() !== day
+    ) {
+      throw new BadRequestException(`${field} must be a valid date`);
+    }
+
+    return endOfDay ? this.endOfDay(parsed) : this.startOfDay(parsed);
+  }
+
+  private startOfDay(date: Date) {
+    const value = new Date(date);
+    value.setUTCHours(0, 0, 0, 0);
+    return value;
+  }
+
+  private endOfDay(date: Date) {
+    const value = new Date(date);
+    value.setUTCHours(23, 59, 59, 999);
+    return value;
+  }
+
+  private getInclusiveDayCount(startDate: Date, endDate: Date) {
+    const start = this.startOfDay(startDate).getTime();
+    const end = this.startOfDay(endDate).getTime();
+    return Math.floor((end - start) / 86_400_000) + 1;
   }
 }

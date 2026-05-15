@@ -1,5 +1,13 @@
 // src/dashboard/dashboard.controller.ts
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiForbiddenResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { RecruiterDashboardQueryDto } from './dto/recruiter-dashboard-query.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -9,6 +17,9 @@ import { User } from '@/common/decorators/user.decorator';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { AdminDashboardQueryDto } from './dto/admin-dashboard-query.dto';
+
+@ApiTags('Dashboard')
+@ApiBearerAuth()
 @Controller('dashboard')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class DashboardController {
@@ -36,6 +47,8 @@ export class DashboardController {
 
   @Get('admin')
   @Roles('admin')
+  @ApiUnauthorizedResponse({ description: 'Missing or invalid authentication' })
+  @ApiForbiddenResponse({ description: 'Authenticated user is not an admin' })
   async getAdminDashboard(@Query() query: AdminDashboardQueryDto) {
     return this.dashboardService.getAdminDashboard(query);
   }

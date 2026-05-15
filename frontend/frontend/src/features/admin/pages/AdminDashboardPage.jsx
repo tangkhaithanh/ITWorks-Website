@@ -41,6 +41,23 @@ import EmptyState from "@/components/common/EmptyState";
 const nf = new Intl.NumberFormat("vi-VN");
 const formatVnd = (n) => `${nf.format(Number(n || 0))} ₫`;
 const formatInt = (n) => nf.format(Number(n || 0));
+const formatDateTime = (value) => {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+    return new Intl.DateTimeFormat("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(date);
+};
+const hasInvalidCustomRange = (filter) =>
+    filter.range === "custom" &&
+    filter.from &&
+    filter.to &&
+    filter.from > filter.to;
 
 // ===========================
 // 1. Premium Components: Skeleton & Sparkline
@@ -219,11 +236,11 @@ function RevenueAreaChart({ points = [] }) {
 // Pie Chart gọn gàng
 function StatusPieChart({ data }) {
     const chartData = [
-        { name: "Paid", value: data?.paid ?? 0, color: "#10b981" },
-        { name: "Pending", value: data?.pending ?? 0, color: "#f59e0b" },
-        { name: "Failed", value: data?.failed ?? 0, color: "#ef4444" },
-        { name: "Expired", value: data?.expired ?? 0, color: "#64748b" },
-        { name: "Cancelled", value: data?.cancelled ?? 0, color: "#a855f7" },
+        { name: "Đã thanh toán", value: data?.paid ?? 0, color: "#10b981" },
+        { name: "Đang chờ", value: data?.pending ?? 0, color: "#f59e0b" },
+        { name: "Thất bại", value: data?.failed ?? 0, color: "#ef4444" },
+        { name: "Hết hạn", value: data?.expired ?? 0, color: "#64748b" },
+        { name: "Đã huỷ", value: data?.cancelled ?? 0, color: "#a855f7" },
     ].filter(item => item.value > 0);
 
     if (chartData.length === 0) return <EmptyState text="Chưa có dữ liệu" />;
@@ -321,6 +338,64 @@ function TopPlansTable({ items = [] }) {
     );
 }
 
+function TopCompaniesTable({ items = [] }) {
+    if (!items.length) return <div className="p-10"><EmptyState text="Chưa có dữ liệu công ty" /></div>;
+    const maxRevenue = Math.max(1, ...items.map((x) => Number(x.revenue || 0)));
+
+    return (
+        <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left border-collapse">
+                <thead className="bg-slate-50/80 text-slate-500 font-semibold text-xs uppercase tracking-wider backdrop-blur">
+                    <tr>
+                        <th className="px-6 py-4 border-b border-slate-100">Công ty</th>
+                        <th className="px-6 py-4 border-b border-slate-100">Gói hiện tại</th>
+                        <th className="px-6 py-4 border-b border-slate-100">Đơn paid</th>
+                        <th className="px-6 py-4 border-b border-slate-100">Doanh thu</th>
+                        <th className="px-6 py-4 border-b border-slate-100">Thanh toán mới nhất</th>
+                        <th className="px-6 py-4 border-b border-slate-100 w-[22%]">Tỉ trọng</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                    {items.map((x, idx) => {
+                        const pct = Math.max(0, Math.min(100, (Number(x.revenue || 0) / maxRevenue) * 100));
+                        return (
+                            <tr key={x.company_id} className="group hover:bg-slate-50 transition-colors">
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs transition-colors ${idx === 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600 group-hover:bg-white group-hover:shadow-sm'}`}>
+                                            #{idx + 1}
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-slate-900">{x.company_name || "Unknown"}</p>
+                                            <p className="text-[10px] text-slate-400 font-mono">ID: {x.company_id}</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <span className="inline-flex max-w-[180px] truncate rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+                                        {x.currentActivePlanName || "Chưa active"}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 font-semibold text-slate-700">{formatInt(x.paidOrdersCount)}</td>
+                                <td className="px-6 py-4 font-bold text-emerald-600">{formatVnd(x.revenue)}</td>
+                                <td className="px-6 py-4 font-medium text-slate-500">{formatDateTime(x.latestPaidAt)}</td>
+                                <td className="px-6 py-4">
+                                    <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                                        <div
+                                            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]"
+                                            style={{ width: `${pct}%` }}
+                                        />
+                                    </div>
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
 // ===========================
 // Main Page Logic
 // ===========================
@@ -357,6 +432,10 @@ export default function AdminDashboardPage() {
     }, [filter]);
 
     const fetchDashboard = async () => {
+        if (hasInvalidCustomRange(filter)) {
+            setError("Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc");
+            return;
+        }
         setLoading(true);
         setError("");
         try {
@@ -365,7 +444,7 @@ export default function AdminDashboardPage() {
             if (body?.success === false) {
                 throw new Error(body?.message || "Load dashboard failed");
             }
-            setPayload(body);
+            setPayload(body?.data ? body : { data: body });
         } catch (e) {
             setError(e?.response?.data?.message || e?.message || "Có lỗi xảy ra");
         } finally {
@@ -398,7 +477,7 @@ export default function AdminDashboardPage() {
             <Card className="border-none shadow-sm bg-white/80 backdrop-blur-xl sticky top-0 z-20 border-b border-slate-200/60">
                 <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Dashboard Overview</h1>
+                        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Revenue Statistics</h1>
                         <p className="text-sm text-slate-500 mt-1 flex items-center gap-2 font-medium">
                             <CalendarRange className="w-4 h-4 text-slate-400" />
                             {data?.range ? `${data.range.from} - ${data.range.to}` : "Tổng quan hệ thống"}
@@ -462,7 +541,7 @@ export default function AdminDashboardPage() {
                 <PremiumKpiCard
                     title="Tổng Doanh Thu"
                     value={formatVnd(kpis?.totalRevenueAllTime)}
-                    subtitle="All-time revenue"
+                    subtitle="Doanh thu đã thanh toán"
                     icon={<DollarSign className="w-5 h-5" />}
                     tone="emerald"
                     // Truyền data thực tế vào sparkline
@@ -480,7 +559,7 @@ export default function AdminDashboardPage() {
                 <PremiumKpiCard
                     title="Đơn Thành Công"
                     value={formatInt(kpis?.paidOrdersCount)}
-                    subtitle={`Lỗi/Hết hạn: ${formatInt(kpis?.failedOrExpiredCount)}`}
+                    subtitle={`Thất bại/Hết hạn: ${formatInt(kpis?.failedOrExpiredCount)}`}
                     icon={<ShoppingCart className="w-5 h-5" />}
                     tone="violet"
                 />
@@ -501,7 +580,7 @@ export default function AdminDashboardPage() {
                     <CardHeader
                         title="Biểu Đồ Doanh Thu"
                         icon={<TrendingUp className="w-5 h-5 text-blue-600" />}
-                        action={<span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100 uppercase tracking-wide">{charts?.revenueTimeline?.bucket || 'Day'}</span>}
+                        action={<span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100 uppercase tracking-wide">{charts?.revenueTimeline?.bucket || 'day'}</span>}
                     />
                     <CardBody className="flex-1 min-h-[350px] p-6">
                         {charts?.revenueTimeline?.points?.length ? (
@@ -562,6 +641,15 @@ export default function AdminDashboardPage() {
                     icon={<DollarSign className="w-5 h-5 text-emerald-600" />}
                 />
                 <TopPlansTable items={charts?.topPlans || []} />
+            </Card>
+
+            {/* Top Companies Table */}
+            <Card className="overflow-hidden shadow-sm border-slate-200/60">
+                <CardHeader
+                    title="Top Công Ty Doanh Thu"
+                    icon={<Building2 className="w-5 h-5 text-blue-600" />}
+                />
+                <TopCompaniesTable items={charts?.topCompanies || []} />
             </Card>
         </div>
     );
