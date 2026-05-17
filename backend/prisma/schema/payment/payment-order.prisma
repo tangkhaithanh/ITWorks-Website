@@ -1,0 +1,20 @@
+model PaymentOrder {
+  id                 BigInt               @id @default(autoincrement())
+  company_id         BigInt
+  plan_id            BigInt
+  amount             BigInt
+  payment_method     PaymentMethod        @default(vnpay)
+  status             PaymentStatus        @default(pending)
+  vnp_txn_ref        String?
+  vnp_transaction_no String?
+  vnp_response_code  String?
+  paid_at            DateTime?
+  expired_at         DateTime?
+  company            Company              @relation(fields: [company_id], references: [id])
+  plan               Plan                 @relation(fields: [plan_id], references: [id])
+  histories          CompanyPlanHistory[]
+  companyPlan        CompanyPlan?
+  creditTransactions CreditTransaction[]
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+}

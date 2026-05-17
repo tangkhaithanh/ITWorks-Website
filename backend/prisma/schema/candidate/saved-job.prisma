@@ -1,0 +1,9 @@
+model SavedJob {
+  id           BigInt    @id @default(autoincrement())
+  candidate_id BigInt
+  job_id       BigInt
+  saved_at     DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+  candidate    Candidate @relation(fields: [candidate_id], references: [id])
+  job          Job       @relation(fields: [job_id], references: [id])
+}

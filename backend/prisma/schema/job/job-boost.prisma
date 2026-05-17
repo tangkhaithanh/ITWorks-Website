@@ -1,0 +1,13 @@
+model JobBoost {
+  id         BigInt      @id @default(autoincrement())
+  job_id     BigInt
+  company_id BigInt
+  tier       BoostTier
+  credits    Int
+  start_at   DateTime
+  end_at     DateTime
+  status     BoostStatus @default(active)
+  job        Job         @relation(fields: [job_id], references: [id])
+  company    Company     @relation(fields: [company_id], references: [id])
+  created_at DateTime    @default(now())
+}

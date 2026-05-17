@@ -1,0 +1,6 @@
+model JobDetail {
+  job_id       BigInt  @id
+  description  String?
+  requirements String?
+  job          Job     @relation(fields: [job_id], references: [id])
+}

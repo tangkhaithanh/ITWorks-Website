@@ -1,0 +1,7 @@
+model BoostRule {
+  id            BigInt    @id @default(autoincrement())
+  tier          BoostTier
+  credits       Int
+  duration_days Int
+  created_at    DateTime  @default(now())
+}

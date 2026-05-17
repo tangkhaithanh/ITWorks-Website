@@ -1,0 +1,16 @@
+model Conversation {
+  id                   BigInt    @id @default(autoincrement())
+  job_id               BigInt
+  applicant_account_id BigInt
+  recruiter_account_id BigInt
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+  job                  Job       @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  applicant_account    Account   @relation("ConvApplicant", fields: [applicant_account_id], references: [id], onDelete: Cascade)
+  recruiter_account    Account   @relation("ConvRecruiter", fields: [recruiter_account_id], references: [id], onDelete: Cascade)
+  messages             Message[]
+
+  @@unique([job_id, applicant_account_id])
+  @@index([applicant_account_id])
+  @@index([recruiter_account_id])
+}

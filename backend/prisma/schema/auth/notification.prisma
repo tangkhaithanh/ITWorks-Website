@@ -1,0 +1,10 @@
+model Notification {
+  id         BigInt           @id @default(autoincrement())
+  account_id BigInt
+  type       NotificationType
+  message    String
+  is_read    Boolean          @default(false)
+  created_at DateTime         @default(now())
+  updated_at DateTime         @updatedAt
+  account    Account          @relation(fields: [account_id], references: [id])
+}

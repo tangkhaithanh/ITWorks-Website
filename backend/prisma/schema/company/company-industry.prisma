@@ -1,0 +1,9 @@
+model CompanyIndustry {
+  id          BigInt   @id @default(autoincrement())
+  company_id  BigInt
+  industry_id BigInt
+  company     Company  @relation(fields: [company_id], references: [id])
+  industry    Industry @relation(fields: [industry_id], references: [id])
+
+  @@unique([company_id, industry_id])
+}

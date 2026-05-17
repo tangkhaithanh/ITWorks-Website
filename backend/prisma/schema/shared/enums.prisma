@@ -1,0 +1,174 @@
+enum Role {
+  candidate
+  recruiter
+  admin
+}
+
+enum Status {
+  active
+  banned
+  pending
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum CompanySize {
+  small
+  medium
+  large
+}
+
+enum CompanyStatus {
+  pending
+  approved
+  rejected
+  hidden
+}
+
+enum JobSkillType {
+  REQUIRED
+  NICE_TO_HAVE
+}
+
+enum EmploymentType {
+  fulltime
+  parttime
+  intern
+  contract
+}
+
+enum JobStatus {
+  active
+  hidden
+  closed
+  expired
+}
+
+enum WorkMode {
+  onsite
+  remote
+  hybrid
+}
+
+enum ExperienceLevel {
+  fresher
+  junior
+  mid
+  senior
+  lead
+  intern
+}
+
+enum CvType {
+  FILE
+  ONLINE
+}
+
+enum ApplicationStatus {
+  pending
+  shortlisted
+  interviewing
+  offered
+  accepted
+  rejected
+  withdrawn
+}
+
+enum AttachmentType {
+  image
+  file
+}
+
+enum NotificationType {
+  system
+  application
+  company
+  message
+}
+
+enum TargetType {
+  user
+  company
+  job
+}
+
+enum InterviewResult {
+  pass
+  reject
+  hold
+}
+
+enum InterviewStatus {
+  scheduled
+  rescheduled
+  cancelled
+  completed
+  no_show
+}
+
+enum InterviewMode {
+  online
+  offline
+}
+
+enum PlanStatus {
+  active
+  expired
+  cancelled
+}
+
+enum PlanHistoryStatus {
+  completed
+  expired
+  cancelled
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  cancelled
+  expired
+}
+
+enum PaymentMethod {
+  vnpay
+}
+
+enum BoostTier {
+  top_100
+  top_50
+  top_30
+  top_10
+}
+
+enum BoostStatus {
+  active
+  expired
+  cancelled
+}
+
+enum CreditTxnType {
+  grant
+  boost
+  refund
+}
+
+enum PotentialCandidateStatus {
+  SAVED
+  CONTACTED
+  INTERESTED
+  INTERVIEW_SCHEDULED
+  NOT_INTERESTED
+  HIRED
+}
+
+enum PotentialCandidatePriority {
+  LOW
+  MEDIUM
+  HIGH
+}

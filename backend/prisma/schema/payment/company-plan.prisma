@@ -1,0 +1,21 @@
+model CompanyPlan {
+  id                     BigInt        @id @default(autoincrement())
+  company_id             BigInt        @unique
+  plan_id                BigInt
+  start_date             DateTime
+  end_date               DateTime
+  purchased_price        BigInt
+  job_limit_snapshot     Int
+  credit_amount_snapshot Int
+  jobs_left              Int
+  order_id               BigInt?       @unique
+  credits_left           Int
+  status                 PlanStatus    @default(active)
+  company                Company       @relation(fields: [company_id], references: [id])
+  plan                   Plan          @relation(fields: [plan_id], references: [id])
+  order                  PaymentOrder? @relation(fields: [order_id], references: [id])
+  created_at             DateTime      @default(now())
+  updated_at             DateTime      @updatedAt
+
+  @@index([company_id, status, end_date])
+}

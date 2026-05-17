@@ -1,0 +1,5 @@
+model JobCategory {
+  id   BigInt @id @default(autoincrement())
+  name String @unique
+  jobs Job[]
+}

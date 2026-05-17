@@ -1,0 +1,16 @@
+model Plan {
+  id                 BigInt               @id @default(autoincrement())
+  name               String
+  price              BigInt
+  job_limit          Int
+  credit_amount      Int
+  duration_days      Int
+  features           String?
+  is_hidden          Boolean              @default(false)
+  companyPlans       CompanyPlan[]
+  histories          CompanyPlanHistory[]
+  paymentOrders      PaymentOrder[]
+  creditTransactions CreditTransaction[]
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+}

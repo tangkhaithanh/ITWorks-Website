@@ -1,0 +1,5 @@
+model Industry {
+  id        BigInt            @id @default(autoincrement())
+  name      String            @unique
+  companies CompanyIndustry[]
+}

@@ -1,0 +1,23 @@
+model PotentialCandidate {
+  id             BigInt                     @id @default(autoincrement())
+  candidate_id   BigInt
+  job_id         BigInt
+  recruiter_id   BigInt
+  match_score    Float?
+  matched_skills String[]
+  missing_skills String[]
+  note           String?
+  tags           String[]
+  status         PotentialCandidateStatus   @default(SAVED)
+  priority       PotentialCandidatePriority @default(MEDIUM)
+  follow_up_date DateTime?
+  created_at     DateTime                   @default(now())
+  updated_at     DateTime                   @updatedAt
+  deleted_at     DateTime?
+
+  candidate Candidate @relation(fields: [candidate_id], references: [id])
+  job       Job       @relation(fields: [job_id], references: [id])
+  recruiter Account   @relation(fields: [recruiter_id], references: [id])
+
+  @@unique([recruiter_id, candidate_id, job_id])
+}

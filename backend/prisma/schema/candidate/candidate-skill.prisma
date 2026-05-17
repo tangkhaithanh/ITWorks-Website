@@ -1,0 +1,7 @@
+model CandidateSkill {
+  id           BigInt    @id @default(autoincrement())
+  candidate_id BigInt
+  skill_id     BigInt
+  candidate    Candidate @relation(fields: [candidate_id], references: [id])
+  skill        Skill     @relation(fields: [skill_id], references: [id])
+}

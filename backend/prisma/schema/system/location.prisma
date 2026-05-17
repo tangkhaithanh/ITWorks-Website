@@ -1,0 +1,12 @@
+model LocationCity {
+  id    Int            @id
+  name  String
+  wards LocationWard[]
+}
+
+model LocationWard {
+  id      Int          @id
+  name    String
+  city_id Int
+  city    LocationCity @relation(fields: [city_id], references: [id], onDelete: Cascade)
+}

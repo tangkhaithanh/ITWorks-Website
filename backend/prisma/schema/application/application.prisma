@@ -1,0 +1,14 @@
+model Application {
+  id           BigInt            @id @default(autoincrement())
+  job_id       BigInt
+  candidate_id BigInt
+  cv_id        BigInt
+  cover_letter String?           @db.Text
+  status       ApplicationStatus @default(pending)
+  applied_at   DateTime          @default(now())
+  updated_at   DateTime          @updatedAt
+  job          Job               @relation(fields: [job_id], references: [id])
+  candidate    Candidate         @relation(fields: [candidate_id], references: [id])
+  cv           Cv                @relation(fields: [cv_id], references: [id])
+  interviews   Interview[]
+}

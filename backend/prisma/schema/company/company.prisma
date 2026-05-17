@@ -1,0 +1,34 @@
+model Company {
+  id                      BigInt               @id @default(autoincrement())
+  account_id              BigInt               @unique
+  ai_service_id           Int?                 @unique
+  name                    String
+  logo_url                String?
+  logo_public_id          String?
+  website                 String?
+  description             String?
+  headquarters            String?
+  address                 String?
+  size                    CompanySize?
+  industry_info           CompanyIndustry[]
+  skills                  CompanySkill[]
+  business_code           String?              @unique
+  representative_name     String?
+  representative_position String?
+  license_file_url        String?
+  license_file_public_id  String?
+  contact_email           String?
+  contact_phone           String?
+  founded_date            DateTime?
+  status                  CompanyStatus        @default(pending)
+  created_at              DateTime             @default(now())
+  updated_at              DateTime             @updatedAt
+  account                 Account              @relation(fields: [account_id], references: [id])
+  jobs                    Job[]
+  statistics              RecruiterStatistic[]
+  companyPlan             CompanyPlan?
+  companyPlanHistory      CompanyPlanHistory[]
+  paymentOrders           PaymentOrder[]
+  jobBoosts               JobBoost[]
+  creditTransactions      CreditTransaction[]
+}

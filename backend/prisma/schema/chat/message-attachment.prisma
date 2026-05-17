@@ -1,0 +1,14 @@
+model MessageAttachment {
+  id             BigInt         @id @default(autoincrement())
+  message_id     BigInt
+  file_name      String
+  mime_type      String
+  size_bytes     Int
+  file_url       String
+  file_public_id String
+  type           AttachmentType
+  created_at     DateTime       @default(now())
+  message        Message        @relation(fields: [message_id], references: [id], onDelete: Cascade)
+
+  @@index([message_id])
+}

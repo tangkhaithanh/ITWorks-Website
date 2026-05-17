@@ -1,0 +1,9 @@
+model RecruiterStatistic {
+  id         BigInt   @id @default(autoincrement())
+  company_id BigInt
+  metric     String
+  value      Int
+  date       DateTime
+  updated_at DateTime @updatedAt
+  company    Company  @relation(fields: [company_id], references: [id])
+}
