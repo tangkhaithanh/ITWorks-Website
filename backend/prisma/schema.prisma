@@ -364,6 +364,7 @@ model Application {
   job_id       BigInt
   candidate_id BigInt
   cv_id        BigInt
+  cover_letter   String?           @db.Text
   status       ApplicationStatus @default(pending)
   applied_at   DateTime          @default(now())
   updated_at   DateTime          @updatedAt

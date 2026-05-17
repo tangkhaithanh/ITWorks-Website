@@ -5,10 +5,11 @@ const ApplicationAPI = {
   /**
    * 📨 Gửi đơn ứng tuyển
    */
-  apply: (job_id, cv_id) =>
+  apply: (job_id, cv_id, cover_letter = "") =>
     apiClient.post("/applications/apply", {
       job_id: String(job_id),
       cv_id: String(cv_id),
+      cover_letter,
     }),
 
   // Kiểm tra xem ứng viên có ứng tuyển công việc này hay chưa:

@@ -69,9 +69,9 @@ export const checkAppliedJob = createAsyncThunk(
 // ───────────────────────────────────────
 export const applyJob = createAsyncThunk(
   "candidate/applyJob",
-  async ({ jobId, cvId }, { rejectWithValue }) => {
+  async ({ jobId, cvId, coverLetter = "" }, { rejectWithValue }) => {
     try {
-      await ApplicationAPI.apply(jobId, cvId);
+      await ApplicationAPI.apply(jobId, cvId, coverLetter);
       return { jobId };
     } catch (err) {
       const msg = err.response?.data?.message || "Lỗi khi gửi đơn ứng tuyển";

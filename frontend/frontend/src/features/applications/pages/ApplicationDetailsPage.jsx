@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
+import DOMPurify from "dompurify";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 
@@ -25,6 +26,24 @@ import {
 } from "lucide-react";
 
 const MySwal = withReactContent(Swal);
+
+const hasMeaningfulHtmlContent = (html) => {
+  if (typeof html !== "string") return false;
+
+  const sanitized = DOMPurify.sanitize(html);
+  if (typeof window !== "undefined" && window.DOMParser) {
+    const parsed = new DOMParser().parseFromString(sanitized, "text/html");
+    return Boolean(parsed.body.textContent?.replace(/\u00a0/g, " ").trim());
+  }
+
+  return Boolean(
+    sanitized
+      .replace(/<br\s*\/?>/gi, "")
+      .replace(/<[^>]*>/g, "")
+      .replace(/&nbsp;/gi, " ")
+      .trim()
+  );
+};
 
 // --- HELPERS ---
 const STATUS_CONFIG = {
@@ -112,7 +131,10 @@ export default function ApplicationDetailsPage() {
     fetchDetail();
   }, [id]);
 
-  const { candidate, job, cv, interviews = [], status, applied_at } = app || {};
+  const { candidate, job, cv, interviews = [], status, applied_at, cover_letter } = app || {};
+  const sanitizedCoverLetter =
+    typeof cover_letter === "string" ? DOMPurify.sanitize(cover_letter) : "";
+  const shouldShowCoverLetter = hasMeaningfulHtmlContent(sanitizedCoverLetter);
 
   // Logic check active interview
   const hasActiveInterview = interviews.some(
@@ -547,6 +569,26 @@ export default function ApplicationDetailsPage() {
                 )}
               </div>
             </div>
+
+            {shouldShowCoverLetter && (
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                  <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    Cover Letter
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <div
+                    className="prose prose-slate prose-sm max-w-none rounded-lg border border-slate-100 bg-slate-50/70 p-4 text-slate-700
+                      prose-p:my-3 prose-p:leading-7 prose-ul:my-3 prose-ol:my-3 prose-li:my-1
+                      prose-strong:text-slate-900 prose-a:text-blue-600 break-words
+                      [&_*]:max-w-full [&_ul]:pl-5 [&_ol]:pl-5"
+                    dangerouslySetInnerHTML={{ __html: sanitizedCoverLetter }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* --- RIGHT COLUMN (1/3): SIDEBAR INFO --- */}

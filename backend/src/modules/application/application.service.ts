@@ -93,6 +93,7 @@ export class ApplicationService {
             job_id: jobId,
             candidate_id: candidateId,
             cv_id: cvId,
+            cover_letter: dto.cover_letter?.trim() || null,
           },
         });
         if (recruiterAccountId) {
@@ -442,6 +443,7 @@ export class ApplicationService {
       id: app.id,
       status: app.status,
       applied_at: app.applied_at,
+      cover_letter: app.cover_letter,
 
       job: {
         id: app.job.id,
