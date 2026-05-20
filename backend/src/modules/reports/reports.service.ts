@@ -193,6 +193,12 @@ export class ReportsService {
       );
     }
 
+    if (!ACTIVE_REPORT_STATUSES.includes(report.status)) {
+      throw new BadRequestException(
+        'Không thể đóng tin tuyển dụng từ báo cáo đã xử lý hoặc đã bỏ qua',
+      );
+    }
+
     if (!report.job) {
       throw new NotFoundException('Không tìm thấy tin tuyển dụng bị báo cáo');
     }

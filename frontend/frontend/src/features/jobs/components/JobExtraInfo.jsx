@@ -1,4 +1,11 @@
-import { MapPin, Users, Briefcase, ClipboardList, FileBadge } from "lucide-react";
+import {
+  AlertTriangle,
+  MapPin,
+  Users,
+  Briefcase,
+  ClipboardList,
+  FileBadge,
+} from "lucide-react";
 
 const getSkillList = (job, fieldName) => {
   if (Array.isArray(job?.[fieldName])) {
@@ -28,7 +35,7 @@ const renderSkillTags = (skills, emptyLabel, tagClassName) => {
   );
 };
 
-const JobExtraInfo = ({ job }) => {
+const JobExtraInfo = ({ job, onReport }) => {
   if (!job) return null;
 
   const workModes = Array.isArray(job.work_modes)
@@ -147,6 +154,17 @@ const JobExtraInfo = ({ job }) => {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-5 border-t border-slate-100 pt-4">
+        <button
+          type="button"
+          onClick={onReport}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+        >
+          <AlertTriangle className="h-4 w-4" />
+          Báo cáo tin
+        </button>
       </div>
     </div>
   );

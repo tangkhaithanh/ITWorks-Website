@@ -39,6 +39,7 @@ export class ReportsController {
     @User('accountId') accountId: bigint,
     @Body() dto: CreateReportDto,
   ) {
+    console.log('Creating report for accountId:', accountId, 'with targetId:', dto.targetId);
     return this.reportsService.createReport(accountId, dto);
   }
 

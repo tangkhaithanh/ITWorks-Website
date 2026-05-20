@@ -89,6 +89,11 @@ export class JobsService {
       longitude: rest.longitude,
     });
 
+    if (category_id === undefined || category_id === null) {
+      throw new BadRequestException('Vui lòng chọn danh mục công việc');
+    }
+
+    const categoryId = BigInt(category_id as any);
     const now = new Date();
     const negotiable = rest.negotiable ?? false;
 
@@ -111,6 +116,7 @@ export class JobsService {
       const job = await tx.job.create({
         data: {
           company: { connect: { id: company.id } },
+          category: { connect: { id: categoryId } },
 
           title: rest.title,
           salary_min: negotiable ? null : (rest.salary_min ?? null),
@@ -131,14 +137,6 @@ export class JobsService {
 
           number_of_openings: rest.number_of_openings ?? 1,
           deadline: rest.deadline ? new Date(rest.deadline) : null,
-
-          ...(category_id
-            ? {
-                category: {
-                  connect: { id: BigInt(category_id as any) },
-                },
-              }
-            : {}),
 
           details: {
             create: {

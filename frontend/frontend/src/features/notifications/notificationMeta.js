@@ -65,6 +65,12 @@ export const NOTIFICATION_TYPE_META = {
     iconClassName: "bg-sky-50 text-sky-700 ring-1 ring-sky-100",
     pillClassName: "bg-sky-50 text-sky-700 border border-sky-100",
   },
+  report: {
+    label: "Báo cáo",
+    icon: ShieldAlert,
+    iconClassName: "bg-rose-50 text-rose-700 ring-1 ring-rose-100",
+    pillClassName: "bg-rose-50 text-rose-700 border border-rose-100",
+  },
   default: {
     label: "Thông báo",
     icon: BellRing,

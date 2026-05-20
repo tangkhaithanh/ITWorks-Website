@@ -1,4 +1,5 @@
 import { ArrowUpRight, Users, Layers, MapPin } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const JobCompanyInfo = ({ company, job }) => {
   if (!company) return null;
@@ -21,16 +22,23 @@ const JobCompanyInfo = ({ company, job }) => {
     <div className="flex flex-col bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
       {/* Logo + Tên công ty */}
       <div className="flex items-center gap-3 pb-4 mb-4 border-b border-slate-100">
-        <div className="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100 shadow-sm">
+        <Link
+          to={`/companies/${company.id}`}
+          className="w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100 shadow-sm transition ring-offset-2 hover:ring-2 hover:ring-blue-300"
+          aria-label={`Xem trang công ty ${company.name}`}
+        >
           <img
             src={company.logo_url}
             alt={company.name}
             className="w-full h-full object-cover"
           />
-        </div>
-        <h3 className="text-base font-bold text-slate-800 leading-snug">
+        </Link>
+        <Link
+          to={`/companies/${company.id}`}
+          className="text-base font-bold leading-snug text-slate-800 transition hover:text-blue-700"
+        >
           {company.name}
-        </h3>
+        </Link>
       </div>
 
       {/* Thông tin chi tiết */}

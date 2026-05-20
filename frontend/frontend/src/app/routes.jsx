@@ -30,6 +30,8 @@ import ManageAccountPage from "../features/admin/pages/ManageAccountPage";
 import ManageCompanyForAdmin from "../features/companies/pages/ManageCompanyForAdmin";
 import AdminCompanyDetailPage from "../features/companies/pages/AdminCompanyDetailPage";
 import ManagePlanPage from "../features/admin/pages/ManagePlanPage";
+import ManageReportsPage from "../features/admin/pages/ManageReportsPage";
+import ReportDetailPage from "../features/admin/pages/ReportDetailPage";
 import UpgradePlanPage from "../pages/UpgradePlanPage";
 import PaymentResultPage from "../pages/PaymentResultPage";
 import UsagePage from "../features/companies/pages/UsagePage";
@@ -111,18 +113,25 @@ const router = createBrowserRouter([
       },
       {
         path: "companies",
-        element: <CompanySearchPage/>,
+        element: <CompanySearchPage />,
       },
       {
         path: "companies/:id",
-        element: <CompanyProfilePage/>,
-      }
+        element: <CompanyProfilePage />,
+      },
     ],
   },
   {
     element: <AuthLayout />,
     children: [
-      { path: "login", element: <GuestRoute><LoginPage /></GuestRoute> },
+      {
+        path: "login",
+        element: (
+          <GuestRoute>
+            <LoginPage />
+          </GuestRoute>
+        ),
+      },
       { path: "register", element: <RegisterPage /> },
       { path: "verify-email", element: <VerifyEmailPage /> },
       { path: "reset-password", element: <ResetPasswordPage /> },
@@ -175,7 +184,9 @@ const router = createBrowserRouter([
       { path: "accounts", element: <ManageAccountPage /> },
       { path: "companies", element: <ManageCompanyForAdmin /> },
       { path: "companies/:id", element: <AdminCompanyDetailPage /> },
-      { path: "plans", element: <ManagePlanPage /> }
+      { path: "plans", element: <ManagePlanPage /> },
+      { path: "reports", element: <ManageReportsPage /> },
+      { path: "reports/:id", element: <ReportDetailPage /> },
     ],
   },
 ]);
