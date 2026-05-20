@@ -95,6 +95,7 @@ enum NotificationType {
   application
   company
   message
+  report
 }
 
 enum TargetType {
