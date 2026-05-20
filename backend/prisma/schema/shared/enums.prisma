@@ -70,11 +70,18 @@ enum CvType {
 
 enum ApplicationStatus {
   pending
-  shortlisted
   interviewing
   offered
   accepted
   rejected
+  withdrawn
+}
+
+enum JobOfferStatus {
+  pending
+  accepted
+  rejected
+  expired
   withdrawn
 }
 

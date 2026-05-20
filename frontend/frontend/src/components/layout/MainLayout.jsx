@@ -16,7 +16,8 @@ const MainLayout = () => {
     "/profile",
     "/settings",
     "/change-password",
-    "/dashboard"
+    "/dashboard",
+    "/my-jobOffers"
   ].some(path => location.pathname.includes(path));
 
   return (

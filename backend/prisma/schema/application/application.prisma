@@ -11,4 +11,5 @@ model Application {
   candidate    Candidate         @relation(fields: [candidate_id], references: [id])
   cv           Cv                @relation(fields: [cv_id], references: [id])
   interviews   Interview[]
+  job_offer    JobOffer?
 }

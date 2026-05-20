@@ -25,7 +25,6 @@ export default function InterviewFormModal({
     mode: "",
     location: "",
     meeting_link: "",
-    notes: "",
   });
 
   // PREFILL WHEN EDIT
@@ -39,7 +38,6 @@ export default function InterviewFormModal({
         mode: interview.mode || "",
         location: interview.location || "",
         meeting_link: interview.meeting_link || "",
-        notes: interview.notes || "",
       });
     } else {
       setForm({
@@ -48,7 +46,6 @@ export default function InterviewFormModal({
         mode: "",
         location: "",
         meeting_link: "",
-        notes: "",
       });
     }
   }, [open]);
@@ -80,7 +77,6 @@ export default function InterviewFormModal({
       mode: form.mode,
       location: form.mode === "offline" ? form.location : null,
       meeting_link: form.mode === "online" ? form.meeting_link : null,
-      notes: form.notes || null,
     };
 
     try {
@@ -220,13 +216,6 @@ export default function InterviewFormModal({
             required
           />
         )}
-
-        {/* NOTES */}
-        <TextInput
-          label="Ghi chú (tuỳ chọn)"
-          value={form.notes}
-          onChange={(e) => setForm({ ...form, notes: e.target.value })}
-        />
 
         {/* ACTION BUTTONS */}
         <div className="flex justify-end gap-3 pt-4">

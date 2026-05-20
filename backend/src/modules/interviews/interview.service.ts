@@ -2,25 +2,37 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 import { UpdateInterviewDto } from './dto/update-interview.dto';
+import { SubmitInterviewResultDto } from './dto/submit-interview-result.dto';
 import {
   ApplicationStatus,
+  InterviewResult,
   InterviewStatus,
   InterviewMode,
+  NotificationType,
 } from '@prisma/client';
 import { MailService } from '@/common/services/mail/mail.service';
+import { NotificationsService } from '@/modules/notifications/notifications.service';
 @Injectable()
 export class InterviewService {
+   private readonly logger = new Logger(InterviewService.name);
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // Tạo lịch tuyển dụng mới:
-  async createInterview(accountId: bigint, dto: CreateInterviewDto) {
+ async createInterview(accountId: bigint, dto: CreateInterviewDto) {
+  try {
+    this.logger.log(
+      `Creating interview for application_id=${dto.application_id}`,
+    );
+
     const application = await this.prisma.application.findFirst({
       where: { id: BigInt(dto.application_id) },
       include: {
@@ -30,12 +42,27 @@ export class InterviewService {
         },
       },
     });
-    if (!application) throw new NotFoundException('Application not found');
-    if (application.job.company.account_id !== accountId)
+
+    if (!application) {
+      this.logger.warn(
+        `Application not found: application_id=${dto.application_id}`,
+      );
+      throw new NotFoundException('Application not found');
+    }
+
+    if (application.job.company.account_id !== accountId) {
+      this.logger.warn(
+        `Forbidden create interview attempt by account_id=${accountId}`,
+      );
       throw new ForbiddenException('Not allowed');
+    }
+
     const scheduledAt = new Date(dto.scheduled_at);
 
-    // Tạo interview và chuyển trạng thái application → interviewing
+    this.logger.log(
+      `Creating interview + updating application status to interviewing`,
+    );
+
     const [interview] = await this.prisma.$transaction([
       this.prisma.interview.create({
         data: {
@@ -54,16 +81,29 @@ export class InterviewService {
       }),
     ]);
 
-    // Gửi email cho ứng viên:
+    this.logger.log(
+      `Interview created successfully: interview_id=${interview.id}`,
+    );
+
     const candidate = application.candidate.user;
     const job = application.job;
+
     const hr = await this.prisma.user.findUnique({
       where: { account_id: accountId },
       include: { account: true },
     });
+
     if (!hr) {
+      this.logger.error(
+        `HR info not found for account_id=${accountId}`,
+      );
+
       throw new ForbiddenException('Không tìm thấy thông tin HR.');
     }
+
+    this.logger.log(
+      `Sending interview email to ${candidate.account.email}`,
+    );
 
     await this.mailService.sendInterviewScheduleMail({
       to: candidate.account.email,
@@ -74,7 +114,10 @@ export class InterviewService {
       mode: dto.mode,
       location: dto.location,
       meetingLink: dto.meeting_link,
-      googleCalendarLink: this.buildGoogleCalendarLink(scheduledAt, dto),
+      googleCalendarLink: this.buildGoogleCalendarLink(
+        scheduledAt,
+        dto,
+      ),
       icsContent: this.generateIcsEvent(scheduledAt, dto),
       hr: {
         full_name: hr.full_name,
@@ -82,8 +125,21 @@ export class InterviewService {
         phone: hr.phone,
       },
     });
+
+    this.logger.log(
+      `Interview email sent successfully to ${candidate.account.email}`,
+    );
+
     return interview;
+  } catch (error) {
+    this.logger.error(
+      `Failed to create interview: ${error.message}`,
+      error.stack,
+    );
+
+    throw error;
   }
+}
 
   // Sửa lịch phỏng vấn -> gửi mail thông báo cho ứng viên:
   async updateInterview(
@@ -204,6 +260,116 @@ export class InterviewService {
     });
     return updatedInterview;
   }
+
+  async submitInterviewResult(
+  accountId: bigint,
+  interviewId: bigint,
+  dto: SubmitInterviewResultDto,
+) {
+  try {
+    const interview = await this.prisma.interview.findFirst({
+      where: { id: interviewId },
+      include: {
+        application: {
+          include: {
+            job: {
+              include: {
+                company: true,
+              },
+            },
+            candidate: {
+              include: {
+                user: {
+                  include: {
+                    account: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!interview) {
+      throw new NotFoundException('Interview not found');
+    }
+
+    if (interview.application.job.company.account_id !== accountId) {
+      throw new ForbiddenException('Not allowed');
+    }
+
+    const updated = await this.prisma.interview.update({
+      where: { id: interviewId },
+      data: {
+        notes: dto.notes ?? interview.notes,
+        result: dto.result,
+        status: dto.no_show
+          ? InterviewStatus.no_show
+          : InterviewStatus.completed,
+      },
+    });
+
+    const app = interview.application;
+    const candidateUser = app.candidate.user;
+    const jobTitle = app.job.title;
+
+    if (dto.result === InterviewResult.pass) {
+      await this.notificationsService.notifyAccount({
+        accountId: candidateUser.account_id,
+        type: NotificationType.application,
+        message: `Bạn đã trúng tuyển công việc ${jobTitle} - Bạn sẽ nhận offer sau đó!`,
+        realtimePayload: {
+          interviewId: updated.id.toString(),
+          applicationId: app.id.toString(),
+          jobId: app.job.id.toString(),
+          result: updated.result,
+          status: updated.status,
+        },
+      });
+    }
+
+    if (dto.result === InterviewResult.reject) {
+
+       await this.prisma.application.update({
+        where: { id: app.id },
+        data: {
+          status: ApplicationStatus.rejected,
+        },
+      });
+      
+      await this.notificationsService.notifyAccount({
+        accountId: candidateUser.account_id,
+        type: NotificationType.application,
+        message: `Bạn đã bị từ chối công việc ${jobTitle}`,
+        realtimePayload: {
+          interviewId: updated.id.toString(),
+          applicationId: app.id.toString(),
+          jobId: app.job.id.toString(),
+          result: updated.result,
+          status: updated.status,
+        },
+      });
+
+      await this.mailService.sendApplicationRejectedMail({
+        to: candidateUser.account.email,
+        fullName: candidateUser.full_name,
+        jobTitle,
+        companyName: app.job.company.name,
+      });
+    }
+
+    return {
+      ...updated,
+      no_show: dto.no_show,
+      status: updated.status,
+      result: updated.result,
+      notes: updated.notes,
+    };
+  } catch (error) {
+    throw error;
+  }
+}
 
   //=======Helpers: ICS + Google Calendar Link =======
   private toIcs(date: Date): string {

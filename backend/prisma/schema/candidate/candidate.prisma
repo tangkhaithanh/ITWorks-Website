@@ -24,4 +24,5 @@ model Candidate {
   created_at           DateTime             @default(now())
   updated_at           DateTime             @updatedAt
   potential_candidates PotentialCandidate[]
+  job_offers           JobOffer[]
 }

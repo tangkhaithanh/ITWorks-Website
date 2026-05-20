@@ -34,4 +34,5 @@ model Job {
   creditTransactions   CreditTransaction[]
   conversations        Conversation[]
   potential_candidates PotentialCandidate[]
+  job_offers           JobOffer[]
 }

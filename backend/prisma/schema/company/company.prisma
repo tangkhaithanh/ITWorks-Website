@@ -31,4 +31,5 @@ model Company {
   paymentOrders           PaymentOrder[]
   jobBoosts               JobBoost[]
   creditTransactions      CreditTransaction[]
+  job_offers              JobOffer[]
 }
