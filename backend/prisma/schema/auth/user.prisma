@@ -10,6 +10,6 @@ model User {
   avatar_public_id String?
   created_at       DateTime   @default(now())
   updated_at       DateTime   @updatedAt
-  account          Account    @relation(fields: [account_id], references: [id])
   candidate        Candidate?
+  account          Account    @relation(fields: [account_id], references: [id])
 }

@@ -1,7 +1,7 @@
 model Skill {
   id             BigInt           @id @default(autoincrement())
   name           String           @unique
-  jobs           JobSkill[]
   candidates     CandidateSkill[]
   company_skills CompanySkill[]
+  jobs           JobSkill[]
 }

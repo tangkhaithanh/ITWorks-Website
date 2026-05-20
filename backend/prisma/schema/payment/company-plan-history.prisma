@@ -11,10 +11,10 @@ model CompanyPlanHistory {
   credits_used           Int
   status                 PlanHistoryStatus
   order_id               BigInt?
-  company                Company           @relation(fields: [company_id], references: [id])
-  plan                   Plan              @relation(fields: [plan_id], references: [id])
-  order                  PaymentOrder?     @relation(fields: [order_id], references: [id])
   created_at             DateTime          @default(now())
+  company                Company           @relation(fields: [company_id], references: [id])
+  order                  PaymentOrder?     @relation(fields: [order_id], references: [id])
+  plan                   Plan              @relation(fields: [plan_id], references: [id])
 
   @@index([company_id, status, end_date, created_at])
 }

@@ -8,7 +8,7 @@ model CreditTransaction {
   plan_id    BigInt?
   created_at DateTime      @default(now())
   company    Company       @relation(fields: [company_id], references: [id])
+  job        Job?          @relation(fields: [job_id], references: [id])
   order      PaymentOrder? @relation(fields: [order_id], references: [id])
   plan       Plan?         @relation(fields: [plan_id], references: [id])
-  job        Job?          @relation(fields: [job_id], references: [id])
 }

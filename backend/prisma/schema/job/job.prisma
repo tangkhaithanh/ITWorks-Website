@@ -2,11 +2,9 @@ model Job {
   id                   BigInt               @id @default(autoincrement())
   company_id           BigInt
   category_id          BigInt
-  ai_service_id        Int?                 @unique
   title                String
   salary_min           Float?
   salary_max           Float?
-  experience_required  Float?
   negotiable           Boolean              @default(false)
   location_city        String
   location_district    String?
@@ -24,14 +22,17 @@ model Job {
   updated_at           DateTime             @updatedAt
   number_of_openings   Int                  @default(1)
   views_count          Int                  @default(0)
-  company              Company              @relation(fields: [company_id], references: [id])
-  category             JobCategory?         @relation(fields: [category_id], references: [id])
-  details              JobDetail?
+  experience_required  Float?
+  ai_service_id        Int?                 @unique
   applications         Application[]
-  saved_jobs           SavedJob[]
-  skills               JobSkill[]
-  boosts               JobBoost[]
-  creditTransactions   CreditTransaction[]
   conversations        Conversation[]
+  creditTransactions   CreditTransaction[]
+  category             JobCategory          @relation(fields: [category_id], references: [id])
+  company              Company              @relation(fields: [company_id], references: [id])
+  boosts               JobBoost[]
+  details              JobDetail?
+  skills               JobSkill[]
   potential_candidates PotentialCandidate[]
+  reports              Report[]
+  saved_jobs           SavedJob[]
 }

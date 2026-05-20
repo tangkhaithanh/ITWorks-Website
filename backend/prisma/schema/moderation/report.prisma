@@ -1,0 +1,37 @@
+enum ReportTargetType {
+  job
+  company
+}
+
+enum ReportStatus {
+  pending
+  under_review
+  resolved
+  dismissed
+}
+
+model Report {
+  id                     BigInt                @id @default(autoincrement())
+  reporter_account_id    BigInt
+  target_type            ReportTargetType
+  job_id                 BigInt?
+  company_id             BigInt?
+  reason                 String                @db.Text
+  status                 ReportStatus          @default(pending)
+  latest_admin_note      String?               @db.Text
+  reviewed_by_account_id BigInt?
+  reviewed_at            DateTime?
+  created_at             DateTime              @default(now())
+  updated_at             DateTime              @updatedAt
+  reporter               Account               @relation("ReportReporter", fields: [reporter_account_id], references: [id], onDelete: Cascade)
+  reviewed_by            Account?              @relation("ReportReviewer", fields: [reviewed_by_account_id], references: [id], onDelete: SetNull)
+  job                    Job?                  @relation(fields: [job_id], references: [id], onDelete: SetNull)
+  company                Company?              @relation(fields: [company_id], references: [id], onDelete: SetNull)
+  histories              ReportStatusHistory[]
+
+  @@index([status, created_at])
+  @@index([target_type, job_id])
+  @@index([target_type, company_id])
+  @@index([reporter_account_id, target_type, job_id])
+  @@index([reporter_account_id, target_type, company_id])
+}

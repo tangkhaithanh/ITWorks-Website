@@ -48,7 +48,6 @@ export class RecommendationsController {
     @Query() query: RecommendationQueryDto,
   ) {
     try {
-      console.log(`Fetching recommendations for accountId: ${accountId}, top_k: ${query.top_k}`);
       return await this.aiSyncService.getRecommendations(
         accountId,
         query.top_k,

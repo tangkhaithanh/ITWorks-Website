@@ -7,7 +7,7 @@ model JobBoost {
   start_at   DateTime
   end_at     DateTime
   status     BoostStatus @default(active)
-  job        Job         @relation(fields: [job_id], references: [id])
-  company    Company     @relation(fields: [company_id], references: [id])
   created_at DateTime    @default(now())
+  company    Company     @relation(fields: [company_id], references: [id])
+  job        Job         @relation(fields: [job_id], references: [id])
 }

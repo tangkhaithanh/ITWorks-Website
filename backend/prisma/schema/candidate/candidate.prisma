@@ -1,27 +1,23 @@
 model Candidate {
-  id            BigInt @id @default(autoincrement())
-  user_id       BigInt @unique
-  ai_service_id Int?   @unique
-
-  preferred_city      String?
-  preferred_work_mode WorkMode?
-  preferred_category  BigInt?
-  preferred_salary    Float?
-
-  education_level  String?
-  experience_years Float?
-
-  desired_role       String?
-  desired_salary_min Float?
-  desired_salary_max Float?
-
-  open_to_work         Boolean?             @default(true)
-  user                 User                 @relation(fields: [user_id], references: [id])
-  cvs                  Cv[]
-  applications         Application[]
-  saved_jobs           SavedJob[]
-  skills               CandidateSkill[]
+  id                   BigInt               @id @default(autoincrement())
+  user_id              BigInt               @unique
+  preferred_city       String?
+  preferred_work_mode  WorkMode?
+  preferred_category   BigInt?
+  preferred_salary     Float?
   created_at           DateTime             @default(now())
   updated_at           DateTime             @updatedAt
+  desired_role         String?
+  desired_salary_max   Float?
+  desired_salary_min   Float?
+  education_level      String?
+  experience_years     Float?
+  open_to_work         Boolean?             @default(true)
+  ai_service_id        Int?                 @unique
+  applications         Application[]
+  user                 User                 @relation(fields: [user_id], references: [id])
+  skills               CandidateSkill[]
+  cvs                  Cv[]
   potential_candidates PotentialCandidate[]
+  saved_jobs           SavedJob[]
 }

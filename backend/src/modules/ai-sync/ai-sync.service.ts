@@ -240,13 +240,11 @@ export class AiSyncService {
       : [];
     const jobIds = rawMatches.map((m) => m.job_id).filter(Boolean);
 
-
     const [jobsMap, appliedJobs, savedJobs] = await Promise.all([
       this.fetchJobsByIds(jobIds),
       this.fetchAppliedJobIds(user.candidate.id, jobIds),
       this.fetchSavedJobIds(user.candidate.id, jobIds),
     ]);
-
 
     const matches: EnrichedRecommendation[] = rawMatches.map((match) => {
       const job = jobsMap.get(match.job_id);
@@ -265,7 +263,9 @@ export class AiSyncService {
       };
     });
 
-    console.log(`Returning ${matches.length} recommendations for candidateId=${user.candidate.id.toString()}`);
+    console.log(
+      `Returning ${matches.length} recommendations for candidateId=${user.candidate.id.toString()}`,
+    );
     console.log('Sample enriched recommendation:', matches[0]);
 
     return {

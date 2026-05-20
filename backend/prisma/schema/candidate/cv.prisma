@@ -1,19 +1,19 @@
 model Cv {
   id               BigInt        @id @default(autoincrement())
   candidate_id     BigInt
-  ai_service_id    Int?          @unique
   title            String
   file_url         String?
   file_public_id   String?
   template_id      BigInt?
-  template_version Int?
   content          Json?
   type             CvType        @default(ONLINE)
   is_deleted       Boolean       @default(false)
-  is_searchable    Boolean       @default(false)
   created_at       DateTime      @default(now())
   updated_at       DateTime      @updatedAt
+  template_version Int?
+  ai_service_id    Int?          @unique
+  is_searchable    Boolean       @default(false)
+  applications     Application[]
   candidate        Candidate     @relation(fields: [candidate_id], references: [id])
   template         CvTemplate?   @relation(fields: [template_id], references: [id])
-  applications     Application[]
 }

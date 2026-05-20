@@ -1,14 +1,13 @@
 model Interview {
-  id             BigInt           @id @default(autoincrement())
+  id             BigInt          @id @default(autoincrement())
   application_id BigInt
   scheduled_at   DateTime
   mode           InterviewMode
   location       String?
   meeting_link   String?
-  status         InterviewStatus  @default(scheduled)
-  result         InterviewResult?
+  status         InterviewStatus @default(scheduled)
   notes          String?
-  created_at     DateTime         @default(now())
-  updated_at     DateTime         @updatedAt
-  application    Application      @relation(fields: [application_id], references: [id])
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
+  application    Application     @relation(fields: [application_id], references: [id])
 }

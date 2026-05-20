@@ -7,10 +7,10 @@ model Plan {
   duration_days      Int
   features           String?
   is_hidden          Boolean              @default(false)
-  companyPlans       CompanyPlan[]
-  histories          CompanyPlanHistory[]
-  paymentOrders      PaymentOrder[]
-  creditTransactions CreditTransaction[]
   created_at         DateTime             @default(now())
   updated_at         DateTime             @updatedAt
+  companyPlans       CompanyPlan[]
+  histories          CompanyPlanHistory[]
+  creditTransactions CreditTransaction[]
+  paymentOrders      PaymentOrder[]
 }

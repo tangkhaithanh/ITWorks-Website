@@ -2,14 +2,14 @@ model CvTemplate {
   id            BigInt   @id @default(autoincrement())
   code          String   @unique
   name          String
-  version       Int      @default(1)
   description   String?
   preview_url   String?
-  layout_schema Json
-  style_tokens  Json?
-  is_active     Boolean  @default(true)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
+  is_active     Boolean  @default(true)
+  layout_schema Json
+  style_tokens  Json?
+  version       Int      @default(1)
   cvs           Cv[]
 
   @@unique([code, version])

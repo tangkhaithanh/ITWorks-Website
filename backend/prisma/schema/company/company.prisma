@@ -1,7 +1,6 @@
 model Company {
   id                      BigInt               @id @default(autoincrement())
   account_id              BigInt               @unique
-  ai_service_id           Int?                 @unique
   name                    String
   logo_url                String?
   logo_public_id          String?
@@ -10,8 +9,6 @@ model Company {
   headquarters            String?
   address                 String?
   size                    CompanySize?
-  industry_info           CompanyIndustry[]
-  skills                  CompanySkill[]
   business_code           String?              @unique
   representative_name     String?
   representative_position String?
@@ -23,12 +20,16 @@ model Company {
   status                  CompanyStatus        @default(pending)
   created_at              DateTime             @default(now())
   updated_at              DateTime             @updatedAt
+  ai_service_id           Int?                 @unique
   account                 Account              @relation(fields: [account_id], references: [id])
-  jobs                    Job[]
-  statistics              RecruiterStatistic[]
+  industry_info           CompanyIndustry[]
   companyPlan             CompanyPlan?
   companyPlanHistory      CompanyPlanHistory[]
-  paymentOrders           PaymentOrder[]
-  jobBoosts               JobBoost[]
+  skills                  CompanySkill[]
   creditTransactions      CreditTransaction[]
+  jobs                    Job[]
+  jobBoosts               JobBoost[]
+  paymentOrders           PaymentOrder[]
+  reports                 Report[]
+  statistics              RecruiterStatistic[]
 }

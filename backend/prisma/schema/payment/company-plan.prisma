@@ -11,11 +11,11 @@ model CompanyPlan {
   order_id               BigInt?       @unique
   credits_left           Int
   status                 PlanStatus    @default(active)
-  company                Company       @relation(fields: [company_id], references: [id])
-  plan                   Plan          @relation(fields: [plan_id], references: [id])
-  order                  PaymentOrder? @relation(fields: [order_id], references: [id])
   created_at             DateTime      @default(now())
   updated_at             DateTime      @updatedAt
+  company                Company       @relation(fields: [company_id], references: [id])
+  order                  PaymentOrder? @relation(fields: [order_id], references: [id])
+  plan                   Plan          @relation(fields: [plan_id], references: [id])
 
   @@index([company_id, status, end_date])
 }

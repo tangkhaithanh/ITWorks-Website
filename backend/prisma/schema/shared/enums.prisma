@@ -70,9 +70,7 @@ enum CvType {
 
 enum ApplicationStatus {
   pending
-  shortlisted
   interviewing
-  offered
   accepted
   rejected
   withdrawn
@@ -88,6 +86,7 @@ enum NotificationType {
   application
   company
   message
+  report
 }
 
 enum TargetType {
@@ -96,18 +95,11 @@ enum TargetType {
   job
 }
 
-enum InterviewResult {
-  pass
-  reject
-  hold
-}
-
 enum InterviewStatus {
   scheduled
   rescheduled
   cancelled
   completed
-  no_show
 }
 
 enum InterviewMode {

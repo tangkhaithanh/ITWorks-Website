@@ -1,19 +1,22 @@
 model Account {
-  id                         BigInt               @id @default(autoincrement())
-  email                      String               @unique
+  id                         BigInt                @id @default(autoincrement())
+  email                      String                @unique
   password                   String
   role                       Role
-  status                     Status               @default(active)
+  status                     Status                @default(active)
   refreshToken               String?
-  must_change_password       Boolean              @default(false)
-  created_at                 DateTime             @default(now())
-  updated_at                 DateTime             @updatedAt
-  user                       User?
-  company                    Company?
-  notifications              Notification[]
+  must_change_password       Boolean               @default(false)
+  created_at                 DateTime              @default(now())
+  updated_at                 DateTime              @updatedAt
   admin_logs                 AdminLog[]
-  conversations_as_applicant Conversation[]       @relation("ConvApplicant")
-  conversations_as_recruiter Conversation[]       @relation("ConvRecruiter")
-  messages_sent              Message[]            @relation("MessageSender")
+  company                    Company?
+  conversations_as_applicant Conversation[]        @relation("ConvApplicant")
+  conversations_as_recruiter Conversation[]        @relation("ConvRecruiter")
+  messages_sent              Message[]             @relation("MessageSender")
+  notifications              Notification[]
   potential_candidates       PotentialCandidate[]
+  reports_submitted          Report[]              @relation("ReportReporter")
+  reports_reviewed           Report[]              @relation("ReportReviewer")
+  report_status_changes      ReportStatusHistory[] @relation("ReportStatusChangedBy")
+  user                       User?
 }
