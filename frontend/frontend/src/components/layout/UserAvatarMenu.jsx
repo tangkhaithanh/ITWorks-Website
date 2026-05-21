@@ -6,7 +6,8 @@ import {
   LogOut, 
   FileText, 
   ChevronRight,
-  Sparkles 
+  Sparkles,
+  Briefcase
 } from "lucide-react";
 
 const UserAvatarMenu = ({ user, onLogout }) => {
@@ -43,7 +44,13 @@ const UserAvatarMenu = ({ user, onLogout }) => {
       icon: Settings,
       label: "Cài đặt",
       desc: "Tùy chỉnh và cài đặt tài khoản"
-    }
+    },
+    {
+      to: "/my-jobOffers",
+      icon: Briefcase,
+      label: "Thư mời nhận việc",
+      desc: "Offer từ nhà tuyển dụng gửi đến bạn"
+    },
   ];
 
   return (

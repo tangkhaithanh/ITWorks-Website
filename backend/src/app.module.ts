@@ -32,6 +32,7 @@ import aiServiceConfig from '@/config/ai-service.config';
 import { AiSyncModule } from '@/modules/ai-sync/ai-sync.module';
 import { PotentialCandidatesModule } from '@/modules/potential-candidates/potential-candidates.module';
 import { ReportsModule } from '@/modules/reports/reports.module';
+import { JobOfferModule } from '@/modules/job-offer/job-offer.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { ReportsModule } from '@/modules/reports/reports.module';
     MessagingModule,
     PotentialCandidatesModule,
     ReportsModule,
+    JobOfferModule,
   ],
 })
 export class AppModule {}

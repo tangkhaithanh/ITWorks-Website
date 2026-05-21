@@ -15,6 +15,7 @@ import { Roles } from '@/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 import { UpdateInterviewDto } from './dto/update-interview.dto';
+import { SubmitInterviewResultDto } from './dto/submit-interview-result.dto';
 import { User } from '@/common/decorators/user.decorator';
 import { InterviewOwnershipGuard } from '@/common/guards/interview-ownership.guard';
 
@@ -49,5 +50,19 @@ export class InterviewController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.interviewService.cancelInterview(accountId, BigInt(id));
+  }
+
+  @Patch(':id/result')
+  @UseGuards(InterviewOwnershipGuard)
+  async submitResult(
+    @User('accountId') accountId: bigint,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SubmitInterviewResultDto,
+  ) {
+    return this.interviewService.submitInterviewResult(
+      accountId,
+      BigInt(id),
+      dto,
+    );
   }
 }

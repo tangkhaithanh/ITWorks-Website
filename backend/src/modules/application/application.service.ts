@@ -418,6 +418,7 @@ export class ApplicationService {
           },
         },
         cv: true,
+        job_offer: { select: { id: true } },
 
         // 👉 Lấy lịch phỏng vấn mới nhất
         interviews: {
@@ -429,6 +430,7 @@ export class ApplicationService {
             location: true,
             meeting_link: true,
             status: true,
+            result: true,
             notes: true,
           },
         },
@@ -462,6 +464,7 @@ export class ApplicationService {
 
       cv: formattedCv,
 
+      has_offer: !!app.job_offer,
       interviews: app.interviews,
     };
   }
