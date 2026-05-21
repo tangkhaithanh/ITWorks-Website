@@ -129,4 +129,24 @@ export class CvsController {
       res.status(status).send(error.message || 'Lỗi không xác định');
     }
   }
+
+  @Post('preview')
+  async previewCv(@User('userId') userId: bigint, @Body() dto: CreateCvDto) {
+    return this.cvsService.previewCv(userId, dto);
+  }
+
+  @Get(':id/export/pdf')
+  async exportCvPdf(
+    @User('userId') userId: bigint,
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.cvsService.exportCvPdf(userId, BigInt(id));
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="cv-${id}-${Date.now()}.pdf"`,
+    );
+    res.send(buffer);
+  }
 }

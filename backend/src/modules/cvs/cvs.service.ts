@@ -15,6 +15,7 @@ import { CvHelper } from '@/common/helpers/cv.helper';
 import { CvTemplatesService } from '@/modules/cv-templates/cv-templates.service';
 import { CvRenderingService } from './cv-rendering.service';
 import { AiSyncProducer } from '@/modules/ai-sync/ai-sync.producer';
+import PDFDocument from 'pdfkit';
 @Injectable()
 export class CvsService {
   private readonly logger = new Logger(CvsService.name);
@@ -319,5 +320,93 @@ export class CvsService {
       }
       throw new Error(`Lỗi khi tải file từ Cloudinary: ${error.message}`);
     }
+  }
+  async previewCv(userId: bigint, dto: CreateCvDto) {
+    await this.getCandidateIdByUserId(userId);
+    if (!dto.template_id) {
+      throw new BadRequestException('template_id la bat buoc de preview CV');
+    }
+    const template = await this.cvTemplatesService.getTemplateById(
+      BigInt(dto.template_id),
+    );
+    const model = this.cvRenderingService.normalizeModel(
+      template,
+      (dto.content as any) ?? {},
+    );
+    return {
+      html: this.cvRenderingService.renderHtml(model),
+      model,
+    };
+  }
+  async exportCvPdf(userId: bigint, cvId: bigint) {
+    const candidateId = await this.getCandidateIdByUserId(userId);
+    const cv = await this.prisma.cv.findFirst({
+      where: {
+        id: cvId,
+        candidate_id: candidateId,
+        is_deleted: false,
+        type: CvType.ONLINE,
+      },
+    });
+    if (!cv || !cv.template_id) {
+      throw new NotFoundException('Khong tim thay CV online hop le de export');
+    }
+    const template = await this.cvTemplatesService.getTemplateById(cv.template_id);
+    const model = this.cvRenderingService.normalizeModel(
+      template,
+      (cv.content as Record<string, unknown>) ?? {},
+    );
+    const personal = (model.content.personal as Record<string, string>) ?? {};
+
+    return await new Promise<Buffer>((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 40 });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      doc.fontSize(20).text(personal.fullName || cv.title);
+      doc.moveDown(0.5);
+      doc
+        .fontSize(11)
+        .fillColor('#64748b')
+        .text([personal.email, personal.phone].filter(Boolean).join(' | '));
+      doc.moveDown();
+
+      const writeList = (title: string, items: string[]) => {
+        doc.fillColor('#0f172a').fontSize(14).text(title);
+        doc.moveDown(0.2);
+        if (!items.length) {
+          doc.fontSize(11).text('-');
+        } else {
+          items.forEach((item) => doc.fontSize(11).text(`- ${item}`));
+        }
+        doc.moveDown();
+      };
+
+      const education =
+        ((model.content.education as Array<Record<string, string>>) ?? []).map(
+          (item) =>
+            `${item.school || ''} - ${item.degree || ''} (${item.startDate || ''} - ${item.endDate || ''})`,
+        );
+      const experience =
+        ((model.content.experience as Array<Record<string, string>>) ?? []).map(
+          (item) =>
+            `${item.company || ''} - ${item.role || ''}: ${item.description || ''}`,
+        );
+      const skills = (model.content.skills as string[]) ?? [];
+      const projects =
+        ((model.content.projects as Array<Record<string, string>>) ?? []).map(
+          (item) => `${item.name || ''}: ${item.description || ''}`,
+        );
+
+      writeList('Education', education);
+      writeList('Experience', experience);
+      writeList('Skills', skills);
+      writeList('Projects', projects);
+
+      doc.end();
+    });
   }
 }
