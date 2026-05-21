@@ -4,6 +4,7 @@ const InterviewAPI = {
   create: (data) => apiClient.post("/interviews", data),
   update: (id, data) => apiClient.patch(`/interviews/${id}`, data),
   cancel: (id) => apiClient.patch(`/interviews/${id}/cancel`),
+  submitResult: (id, data) => apiClient.patch(`/interviews/${id}/result`, data),
 };
 
 export default InterviewAPI;

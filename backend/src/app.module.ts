@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { ScheduleModule } from '@nestjs/schedule';
+
 import { AuthModule } from './modules/auth/auth.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { CompaniesModule } from '@/modules/companies/companies.module';
@@ -25,24 +26,28 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { QueueModule } from '@/modules/queue/queue.module';
 import { MessagingModule } from '@/modules/messaging/messaging.module';
 import { CvTemplatesModule } from '@/modules/cv-templates/cv-templates.module';
+import { AiSyncModule } from '@/modules/ai-sync/ai-sync.module';
+import { PotentialCandidatesModule } from '@/modules/potential-candidates/potential-candidates.module';
+
+import { JobOfferModule } from '@/modules/job-offer/job-offer.module';
+import { ReportsModule } from '@/modules/reports/reports.module';
+
 import databaseConfig from '@/config/database.config';
 import jwtConfig from '@/config/jwt.config';
 import mailerConfig from '@/config/mailer.config';
 import aiServiceConfig from '@/config/ai-service.config';
-import { AiSyncModule } from '@/modules/ai-sync/ai-sync.module';
-import { PotentialCandidatesModule } from '@/modules/potential-candidates/potential-candidates.module';
-import { ReportsModule } from '@/modules/reports/reports.module';
 
 @Module({
   imports: [
-    //Khi app khởi động, hãy load toàn bộ config này vào ConfigService, cho toàn app dùng.
     ConfigModule.forRoot({
       isGlobal: true,
       load: [databaseConfig, jwtConfig, mailerConfig, aiServiceConfig],
     }),
+
     PrismaModule,
     ElasticsearchCustomModule,
     ScheduleModule.forRoot(),
+
     AuthModule,
     CloudinaryModule,
     CompaniesModule,
@@ -66,6 +71,8 @@ import { ReportsModule } from '@/modules/reports/reports.module';
     CvTemplatesModule,
     MessagingModule,
     PotentialCandidatesModule,
+
+    JobOfferModule,
     ReportsModule,
   ],
 })

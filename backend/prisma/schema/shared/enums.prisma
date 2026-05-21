@@ -76,6 +76,14 @@ enum ApplicationStatus {
   withdrawn
 }
 
+enum JobOfferStatus {
+  pending
+  accepted
+  rejected
+  expired
+  withdrawn
+}
+
 enum AttachmentType {
   image
   file

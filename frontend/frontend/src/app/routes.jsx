@@ -24,6 +24,7 @@ import JobDashboardForHRPage from "../features/jobs/pages/JobDashboardForHRPage"
 import CandidateProfilePage from "../features/candidates/pages/CandidateProfilePage";
 import MyApplicationsPage from "../features/applications/pages/MyApplicationsPage";
 import MyApplicationDetailPage from "../features/applications/pages/MyApplicationDetailPage";
+import MyJobOffersPage from "../features/applications/pages/MyJobOffersPage";
 import CompanyDashboard from "../features/companies/pages/CompanyDashBoard";
 import AdminLayout from "@/components/layout/AdminLayout";
 import ManageAccountPage from "../features/admin/pages/ManageAccountPage";
@@ -92,6 +93,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={["candidate"]}>
             <MyApplicationDetailPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "my-jobOffers",
+        element: (
+          <ProtectedRoute roles={["candidate"]}>
+            <MyJobOffersPage />
           </ProtectedRoute>
         ),
       },

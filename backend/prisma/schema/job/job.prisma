@@ -1,38 +1,43 @@
 model Job {
-  id                   BigInt               @id @default(autoincrement())
-  company_id           BigInt
-  category_id          BigInt
-  title                String
-  salary_min           Float?
-  salary_max           Float?
-  negotiable           Boolean              @default(false)
-  location_city        String
-  location_district    String?
-  location_ward        String?
-  location_street      String?
-  location_full        String?
-  latitude             Float?
-  longitude            Float?
-  work_modes           Json
-  experience_levels    Json
-  employment_type      EmploymentType
-  status               JobStatus            @default(active)
-  deadline             DateTime?
-  created_at           DateTime             @default(now())
-  updated_at           DateTime             @updatedAt
-  number_of_openings   Int                  @default(1)
-  views_count          Int                  @default(0)
-  experience_required  Float?
-  ai_service_id        Int?                 @unique
-  applications         Application[]
-  conversations        Conversation[]
-  creditTransactions   CreditTransaction[]
-  category             JobCategory          @relation(fields: [category_id], references: [id])
+  id                  BigInt  @id @default(autoincrement())
+  company_id          BigInt
+  category_id         BigInt
+  ai_service_id       Int?    @unique
+  title               String
+  salary_min          Float?
+  salary_max          Float?
+  experience_required Float?
+  negotiable          Boolean @default(false)
+
+  location_city     String
+  location_district String?
+  location_ward     String?
+  location_street   String?
+  location_full     String?
+  latitude          Float?
+  longitude         Float?
+
+  work_modes        Json
+  experience_levels Json
+  employment_type   EmploymentType
+  status            JobStatus @default(active)
+  deadline          DateTime?
+
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+  number_of_openings Int      @default(1)
+  views_count        Int      @default(0)
+
   company              Company              @relation(fields: [company_id], references: [id])
-  boosts               JobBoost[]
+  category             JobCategory?         @relation(fields: [category_id], references: [id])
   details              JobDetail?
-  skills               JobSkill[]
-  potential_candidates PotentialCandidate[]
-  reports              Report[]
+  applications         Application[]
   saved_jobs           SavedJob[]
+  skills               JobSkill[]
+  boosts               JobBoost[]
+  creditTransactions   CreditTransaction[]
+  conversations        Conversation[]
+  potential_candidates PotentialCandidate[]
+  job_offers           JobOffer[]
+  reports              Report[]
 }
