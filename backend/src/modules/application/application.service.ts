@@ -185,23 +185,39 @@ export class ApplicationService {
   // Xem chi tiết 1 đơn ứng tuyển dành cho ứng viên
 
   async getMyApplicationDetail(userId: bigint, appId: bigint) {
-    const candidateId = await this.getCandidateIdByUserId(userId);
-    const app = await this.prisma.application.findFirst({
-      where: { id: appId, candidate_id: candidateId },
-      include: {
-        job: {
-          include: {
-            company: { select: { id: true, name: true, logo_url: true } },
-          },
+  const candidateId = await this.getCandidateIdByUserId(userId);
+
+  const app = await this.prisma.application.findFirst({
+    where: { id: appId, candidate_id: candidateId },
+    include: {
+      job: {
+        include: {
+          company: { select: { id: true, name: true, logo_url: true } },
         },
-        cv: true,
       },
-    });
+      cv: true,
+      interviews: {
+        orderBy: { scheduled_at: 'asc' },
+        select: {
+          id: true,
+          scheduled_at: true,
+          mode: true,
+          location: true,
+          meeting_link: true,
+          status: true,
+          result: true,
+          notes: true,
+          created_at: true,
+          updated_at: true,
+        },
+      },
+    },
+  });
 
-    if (!app) throw new NotFoundException('Không tìm thấy đơn ứng tuyển.');
+  if (!app) throw new NotFoundException('Không tìm thấy đơn ứng tuyển.');
 
-    return app;
-  }
+  return app;
+}
 
   // Rút lại đơn ứng tuyển:
   async withdrawApplication(userId: bigint, appId: bigint) {
