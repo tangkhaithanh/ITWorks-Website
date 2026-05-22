@@ -33,6 +33,7 @@ model Job {
   details              JobDetail?
   skills               JobSkill[]
   potential_candidates PotentialCandidate[]
+  recruiter_matching_history RecruiterMatchingHistory[]
   job_offers           JobOffer[]
   reports              Report[]
   saved_jobs           SavedJob[]

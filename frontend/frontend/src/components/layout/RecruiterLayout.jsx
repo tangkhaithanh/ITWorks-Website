@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import useNotificationsRealtime from "@/features/notifications/useNotificationsRealtime.js";
 import CompanyPlanAPI from "../../features/companies/CompanyPlanAPI";
@@ -16,6 +16,7 @@ import {
   Bell,
   MessageCircle,
   Search,
+  History,
 } from "lucide-react";
 import logo from "@/assets/images/logo.png";
 import { Gauge } from "lucide-react";
@@ -38,11 +39,15 @@ const NAV_ITEMS = [
     label: "Tìm kiếm & xếp hạng ứng viên",
     icon: Search,
   },
+  {
+    path: "/recruiter/candidate-search/history",
+    label: "Lịch sử tìm kiếm ứng viên",
+    icon: History,
+  },
 ];
 
 export default function RecruiterLayout() {
   useNotificationsRealtime();
-  const unread = useSelector((state) => state.notifications?.unread || 0);
   const messagingUnread = useSelector((state) => state.messaging?.unread || 0);
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
@@ -51,8 +56,6 @@ export default function RecruiterLayout() {
   const [currentPlan, setCurrentPlan] = useState(null);
 
   const location = useLocation();
-  const navigate = useNavigate();
-
   // ============================
   // 🚀 FIX redirect /recruiter → /recruiter/dashboard
   //     — KHÔNG return Navigate để tránh lỗi hooks

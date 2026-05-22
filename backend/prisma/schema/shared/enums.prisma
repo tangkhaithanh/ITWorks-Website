@@ -180,3 +180,8 @@ enum PotentialCandidatePriority {
   MEDIUM
   HIGH
 }
+
+enum RecruiterMatchingAction {
+  RANK_APPLICANTS
+  FIND_TALENT
+}

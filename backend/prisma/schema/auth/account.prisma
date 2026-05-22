@@ -15,6 +15,7 @@ model Account {
   messages_sent              Message[]             @relation("MessageSender")
   notifications              Notification[]
   potential_candidates       PotentialCandidate[]
+  recruiter_matching_history RecruiterMatchingHistory[]
   reports_submitted          Report[]              @relation("ReportReporter")
   reports_reviewed           Report[]              @relation("ReportReviewer")
   report_status_changes      ReportStatusHistory[] @relation("ReportStatusChangedBy")

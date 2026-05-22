@@ -33,6 +33,7 @@ import { AiSyncModule } from '@/modules/ai-sync/ai-sync.module';
 import { PotentialCandidatesModule } from '@/modules/potential-candidates/potential-candidates.module';
 import { ReportsModule } from '@/modules/reports/reports.module';
 import { JobOfferModule } from '@/modules/job-offer/job-offer.module';
+import { MatchingHistoryModule } from '@/modules/matching-history/matching-history.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { JobOfferModule } from '@/modules/job-offer/job-offer.module';
     NotificationsModule,
     QueueModule,
     AiSyncModule,
+    MatchingHistoryModule,
     CvTemplatesModule,
     MessagingModule,
     PotentialCandidatesModule,
