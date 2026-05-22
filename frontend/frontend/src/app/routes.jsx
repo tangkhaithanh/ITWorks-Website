@@ -22,6 +22,7 @@ import JobDetailForHRPage from "../features/jobs/pages/JobDetailForHRPage";
 import CreateJobPage from "../features/jobs/pages/CreateJobPage";
 import JobDashboardForHRPage from "../features/jobs/pages/JobDashboardForHRPage";
 import CandidateProfilePage from "../features/candidates/pages/CandidateProfilePage";
+import SavedJobsPage from "../features/candidates/pages/SavedJobsPage";
 import MyApplicationsPage from "../features/applications/pages/MyApplicationsPage";
 import MyApplicationDetailPage from "../features/applications/pages/MyApplicationDetailPage";
 import MyJobOffersPage from "../features/applications/pages/MyJobOffersPage";
@@ -77,6 +78,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={["candidate"]}>
             <CandidateProfilePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "saved-jobs",
+        element: (
+          <ProtectedRoute roles={["candidate"]}>
+            <SavedJobsPage />
           </ProtectedRoute>
         ),
       },

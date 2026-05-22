@@ -8,6 +8,12 @@ import {
   UseGuards,
   Patch,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CandidatesService } from './candidates.service';
 import { SaveJobDto } from './dto/saved-job.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -17,6 +23,9 @@ import { Role } from '@prisma/client';
 import { User } from '@/common/decorators/user.decorator';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
+
+@ApiTags('Candidates')
+@ApiBearerAuth()
 @Controller('candidates')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.candidate)
@@ -38,6 +47,19 @@ export class CandidatesController {
   }
 
   @Get('saved-jobs')
+  @ApiOperation({
+    summary: 'List saved jobs with candidate card display data',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Saved jobs returned newest-saved-first with nested job card display data.',
+  })
+  @ApiResponse({ status: 404, description: 'Candidate profile not found.' })
+  @ApiResponse({
+    status: 500,
+    description: 'Saved job display context cannot be prepared.',
+  })
   async getSavedJobs(@User('userId') userId: bigint) {
     return this.candidatesService.getSavedJobs(userId);
   }

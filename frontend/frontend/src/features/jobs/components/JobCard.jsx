@@ -18,6 +18,8 @@ export const JobCard = ({ job, isSaved = false, onToggleSave }) => {
   const daysAgo = job.created_at
     ? Math.floor((Date.now() - new Date(job.created_at)) / (1000 * 60 * 60 * 24))
     : null;
+  const categoryLabel =
+    typeof job.category === "string" ? job.category : job.category?.name;
 
   // Format lương gọn hơn
   const salaryText =
@@ -52,7 +54,7 @@ export const JobCard = ({ job, isSaved = false, onToggleSave }) => {
         setSaved(false);
         onToggleSave?.(job.id, false);
       }
-    } catch (err) {
+    } catch {
       toast.error("Thao tác thất bại");
     } finally {
       setLoading(false);
@@ -133,10 +135,10 @@ export const JobCard = ({ job, isSaved = false, onToggleSave }) => {
               </div>
             )}
 
-            {job.category && (
+            {categoryLabel && (
               <div className="flex items-center gap-1.5 text-slate-600 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">
                 <Briefcase size={14} />
-                <span className="truncate max-w-[120px]">{job.category}</span>
+                <span className="truncate max-w-[120px]">{categoryLabel}</span>
               </div>
             )}
 

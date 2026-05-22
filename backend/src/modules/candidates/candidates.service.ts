@@ -59,14 +59,49 @@ export class CandidatesService {
   // Lấy danh sách công việc đã lưu:
   async getSavedJobs(userId: bigint) {
     const candidate = await this.getCandidateByUserId(userId);
-    return this.prisma.savedJob.findMany({
+    const savedJobs = await this.prisma.savedJob.findMany({
       where: { candidate_id: candidate.id },
       include: {
         job: {
-          include: { category: true },
+          include: {
+            category: true,
+            company: {
+              select: {
+                id: true,
+                name: true,
+                logo_url: true,
+              },
+            },
+          },
         },
       },
       orderBy: { saved_at: 'desc' },
+    });
+
+    return savedJobs.map((savedJob) => {
+      if (
+        !savedJob.job ||
+        !savedJob.job.category ||
+        !savedJob.job.company ||
+        !savedJob.job.title ||
+        !savedJob.job.location_city ||
+        !savedJob.job.created_at
+      ) {
+        throw new InternalServerErrorException(
+          'Không thể tải dữ liệu hiển thị công việc đã lưu',
+        );
+      }
+
+      const { company, ...job } = savedJob.job;
+
+      return {
+        ...savedJob,
+        job: {
+          ...job,
+          company_name: company.name,
+          company_logo: company.logo_url,
+        },
+      };
     });
   }
 

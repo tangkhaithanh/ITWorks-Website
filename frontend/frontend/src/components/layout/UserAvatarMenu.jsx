@@ -7,7 +7,8 @@ import {
   FileText, 
   ChevronRight,
   Sparkles,
-  Briefcase
+  Briefcase,
+  Heart
 } from "lucide-react";
 
 const UserAvatarMenu = ({ user, onLogout }) => {
@@ -38,6 +39,12 @@ const UserAvatarMenu = ({ user, onLogout }) => {
       icon: FileText,
       label: "Quản lý đơn ứng tuyển",
       desc: "Theo dõi trạng thái đơn ứng tuyển"
+    },
+    {
+      to: "/saved-jobs",
+      icon: Heart,
+      label: "Công việc đã lưu",
+      desc: "Xem các tin tuyển dụng đã lưu"
     },
     {
       to: "/settings",
