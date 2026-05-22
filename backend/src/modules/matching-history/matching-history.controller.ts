@@ -26,24 +26,11 @@ export class MatchingHistoryController {
   ) {}
 
   @Get()
-  @ApiOperation({
-    summary: 'List the authenticated recruiter matching history sessions',
-  })
-  @ApiResponse({ status: 200, description: 'Matching history returned' })
-  @ApiResponse({ status: 403, description: 'Recruiter role required' })
   findAll(@User('accountId') accountId: bigint) {
     return this.matchingHistoryService.findSummaries(accountId);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Read one saved recruiter matching session' })
-  @ApiParam({
-    name: 'id',
-    description: 'String-encoded matching history session identifier',
-  })
-  @ApiResponse({ status: 200, description: 'Saved matching session returned' })
-  @ApiResponse({ status: 403, description: 'Recruiter role required' })
-  @ApiResponse({ status: 404, description: 'Matching session not found' })
   findOne(
     @Param() params: MatchingHistoryIdDto,
     @User('accountId') accountId: bigint,

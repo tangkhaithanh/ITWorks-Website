@@ -103,7 +103,7 @@ export default function MatchDetailDrawer({
           <section className="rounded-3xl border border-slate-200 p-5">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500">
-                Phân tích Matching
+                Phân tích mức độ phù hợp
               </h3>
               <span
                 className={`rounded-full border px-3 py-1 text-sm font-bold ${getScoreTone(match.overall_score).chip}`}
@@ -112,12 +112,12 @@ export default function MatchDetailDrawer({
               </span>
             </div>
             <div className="space-y-4">
-              <MatchScoreBar label="Overall Score" value={match.overall_score} />
-              <MatchScoreBar label="Semantic Similarity" value={match.scores?.semantic_score} />
-              <MatchScoreBar label="Skill Match" value={match.scores?.skill_match_score} />
-              <MatchScoreBar label="Experience" value={match.scores?.experience_score} />
-              <MatchScoreBar label="Location Match" value={match.scores?.location_score} />
-              <MatchScoreBar label="Salary Match" value={match.scores?.salary_score} />
+              <MatchScoreBar label="Điểm tổng thể" value={match.overall_score} />
+              <MatchScoreBar label="Độ tương đồng ngữ nghĩa" value={match.scores?.semantic_score} />
+              <MatchScoreBar label="Điểm kỹ năng" value={match.scores?.skill_match_score} />
+              <MatchScoreBar label="Kinh nghiệm" value={match.scores?.experience_score} />
+              <MatchScoreBar label="Điểm địa điểm" value={match.scores?.location_score} />
+              <MatchScoreBar label="Điểm lương" value={match.scores?.salary_score} />
             </div>
           </section>
 
@@ -177,7 +177,7 @@ export default function MatchDetailDrawer({
                   </Button>
                 ) : (
                   <div className="rounded-2xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-700">
-                    Ứng viên trong kho hiện chưa có `application_id`.
+                    Ứng viên trong kho hiện chưa có mã đơn ứng tuyển.
                   </div>
                 )}
               </div>

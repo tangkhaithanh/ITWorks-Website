@@ -5,8 +5,10 @@ import {
   CvType,
   EmploymentType,
   JobSkillType,
+  RecruiterMatchingAction,
 } from '@prisma/client';
 
+import { MatchingHistoryService } from '@/modules/matching-history/matching-history.service';
 import { PrismaService } from '@/prisma/prisma.service';
 import {
   AiApplicationSyncPayload,
@@ -47,6 +49,7 @@ export class AiSyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly aiSyncClient: AiSyncClient,
+    private readonly matchingHistoryService: MatchingHistoryService,
   ) {}
 
   async syncCompany(companyId: bigint) {
@@ -317,14 +320,55 @@ export class AiSyncService {
     return new Set(saved.map((s) => this.toNumber(s.job_id)));
   }
 
-  async rankApplicants(sourceJobId: number) {
+  async rankApplicants(sourceJobId: number, recruiterId?: bigint) {
     const result = await this.aiSyncClient.rankApplicants(sourceJobId);
-    return this.enrichMatchesWithCvFileUrls(result);
+    const enrichedResult = await this.enrichMatchesWithCvFileUrls(result);
+
+    await this.captureHistory(
+      recruiterId,
+      BigInt(sourceJobId),
+      RecruiterMatchingAction.RANK_APPLICANTS,
+      enrichedResult,
+    );
+
+    return enrichedResult;
   }
 
-  async findTalent(sourceJobId: number) {
+  async findTalent(sourceJobId: number, recruiterId?: bigint) {
     const result = await this.aiSyncClient.findTalent(sourceJobId);
-    return this.enrichMatchesWithCvFileUrls(result);
+    const enrichedResult = await this.enrichMatchesWithCvFileUrls(result);
+
+    await this.captureHistory(
+      recruiterId,
+      BigInt(sourceJobId),
+      RecruiterMatchingAction.FIND_TALENT,
+      enrichedResult,
+    );
+
+    return enrichedResult;
+  }
+
+  private async captureHistory(
+    recruiterId: bigint | undefined,
+    jobId: bigint,
+    actionType: RecruiterMatchingAction,
+    response: unknown,
+  ) {
+    if (!recruiterId) return;
+
+    try {
+      await this.matchingHistoryService.captureSession({
+        recruiterId,
+        jobId,
+        actionType,
+        response,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Unable to persist ${actionType} history for job ${jobId.toString()}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
   }
 
   private async enrichMatchesWithCvFileUrls(result: any) {

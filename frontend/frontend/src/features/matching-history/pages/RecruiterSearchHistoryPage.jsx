@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, History, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, History, Loader2 } from "lucide-react";
 
-import Button from "@/components/ui/Button";
 import MatchingHistoryAPI from "@/features/matching-history/MatchingHistoryAPI";
 import MatchingHistoryList from "@/features/matching-history/components/MatchingHistoryList";
 import SavedMatchingSessionDetail from "@/features/matching-history/components/SavedMatchingSessionDetail";
@@ -25,7 +24,7 @@ export default function RecruiterSearchHistoryPage() {
       const nextSessions = unwrapData(response);
       setSessions(Array.isArray(nextSessions) ? nextSessions : []);
     } catch {
-      setError("Khong the tai lich su matching. Hay thu lai.");
+      setError("Không thể tải lịch sử tìm kiếm ứng viên. Hãy thử lại.");
     } finally {
       setLoading(false);
     }
@@ -34,43 +33,41 @@ export default function RecruiterSearchHistoryPage() {
   const loadDetail = useCallback(async (id) => {
     try {
       setSelectedId(id);
+      setSelectedSession(null);
       setDetailLoading(true);
       setDetailError("");
       const response = await MatchingHistoryAPI.getSession(id);
       setSelectedSession(unwrapData(response));
     } catch {
       setSelectedSession(null);
-      setDetailError("Khong the tai response da luu cho phien nay.");
+      setDetailError("Không thể tải kết quả đã lưu của phiên này.");
     } finally {
       setDetailLoading(false);
     }
   }, []);
 
+  const closeDetail = () => {
+    setSelectedId(null);
+    setSelectedSession(null);
+    setDetailError("");
+    setDetailLoading(false);
+  };
+
   useEffect(() => {
     loadSummaries();
   }, [loadSummaries]);
 
-  useEffect(() => {
-    if (!selectedId && sessions.length > 0) {
-      loadDetail(sessions[0].id);
-    }
-  }, [loadDetail, selectedId, sessions]);
-
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <header>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
-            Lich su tim kiem ung vien
+            Lịch sử tìm kiếm ứng viên
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Luu lai ket qua Rank Applicants va Find Talent theo tung phien matching.
+            Lưu lại kết quả xếp hạng và tìm kiếm ứng viên theo từng phiên.
           </p>
         </div>
-        <Button size="sm" variant="outline" onClick={loadSummaries} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          Tai lai
-        </Button>
       </header>
 
       {loading ? (
@@ -81,7 +78,7 @@ export default function RecruiterSearchHistoryPage() {
         <section className="rounded-[1.5rem] border border-rose-200 bg-white p-8 text-center shadow-sm">
           <AlertTriangle className="mx-auto h-9 w-9 text-rose-500" />
           <h2 className="mt-4 text-lg font-bold text-slate-900">
-            Khong tai duoc lich su
+            Không tải được lịch sử
           </h2>
           <p className="mt-2 text-sm text-slate-500">{error}</p>
         </section>
@@ -91,26 +88,35 @@ export default function RecruiterSearchHistoryPage() {
             <History className="h-7 w-7" />
           </div>
           <h2 className="mt-4 text-xl font-bold text-slate-900">
-            Chua co phien matching da luu
+            Chưa có phiên tìm kiếm đã lưu
           </h2>
           <p className="mt-2 text-sm text-slate-500">
-            Chay Rank Applicants hoac Find Talent de tao lich su tim kiem ung vien.
+            Chạy xếp hạng hoặc tìm kiếm ứng viên để tạo lịch sử.
           </p>
         </section>
       ) : (
-        <div className="grid gap-5 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.1fr)]">
+        <div
+          className={
+            selectedId
+              ? "grid items-stretch gap-5 2xl:grid-cols-[minmax(300px,0.42fr)_minmax(0,1fr)]"
+              : "grid gap-5"
+          }
+        >
           <MatchingHistoryList
             sessions={sessions}
             selectedId={selectedId}
             onSelect={loadDetail}
           />
-          <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
-            <SavedMatchingSessionDetail
-              session={selectedSession}
-              loading={detailLoading}
-              error={detailError}
-            />
-          </section>
+          {selectedId ? (
+            <section className="min-w-0 min-h-[420px] h-[calc(100vh-11rem)] overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
+              <SavedMatchingSessionDetail
+                session={selectedSession}
+                loading={detailLoading}
+                error={detailError}
+                onClose={closeDetail}
+              />
+            </section>
+          ) : null}
         </div>
       )}
     </div>

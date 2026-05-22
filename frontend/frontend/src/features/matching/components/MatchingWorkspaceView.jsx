@@ -68,7 +68,7 @@ function JobDescriptionDrawer({ open, onClose, job }) {
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-              Job Detail
+              Chi tiết tin tuyển dụng
             </p>
             <h2 className="mt-1 truncate text-xl font-bold text-slate-900">{job?.title}</h2>
           </div>
@@ -90,7 +90,7 @@ function JobDescriptionDrawer({ open, onClose, job }) {
               </div>
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500">
-                  Job Description
+                  Mô tả công việc
                 </h3>
               </div>
             </div>
@@ -114,7 +114,7 @@ function JobDescriptionDrawer({ open, onClose, job }) {
               </div>
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500">
-                  Job Requirements
+                  Yêu cầu tuyển dụng
                 </h3>
               </div>
             </div>
@@ -154,7 +154,7 @@ function MatchingFiltersPanel({
       <div className="mt-5 space-y-6">
         <div>
           <div className="mb-3 flex items-center justify-between text-sm text-slate-600">
-            <span className="font-semibold">Overall score tối thiểu</span>
+            <span className="font-semibold">Điểm tổng thể tối thiểu</span>
             <span>{draftFilters.minScore}%</span>
           </div>
           <input
@@ -174,7 +174,7 @@ function MatchingFiltersPanel({
         </div>
 
         <div>
-          <p className="mb-3 text-sm font-semibold text-slate-700">Kỹ năng matched</p>
+          <p className="mb-3 text-sm font-semibold text-slate-700">Kỹ năng phù hợp</p>
           <div className="flex flex-wrap gap-2">
             {availableSkills.length > 0 ? (
               availableSkills.map((skill) => {
@@ -209,7 +209,7 @@ function MatchingFiltersPanel({
 
         {activeMode === "job_rank_applicants" ? (
           <div>
-            <p className="mb-3 text-sm font-semibold text-slate-700">Trạng thái application</p>
+            <p className="mb-3 text-sm font-semibold text-slate-700">Trạng thái đơn ứng tuyển</p>
             <SelectInput
               name="filterStatus"
               value={draftFilters.status}
@@ -218,16 +218,16 @@ function MatchingFiltersPanel({
               }
               options={[
                 { value: "all", label: "Tất cả" },
-                { value: "pending", label: "Pending" },
-                { value: "interviewing", label: "Interviewing" },
-                { value: "accepted", label: "Accepted" },
-                { value: "rejected", label: "Rejected" },
+                { value: "pending", label: "Chờ xử lý" },
+                { value: "interviewing", label: "Phỏng vấn" },
+                { value: "accepted", label: "Đã nhận" },
+                { value: "rejected", label: "Đã từ chối" },
               ]}
             />
           </div>
         ) : (
           <div className="rounded-3xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-700">
-            Chế độ FindTalent là chế độ matching toàn hệ thống nên có thể tiêu tốn credits cao hơn, và tốn nhiều thời gian hơn
+            Chế độ tìm kiếm ứng viên trên toàn hệ thống có thể tốn nhiều credits và thời gian hơn.
           </div>
         )}
 
@@ -261,6 +261,7 @@ function MatchingResultsPanel({
   onManageApplication,
   onOpenCv,
   onSaveToTalentPool,
+  allowRefresh = true,
 }) {
   return (
     <div className="space-y-5">
@@ -281,15 +282,17 @@ function MatchingResultsPanel({
               disabled={!hasLoadedCurrentMode || matchingLoading}
             />
 
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onRefreshMatch}
-              disabled={!hasLoadedCurrentMode || matchingRefreshing || matchingLoading}
-            >
-              <RefreshCw className={`h-4 w-4 ${matchingRefreshing ? "animate-spin" : ""}`} />
-              Re-run
-            </Button>
+            {allowRefresh ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onRefreshMatch}
+                disabled={!hasLoadedCurrentMode || matchingRefreshing || matchingLoading}
+              >
+                <RefreshCw className={`h-4 w-4 ${matchingRefreshing ? "animate-spin" : ""}`} />
+              Chạy lại
+              </Button>
+            ) : null}
 
             <Button
               size="sm"
@@ -304,7 +307,7 @@ function MatchingResultsPanel({
               disabled={!hasLoadedCurrentMode || filteredMatches.length === 0}
             >
               <Download className="h-4 w-4" />
-              Export CSV
+              Xuất CSV
             </Button>
           </div>
         </div>
@@ -315,9 +318,9 @@ function MatchingResultsPanel({
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-blue-600">
             <RefreshCw className="h-6 w-6 animate-spin" />
           </div>
-          <p className="mt-4 text-base font-semibold text-slate-900">Đang chạy matching</p>
+          <p className="mt-4 text-base font-semibold text-slate-900">Đang tìm kiếm ứng viên</p>
           <p className="mt-2 text-sm text-slate-500">
-            Hệ thống đang phân tích theo mode bạn đã chọn.
+            Hệ thống đang phân tích theo chế độ bạn đã chọn.
           </p>
         </div>
       ) : !hasLoadedCurrentMode ? (
@@ -325,9 +328,9 @@ function MatchingResultsPanel({
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-400">
             <Sparkles className="h-8 w-8" />
           </div>
-          <h3 className="mt-4 text-lg font-semibold text-slate-900">Chọn mode rồi bắt đầu matching</h3>
+          <h3 className="mt-4 text-lg font-semibold text-slate-900">Chọn chế độ rồi bắt đầu tìm kiếm</h3>
           <p className="mt-2 text-sm text-slate-500">
-            Workspace sẽ hiển thị kết quả ngay sau khi bạn chạy mode{" "}
+            Khu vực kết quả sẽ hiển thị ngay sau khi bạn chạy chế độ{" "}
             <span className="font-semibold text-slate-700">{MATCHING_MODES[activeMode].title}</span>.
           </p>
         </div>
@@ -391,6 +394,8 @@ export default function MatchingWorkspaceView({
   onSaveToTalentPool,
   onOpenTalentPool,
   onBackToJobs,
+  allowLiveMatchingControls = true,
+  showFilters = true,
 }) {
   const [jobDrawerOpen, setJobDrawerOpen] = useState(false);
 
@@ -407,13 +412,15 @@ export default function MatchingWorkspaceView({
       />
 
       <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-        <button
-          onClick={onBackToJobs}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Đổi Job
-        </button>
+        {allowLiveMatchingControls ? (
+          <button
+            onClick={onBackToJobs}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-900"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Đổi Job
+          </button>
+        ) : null}
 
         <div className="mt-4 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div>
@@ -433,7 +440,7 @@ export default function MatchingWorkspaceView({
                 className="border-slate-200 text-slate-700 hover:bg-slate-50"
               >
                 <PanelLeftOpen className="h-4 w-4" />
-                Xem JD
+                Xem mô tả
               </Button>
               <Button
                 size="sm"
@@ -447,7 +454,7 @@ export default function MatchingWorkspaceView({
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-slate-500">
-              <span>Job #{selectedJob.id}</span>
+              <span>Tin tuyển dụng #{selectedJob.id}</span>
               <span className="inline-flex items-center gap-1">
                 <MapPin className="h-4 w-4" />
                 {selectedJob.location?.full || selectedJob.location_full || "Chưa cập nhật địa điểm"}
@@ -459,7 +466,7 @@ export default function MatchingWorkspaceView({
               <span className="inline-flex items-center gap-1">
                 <Users className="h-4 w-4" />
                 {loadedModes.job_rank_applicants ? rankTotal : selectedJob?._count?.applications || 0}{" "}
-                ứng viên đã apply
+                ứng viên đã ứng tuyển
               </span>
               <span className="inline-flex items-center gap-1">
                 <CalendarDays className="h-4 w-4" />
@@ -479,76 +486,87 @@ export default function MatchingWorkspaceView({
             </div>
           </div>
 
-          <div className="flex w-full max-w-2xl flex-col gap-3">
-            <div className="grid gap-3 md:grid-cols-2">
-              <button
-                onClick={() => onActiveModeChange("job_rank_applicants")}
-                disabled={matchingLoading || matchingRefreshing}
-                className={`rounded-[1.75rem] border px-5 py-4 text-left transition-all ${
-                  activeMode === "job_rank_applicants"
-                    ? "border-blue-200 bg-blue-50 shadow-sm"
-                    : "border-slate-200 bg-white hover:border-slate-300"
-                } ${matchingLoading || matchingRefreshing ? "cursor-not-allowed opacity-70" : ""}`}
-              >
-                <p className="text-sm font-bold text-slate-900">
-                  Rank Applicants
-                  {loadedModes.job_rank_applicants ? ` (${rankTotal})` : ""}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {MATCHING_MODES.job_rank_applicants.description}
-                </p>
-              </button>
+          {allowLiveMatchingControls ? (
+            <div className="flex w-full max-w-2xl flex-col gap-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <button
+                  onClick={() => onActiveModeChange("job_rank_applicants")}
+                  disabled={matchingLoading || matchingRefreshing}
+                  className={`rounded-[1.75rem] border px-5 py-4 text-left transition-all ${
+                    activeMode === "job_rank_applicants"
+                      ? "border-blue-200 bg-blue-50 shadow-sm"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  } ${matchingLoading || matchingRefreshing ? "cursor-not-allowed opacity-70" : ""}`}
+                >
+                  <p className="text-sm font-bold text-slate-900">
+                  Xếp hạng ứng viên
+                    {loadedModes.job_rank_applicants ? ` (${rankTotal})` : ""}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {MATCHING_MODES.job_rank_applicants.description}
+                  </p>
+                </button>
 
-              <button
-                onClick={() => onActiveModeChange("job_find_talent")}
-                disabled={matchingLoading || matchingRefreshing}
-                className={`rounded-[1.75rem] border px-5 py-4 text-left transition-all ${
-                  activeMode === "job_find_talent"
-                    ? "border-violet-200 bg-violet-50 shadow-sm"
-                    : "border-slate-200 bg-white hover:border-slate-300"
-                } ${matchingLoading || matchingRefreshing ? "cursor-not-allowed opacity-70" : ""}`}
-              >
-                <p className="text-sm font-bold text-slate-900">
-                  Find Talent
-                  {loadedModes.job_find_talent ? ` (${talentTotal})` : ""}
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {MATCHING_MODES.job_find_talent.description}
-                </p>
-              </button>
+                <button
+                  onClick={() => onActiveModeChange("job_find_talent")}
+                  disabled={matchingLoading || matchingRefreshing}
+                  className={`rounded-[1.75rem] border px-5 py-4 text-left transition-all ${
+                    activeMode === "job_find_talent"
+                      ? "border-violet-200 bg-violet-50 shadow-sm"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  } ${matchingLoading || matchingRefreshing ? "cursor-not-allowed opacity-70" : ""}`}
+                >
+                  <p className="text-sm font-bold text-slate-900">
+                  Tìm kiếm ứng viên
+                    {loadedModes.job_find_talent ? ` (${talentTotal})` : ""}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {MATCHING_MODES.job_find_talent.description}
+                  </p>
+                </button>
+              </div>
+
+              <Button onClick={onStartMatch} disabled={matchingLoading || matchingRefreshing} className="w-full">
+                <RefreshCw className={`h-4 w-4 ${matchingLoading || matchingRefreshing ? "animate-spin" : ""}`} />
+                {matchingLoading || matchingRefreshing
+                  ? "Đang tìm kiếm..."
+                  : hasLoadedCurrentMode
+                    ? "Chạy lại tìm kiếm"
+                    : "Bắt đầu tìm kiếm"}
+              </Button>
+
+              {activeMode === "job_find_talent" && (
+                <button
+                  type="button"
+                  onClick={onOpenTalentPool}
+                  className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-left text-sm font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-100"
+                >
+                  Mở kho ứng viên của job này để xem các ứng viên đã lưu
+                </button>
+              )}
             </div>
-
-            <Button onClick={onStartMatch} disabled={matchingLoading || matchingRefreshing} className="w-full">
-              <RefreshCw className={`h-4 w-4 ${matchingLoading || matchingRefreshing ? "animate-spin" : ""}`} />
-              {matchingLoading || matchingRefreshing
-                ? "Đang matching..."
-                : hasLoadedCurrentMode
-                  ? "Chạy lại matching"
-                  : "Bắt đầu matching"}
-            </Button>
-
-            {activeMode === "job_find_talent" && (
-              <button
-                type="button"
-                onClick={onOpenTalentPool}
-                className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-left text-sm font-semibold text-blue-700 transition hover:border-blue-200 hover:bg-blue-100"
-              >
-                Mở kho ứng viên của job này để xem các ứng viên đã lưu
-              </button>
-            )}
-          </div>
+          ) : (
+            <div className="w-full max-w-sm rounded-[1.75rem] border border-blue-100 bg-blue-50 px-5 py-4 text-sm text-blue-800">
+              <p className="font-bold">{MATCHING_MODES[activeMode].title}</p>
+              <p className="mt-1 text-blue-700">
+                Kết quả đã lưu được mở ở đúng chế độ của phiên lịch sử này.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[300px,minmax(0,1fr)]">
-        <MatchingFiltersPanel
-          activeMode={activeMode}
-          availableSkills={availableSkills}
-          draftFilters={draftFilters}
-          onDraftFiltersChange={onDraftFiltersChange}
-          onApplyFilters={onApplyFilters}
-          onResetFilters={onResetFilters}
-        />
+      <div className={showFilters ? "grid gap-6 xl:grid-cols-[300px,minmax(0,1fr)]" : ""}>
+        {showFilters ? (
+          <MatchingFiltersPanel
+            activeMode={activeMode}
+            availableSkills={availableSkills}
+            draftFilters={draftFilters}
+            onDraftFiltersChange={onDraftFiltersChange}
+            onApplyFilters={onApplyFilters}
+            onResetFilters={onResetFilters}
+          />
+        ) : null}
 
         <MatchingResultsPanel
           selectedJob={selectedJob}
@@ -565,6 +583,7 @@ export default function MatchingWorkspaceView({
           onManageApplication={onManageApplication}
           onOpenCv={onOpenCv}
           onSaveToTalentPool={onSaveToTalentPool}
+          allowRefresh={allowLiveMatchingControls}
         />
       </div>
     </div>

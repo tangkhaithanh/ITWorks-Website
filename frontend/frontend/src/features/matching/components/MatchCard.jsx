@@ -74,9 +74,9 @@ export default function MatchCard({
                 {item.experienceLabel}
               </span>
               {applicationId ? (
-                <span>Application #{applicationId}</span>
+                <span>Đơn ứng tuyển #{applicationId}</span>
               ) : (
-                <span>Chưa apply vào job này</span>
+                <span>Chưa ứng tuyển tin này</span>
               )}
             </div>
           </div>
@@ -91,12 +91,12 @@ export default function MatchCard({
       </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        <MatchScoreBar label="Overall" value={item.overall_score} />
-        <MatchScoreBar label="Semantic" value={item.scores?.semantic_score} />
-        <MatchScoreBar label="Skills" value={item.scores?.skill_match_score} />
-        <MatchScoreBar label="Experience" value={item.scores?.experience_score} />
-        <MatchScoreBar label="Location" value={item.scores?.location_score} />
-        <MatchScoreBar label="Salary" value={item.scores?.salary_score} />
+        <MatchScoreBar label="Tổng thể" value={item.overall_score} />
+        <MatchScoreBar label="Ngữ nghĩa" value={item.scores?.semantic_score} />
+        <MatchScoreBar label="Kỹ năng" value={item.scores?.skill_match_score} />
+        <MatchScoreBar label="Kinh nghiệm" value={item.scores?.experience_score} />
+        <MatchScoreBar label="Địa điểm" value={item.scores?.location_score} />
+        <MatchScoreBar label="Mức lương" value={item.scores?.salary_score} />
       </div>
 
       <div className="mt-5 grid gap-3 lg:grid-cols-2">
@@ -165,7 +165,7 @@ export default function MatchCard({
               disabled={normalizeStatus(item.applicationStatus) === "rejected"}
             >
               <XCircle className="h-4 w-4" />
-              Reject
+              Từ chối
             </Button>
           </>
         ) : (
@@ -199,7 +199,7 @@ export default function MatchCard({
               ) : (
                 <Bookmark className="h-4 w-4" />
               )}
-              {item.isSavedToTalentPool ? "Đã lưu" : "Lưu talent"}
+              {item.isSavedToTalentPool ? "Đã lưu" : "Lưu vào kho"}
             </Button>
           </>
         )}

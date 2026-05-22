@@ -16,7 +16,6 @@ import {
   PAGE_SIZE,
 } from "@/features/matching/constants/matchingWorkspace.constants";
 import {
-  buildBackendUrl,
   formatExperienceRequired,
   getJobSkills,
   getMatchApplicationId,
@@ -640,4 +639,3 @@ export default function MatchingWorkspacePage() {
     </div>
   );
 }
-
