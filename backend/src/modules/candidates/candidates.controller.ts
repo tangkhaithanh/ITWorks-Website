@@ -47,19 +47,6 @@ export class CandidatesController {
   }
 
   @Get('saved-jobs')
-  @ApiOperation({
-    summary: 'List saved jobs with candidate card display data',
-  })
-  @ApiResponse({
-    status: 200,
-    description:
-      'Saved jobs returned newest-saved-first with nested job card display data.',
-  })
-  @ApiResponse({ status: 404, description: 'Candidate profile not found.' })
-  @ApiResponse({
-    status: 500,
-    description: 'Saved job display context cannot be prepared.',
-  })
   async getSavedJobs(@User('userId') userId: bigint) {
     return this.candidatesService.getSavedJobs(userId);
   }
