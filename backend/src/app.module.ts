@@ -29,6 +29,7 @@ import databaseConfig from '@/config/database.config';
 import jwtConfig from '@/config/jwt.config';
 import mailerConfig from '@/config/mailer.config';
 import aiServiceConfig from '@/config/ai-service.config';
+import externalAuthConfig from '@/config/external-auth.config';
 import { AiSyncModule } from '@/modules/ai-sync/ai-sync.module';
 import { PotentialCandidatesModule } from '@/modules/potential-candidates/potential-candidates.module';
 import { ReportsModule } from '@/modules/reports/reports.module';
@@ -39,7 +40,13 @@ import { JobOfferModule } from '@/modules/job-offer/job-offer.module';
     //Khi app khởi động, hãy load toàn bộ config này vào ConfigService, cho toàn app dùng.
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, jwtConfig, mailerConfig, aiServiceConfig],
+      load: [
+        databaseConfig,
+        jwtConfig,
+        mailerConfig,
+        aiServiceConfig,
+        externalAuthConfig,
+      ],
     }),
     PrismaModule,
     ElasticsearchCustomModule,

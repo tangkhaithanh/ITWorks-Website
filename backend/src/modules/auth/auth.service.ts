@@ -3,6 +3,7 @@ import {
   BadRequestException,
   UnauthorizedException,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -15,16 +16,20 @@ import { RegisterUserDto } from './dto/register.dto';
 import { Request } from 'express';
 import { env } from 'process';
 import { AiSyncProducer } from '@/modules/ai-sync/ai-sync.producer';
+import { AuthSyncQueue } from './queues/auth-sync.queue';
 const ACCESS_EXPIRES_MS = 15 * 60 * 1000; // 15m
 const REFRESH_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000; // 7d
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
     private mailService: MailService,
     private configService: ConfigService,
     private readonly aiSyncProducer: AiSyncProducer,
+    private readonly authSyncQueue: AuthSyncQueue,
   ) {}
 
   private cookieBase(): CookieOptions {
@@ -192,6 +197,13 @@ export class AuthService {
         user.full_name,
       );
       await this.aiSyncProducer.candidateCreated(candidate.id);
+      await this.queueExternalAuthCandidateSignUp({
+        accountId: account.id,
+        candidateId: candidate.id,
+        name: user.full_name,
+        email: account.email,
+        password: dto.password,
+      });
       return { message: 'Please check your email to verify account' };
     } catch (error) {
       console.error(error);
@@ -372,5 +384,49 @@ export class AuthService {
     } catch (e) {
       throw new BadRequestException('Token invalid or expired');
     }
+  }
+
+  private async queueExternalAuthCandidateSignUp(data: {
+    accountId: bigint;
+    candidateId: bigint;
+    name: string;
+    email: string;
+    password: string;
+  }) {
+    const username = this.buildExternalAuthUsername(data.name, data.email);
+
+    try {
+      await this.authSyncQueue.candidateSignUpEmail({
+        accountId: data.accountId.toString(),
+        candidateId: data.candidateId.toString(),
+        payload: {
+          name: data.name,
+          email: data.email,
+          password: data.password,
+          username,
+          displayUsername: username,
+          callbackURL:
+            this.configService.get<string>('externalAuth.callbackUrl') ??
+            '/dashboard',
+        },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to queue external auth sign-up email=${data.email}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
+  }
+
+  private buildExternalAuthUsername(name: string, email: string) {
+    const normalize = (value: string) =>
+      value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[\u0110\u0111]/g, 'd')
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .toLowerCase();
+
+    return normalize(name) || normalize(email.split('@')[0]) || 'candidate';
   }
 }

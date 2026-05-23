@@ -324,7 +324,8 @@ export class AiSyncService {
 
   async findTalent(sourceJobId: number) {
     const result = await this.aiSyncClient.findTalent(sourceJobId);
-    return this.enrichMatchesWithCvFileUrls(result);
+    const resultWithCvUrls = await this.enrichMatchesWithCvFileUrls(result);
+    return this.enrichFindTalentMatchesWithCandidates(resultWithCvUrls);
   }
 
   private async enrichMatchesWithCvFileUrls(result: any) {
@@ -373,6 +374,70 @@ export class AiSyncService {
           ...match,
           file_url: sourceCvId
             ? (fileUrlsBySourceCvId.get(sourceCvId.toString()) ?? null)
+            : null,
+        };
+      }),
+    };
+  }
+
+  private async enrichFindTalentMatchesWithCandidates(result: any) {
+    const matches = Array.isArray(result?.matches) ? result.matches : [];
+
+    if (!Array.isArray(result?.matches)) {
+      return result;
+    }
+
+    const sourceCandidateIdsByKey = new Map<string, bigint>();
+
+    matches.forEach((match: any) => {
+      const sourceCandidateId = this.toPositiveBigInt(
+        match?.source_candidate_id,
+      );
+
+      if (sourceCandidateId) {
+        sourceCandidateIdsByKey.set(
+          sourceCandidateId.toString(),
+          sourceCandidateId,
+        );
+      }
+    });
+
+    const candidatesBySourceId = new Map<string, any>();
+
+    if (sourceCandidateIdsByKey.size > 0) {
+      const candidates = await this.prisma.candidate.findMany({
+        where: {
+          id: {
+            in: Array.from(sourceCandidateIdsByKey.values()),
+          },
+        },
+        select: {
+          id: true,
+          user: {
+            select: {
+              full_name: true,
+              avatar_url: true,
+            },
+          },
+        },
+      });
+
+      candidates.forEach((candidate) => {
+        candidatesBySourceId.set(candidate.id.toString(), candidate);
+      });
+    }
+
+    return {
+      ...result,
+      matches: matches.map((match: any) => {
+        const sourceCandidateId = this.toPositiveBigInt(
+          match?.source_candidate_id,
+        );
+
+        return {
+          ...match,
+          candidate: sourceCandidateId
+            ? (candidatesBySourceId.get(sourceCandidateId.toString()) ?? null)
             : null,
         };
       }),

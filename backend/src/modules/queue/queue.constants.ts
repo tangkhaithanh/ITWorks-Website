@@ -1,6 +1,7 @@
 export const QUEUES = {
   JOB_EVENTS: 'job-events',
   AI_SYNC: 'ai-sync',
+  AUTH_SYNC: 'auth-sync',
 } as const;
 
 export const JOB_EVENT_NAMES = {
@@ -21,4 +22,8 @@ export const AI_SYNC_JOB_NAMES = {
   APPLICATION_APPLIED: 'ai-sync.application.applied',
   CV_UPLOADED: 'ai-sync.cv.uploaded',
   CV_SEARCHABLE_CHANGED: 'ai-sync.cv.searchable.changed',
+} as const;
+
+export const AUTH_SYNC_JOB_NAMES = {
+  CANDIDATE_SIGN_UP_EMAIL: 'auth-sync.candidate.sign-up.email',
 } as const;

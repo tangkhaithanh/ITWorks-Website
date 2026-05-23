@@ -206,7 +206,6 @@ export class ApplicationService {
           meeting_link: true,
           status: true,
           result: true,
-          notes: true,
           created_at: true,
           updated_at: true,
         },
