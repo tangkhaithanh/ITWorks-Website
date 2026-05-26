@@ -335,19 +335,22 @@ export class AiSyncService {
   }
 
   async findTalent(sourceJobId: number, recruiterId?: bigint) {
-    const result = await this.aiSyncClient.findTalent(sourceJobId);
-    const enrichedResult = await this.enrichMatchesWithCvFileUrls(result);
+  const result = await this.aiSyncClient.findTalent(sourceJobId);
 
-    await this.captureHistory(
-      recruiterId,
-      BigInt(sourceJobId),
-      RecruiterMatchingAction.FIND_TALENT,
-      enrichedResult,
-    );
+  const resultWithCvUrls = await this.enrichMatchesWithCvFileUrls(result);
 
-    return enrichedResult;
-  }
+  const enrichedResult =
+    await this.enrichFindTalentMatchesWithCandidates(resultWithCvUrls);
 
+  await this.captureHistory(
+    recruiterId,
+    BigInt(sourceJobId),
+    RecruiterMatchingAction.FIND_TALENT,
+    enrichedResult,
+  );
+
+  return enrichedResult;
+}
   private async captureHistory(
     recruiterId: bigint | undefined,
     jobId: bigint,
@@ -417,6 +420,70 @@ export class AiSyncService {
           ...match,
           file_url: sourceCvId
             ? (fileUrlsBySourceCvId.get(sourceCvId.toString()) ?? null)
+            : null,
+        };
+      }),
+    };
+  }
+
+  private async enrichFindTalentMatchesWithCandidates(result: any) {
+    const matches = Array.isArray(result?.matches) ? result.matches : [];
+
+    if (!Array.isArray(result?.matches)) {
+      return result;
+    }
+
+    const sourceCandidateIdsByKey = new Map<string, bigint>();
+
+    matches.forEach((match: any) => {
+      const sourceCandidateId = this.toPositiveBigInt(
+        match?.source_candidate_id,
+      );
+
+      if (sourceCandidateId) {
+        sourceCandidateIdsByKey.set(
+          sourceCandidateId.toString(),
+          sourceCandidateId,
+        );
+      }
+    });
+
+    const candidatesBySourceId = new Map<string, any>();
+
+    if (sourceCandidateIdsByKey.size > 0) {
+      const candidates = await this.prisma.candidate.findMany({
+        where: {
+          id: {
+            in: Array.from(sourceCandidateIdsByKey.values()),
+          },
+        },
+        select: {
+          id: true,
+          user: {
+            select: {
+              full_name: true,
+              avatar_url: true,
+            },
+          },
+        },
+      });
+
+      candidates.forEach((candidate) => {
+        candidatesBySourceId.set(candidate.id.toString(), candidate);
+      });
+    }
+
+    return {
+      ...result,
+      matches: matches.map((match: any) => {
+        const sourceCandidateId = this.toPositiveBigInt(
+          match?.source_candidate_id,
+        );
+
+        return {
+          ...match,
+          candidate: sourceCandidateId
+            ? (candidatesBySourceId.get(sourceCandidateId.toString()) ?? null)
             : null,
         };
       }),

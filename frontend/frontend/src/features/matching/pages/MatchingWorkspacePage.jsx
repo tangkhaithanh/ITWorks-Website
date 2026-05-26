@@ -239,7 +239,7 @@ export default function MatchingWorkspacePage() {
       const fallbackCandidate = candidateMap.get(
         Number(match.source_candidate_id || match.candidate_id),
       );
-      const candidateUser = fallbackCandidate?.candidate?.user;
+      const candidateUser = match.candidate?.user || fallbackCandidate?.candidate?.user;
       const candidateId = getMatchCandidateId(match);
       const savedRecord = candidateId ? savedTalentMap.get(candidateId) : null;
 

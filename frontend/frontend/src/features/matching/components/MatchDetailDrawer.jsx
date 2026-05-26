@@ -32,6 +32,9 @@ export default function MatchDetailDrawer({
 
   const explanationLines = parseExplanationLines(match.explanation);
   const candidate = detail?.candidate;
+  const matchedCandidateUser = match.candidate?.user;
+  const candidateName =
+    candidate?.full_name || matchedCandidateUser?.full_name || match.displayName;
   const cvPath = match.file_url || match.cvPath;
   const applicationId = getMatchApplicationId(match);
 
@@ -46,7 +49,7 @@ export default function MatchDetailDrawer({
               Chi tiết ứng viên
             </p>
             <h2 className="mt-1 text-xl font-bold text-slate-900">
-              {candidate?.full_name || match.displayName}
+              {candidateName}
             </h2>
           </div>
           <button
@@ -63,10 +66,11 @@ export default function MatchDetailDrawer({
               <img
                 src={
                   candidate?.avatar_url ||
+                  matchedCandidateUser?.avatar_url ||
                   match.avatarUrl ||
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(match.displayName)}&background=random`
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(candidateName)}&background=random`
                 }
-                alt={match.displayName}
+                alt={candidateName}
                 className="h-16 w-16 rounded-2xl object-cover ring-1 ring-slate-200"
               />
 
