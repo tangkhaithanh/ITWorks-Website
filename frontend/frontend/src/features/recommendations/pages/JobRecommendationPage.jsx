@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import RecommendationAPI from "../RecommendationAPI";
 import RecommendationCard from "../components/RecommendationCard";
 
@@ -24,7 +23,6 @@ const SkeletonCard = () => (
 );
 
 const JobRecommendationPage = () => {
-  const navigate = useNavigate();
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -50,7 +48,7 @@ const JobRecommendationPage = () => {
   }, []);
 
   const handleCardClick = (rec) => {
-    navigate(`/jobs/${rec.job_id}`);
+    window.open(`/jobs/${rec.job_id}`, "_blank", "noopener,noreferrer");
   };
 
   return (
