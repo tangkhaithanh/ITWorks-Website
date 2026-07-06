@@ -15,7 +15,11 @@ import { serializeSocketPayload } from '@/common/utils/serialize-socket-payload'
 
 @WebSocketGateway({
   cors: {
-    origin: 'http://localhost:5173',
+    origin: [
+      'http://localhost:5173',
+      'http://itworks.dpdns.org',
+      'https://itworks.dpdns.org',
+    ],
     credentials: true,
   },
   namespace: '/chat',

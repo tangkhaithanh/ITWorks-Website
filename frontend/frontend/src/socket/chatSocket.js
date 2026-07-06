@@ -5,14 +5,14 @@ let socket = null;
 export function getChatSocket() {
   if (socket) return socket;
 
-  const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+  const baseUrl = import.meta.env.VITE_SOCKET_URL ;
 
   socket = io(`${baseUrl}/chat`, {
+    path: "/socket.io",
     transports: ["websocket"],
     withCredentials: true,
     autoConnect: false,
   });
-
   return socket;
 }
 

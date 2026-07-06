@@ -9,7 +9,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api/v1');
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Recruitment System API')
@@ -23,6 +23,7 @@ async function bootstrap() {
     swaggerOptions: {
       persistAuthorization: true,
     },
+    useGlobalPrefix: true,
   });
 
   app.useGlobalPipes(
@@ -40,7 +41,11 @@ async function bootstrap() {
   app.useGlobalInterceptors(new TransformInterceptor());
 
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: [
+      'http://localhost:5173',
+      'http://itworks.dpdns.org',
+      'https://itworks.dpdns.org',
+    ],
     credentials: true,
   });
 

@@ -5,11 +5,12 @@ let socket = null;
 export function getNotificationsSocket() {
     if (socket) return socket;
 
-    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+    const baseUrl = import.meta.env.VITE_SOCKET_URL ;
 
     socket = io(`${baseUrl}/notifications`, {
+        path: "/socket.io",
         transports: ["websocket"],
-        withCredentials: true, // ✅ cookie access_token sẽ tự gửi kèm
+        withCredentials: true,
         autoConnect: false,
     });
 
