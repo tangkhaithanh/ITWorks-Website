@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { MailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
+import { BrevoClient } from '@getbrevo/brevo';
 import { InterviewMode } from '@prisma/client';
+
 interface InterviewMailBase {
   to: string;
   fullName: string;
@@ -17,9 +19,23 @@ interface InterviewScheduleMailPayload extends InterviewMailBase {
   googleCalendarLink: string;
   icsContent: string;
 }
+
 @Injectable()
 export class MailService {
-  constructor(private readonly mailer: MailerService) {}
+  private readonly brevo: BrevoClient;
+  private readonly fromEmail: string;
+  private readonly fromName: string;
+
+  constructor(private readonly configService: ConfigService) {
+    this.brevo = new BrevoClient({
+      apiKey: this.configService.get<string>('BREVO_API_KEY') ?? '',
+    });
+    this.fromEmail =
+      this.configService.get<string>('BREVO_FROM') ??
+      'no-reply@itworks.dpdns.org';
+    this.fromName = 'ITWorks';
+  }
+
   private buildHrSignature(hr: {
     full_name: string;
     email: string;
@@ -38,10 +54,11 @@ export class MailService {
   }
 
   async sendVerificationMail(to: string, link: string, fullName: string) {
-    return this.mailer.sendMail({
-      to,
+    return this.brevo.transactionalEmails.sendTransacEmail({
+      sender: { name: this.fromName, email: this.fromEmail },
+      to: [{ email: to, name: fullName }],
       subject: 'Verify your email',
-      html: `
+      htmlContent: `
         <h1>Welcome ${fullName}</h1>
         <p>Click below to activate your account:</p>
         <a href="${link}">Verify Email</a>
@@ -50,10 +67,11 @@ export class MailService {
   }
 
   async sendResetPasswordMail(to: string, link: string) {
-    return this.mailer.sendMail({
-      to,
+    return this.brevo.transactionalEmails.sendTransacEmail({
+      sender: { name: this.fromName, email: this.fromEmail },
+      to: [{ email: to }],
       subject: 'Reset your password',
-      html: `
+      htmlContent: `
         <h1>Password Reset Request</h1>
         <p>Click below to reset your password:</p>
         <a href="${link}">Reset Password</a>
@@ -61,7 +79,6 @@ export class MailService {
     });
   }
 
-  // Gửi mail tạo lịch phỏng vấn:
   async sendInterviewScheduleMail(
     payload: InterviewScheduleMailPayload & { hr: any },
   ) {
@@ -91,10 +108,11 @@ export class MailService {
     const modeLabel = mode === 'online' ? 'Online' : 'Trực tiếp';
     const hrSignature = this.buildHrSignature(hr);
 
-    return this.mailer.sendMail({
-      to,
+    return this.brevo.transactionalEmails.sendTransacEmail({
+      sender: { name: this.fromName, email: this.fromEmail },
+      to: [{ email: to, name: fullName }],
       subject: `Lịch phỏng vấn – ${jobTitle} – ${companyName}`,
-      html: `
+      htmlContent: `
       <h2>Xin chào ${fullName},</h2>
 
       <p>Bạn có một lịch phỏng vấn mới cho vị trí <strong>${jobTitle}</strong> tại <strong>${companyName}</strong>.</p>
@@ -120,17 +138,14 @@ export class MailService {
       <br/>
       <p>Trân trọng,<br/>${companyName}</p>
     `,
-      attachments: [
+      attachment: [
         {
-          filename: 'interview.ics',
-          content: icsContent,
-          contentType: 'text/calendar; charset=utf-8',
+          name: 'interview.ics',
+          content: Buffer.from(icsContent).toString('base64'),
         },
       ],
     });
   }
-
-  // Gửi lại email khi sửa lịch phỏng vấn:
 
   async sendInterviewUpdatedMail(
     payload: InterviewScheduleMailPayload & { hr: any },
@@ -161,10 +176,11 @@ export class MailService {
     const modeLabel = mode === 'online' ? 'Online' : 'Trực tiếp';
     const hrSignature = this.buildHrSignature(hr);
 
-    return this.mailer.sendMail({
-      to,
+    return this.brevo.transactionalEmails.sendTransacEmail({
+      sender: { name: this.fromName, email: this.fromEmail },
+      to: [{ email: to, name: fullName }],
       subject: `Cập nhật lịch phỏng vấn – ${jobTitle} – ${companyName}`,
-      html: `
+      htmlContent: `
       <h2>Xin chào ${fullName},</h2>
 
       <p>Lịch phỏng vấn của bạn cho vị trí <strong>${jobTitle}</strong> tại <strong>${companyName}</strong> đã được <strong>cập nhật</strong>.</p>
@@ -188,17 +204,15 @@ export class MailService {
       <br/>
       <p>Trân trọng,<br/>${companyName}</p>
     `,
-      attachments: [
+      attachment: [
         {
-          filename: 'interview.ics',
-          content: icsContent,
-          contentType: 'text/calendar; charset=utf-8',
+          name: 'interview.ics',
+          content: Buffer.from(icsContent).toString('base64'),
         },
       ],
     });
   }
 
-  // Gửi email khi hủy lịch phỏng vấn:
   async sendInterviewCancelledMail(
     payload: InterviewMailBase & { scheduledAt: Date; hr: any },
   ) {
@@ -215,10 +229,11 @@ export class MailService {
 
     const hrSignature = this.buildHrSignature(hr);
 
-    return this.mailer.sendMail({
-      to,
+    return this.brevo.transactionalEmails.sendTransacEmail({
+      sender: { name: this.fromName, email: this.fromEmail },
+      to: [{ email: to, name: fullName }],
       subject: `Hủy lịch phỏng vấn – ${jobTitle} – ${companyName}`,
-      html: `
+      htmlContent: `
       <h2>Xin chào ${fullName},</h2>
 
       <p>Buổi phỏng vấn của bạn cho vị trí <strong>${jobTitle}</strong> vào lúc <strong>${dateStr}</strong> đã được <strong>hủy</strong>.</p>
@@ -233,17 +248,17 @@ export class MailService {
     });
   }
 
-  // Gửi email khi ứng viên được chọn:
   async sendApplicationAcceptedMail(payload: {
     to: string;
     fullName: string;
     jobTitle: string;
     companyName: string;
   }) {
-    return this.mailer.sendMail({
-      to: payload.to,
+    return this.brevo.transactionalEmails.sendTransacEmail({
+      sender: { name: this.fromName, email: this.fromEmail },
+      to: [{ email: payload.to, name: payload.fullName }],
       subject: `🎉 Chúc mừng! Bạn đã trúng tuyển vị trí ${payload.jobTitle}`,
-      html: `
+      htmlContent: `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
       
       <h2 style="color: #0d6efd;">Xin chào ${payload.fullName},</h2>
@@ -298,10 +313,11 @@ export class MailService {
     jobTitle: string;
     companyName: string;
   }) {
-    return this.mailer.sendMail({
-      to: payload.to,
+    return this.brevo.transactionalEmails.sendTransacEmail({
+      sender: { name: this.fromName, email: this.fromEmail },
+      to: [{ email: payload.to, name: payload.fullName }],
       subject: `Kết quả ứng tuyển – ${payload.jobTitle}`,
-      html: `
+      htmlContent: `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
       
       <h2 style="color: #dc2626;">Xin chào ${payload.fullName},</h2>
@@ -344,21 +360,21 @@ export class MailService {
   `,
     });
   }
-  // Hàm gửi mật khẩu đã được admin reset qua mail:
+
   async sendTemporaryPasswordMail(
     to: string,
     fullName: string,
     tempPassword: string,
   ) {
-    // Thiết lập màu chủ đạo
-    const PRIMARY_COLOR = '#0d6efd'; // Màu xanh dương nổi bật
-    const SECONDARY_COLOR = '#f8f9fa'; // Màu nền xám nhạt cho khối mật khẩu
+    const PRIMARY_COLOR = '#0d6efd';
+    const SECONDARY_COLOR = '#f8f9fa';
     const BORDER_COLOR = '#dee2e6';
 
-    return this.mailer.sendMail({
-      to,
+    return this.brevo.transactionalEmails.sendTransacEmail({
+      sender: { name: this.fromName, email: this.fromEmail },
+      to: [{ email: to, name: fullName }],
       subject: '🔑 Mật khẩu Tạm thời Của Bạn - Hệ thống ITworks',
-      html: `
+      htmlContent: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333333; max-width: 600px; margin: 20px auto; border: 1px solid ${BORDER_COLOR}; border-radius: 8px; overflow: hidden;">
             
             <div style="background-color: ${PRIMARY_COLOR}; padding: 20px; text-align: center; color: white;">

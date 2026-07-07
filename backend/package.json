@@ -22,6 +22,7 @@
   "dependencies": {
     "@elastic/elasticsearch": "^8.15.0",
     "@faker-js/faker": "^10.2.0",
+    "@getbrevo/brevo": "^6.0.2",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
@@ -109,10 +110,7 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node",
-    "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/$1"
-    }
+    "testEnvironment": "node"
   },
   "prisma": {
     "schema": "./prisma/schema",
