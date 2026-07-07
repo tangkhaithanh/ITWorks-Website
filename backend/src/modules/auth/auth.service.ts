@@ -190,7 +190,7 @@ export class AuthService {
         { sub: account.id.toString(), purpose: 'verify-email' },
         { expiresIn: '10m' },
       );
-      const link = `http://localhost:3000/auth/verify-email?token=${token}`;
+      const link = `https://itworks.dpdns.org/api/v1/auth/verify-email?token=${token}`;
       await this.mailService.sendVerificationMail(
         account.email,
         link,
@@ -246,7 +246,7 @@ export class AuthService {
         { sub: account.id.toString(), purpose: 'verify-email' },
         { expiresIn: '15m' },
       );
-      const link = `http://localhost:3000/auth/verify-email?token=${token}`;
+      const link = `https://itworks.dpdns.org/api/v1/auth/verify-email?token=${token}`;
 
       // Gửi mail verify
       await this.mailService.sendVerificationMail(
