@@ -20,8 +20,7 @@ export default function PaymentResultPage() {
             try {
                 // ✅ verify lại order trên server (khỏi tin query param 100%)
                 const res = await PaymentAPI.getOrder(orderId);
-                const status = res?.data?.status || statusParam;
-
+                const status = res?.data?.data?.status || statusParam;
                 if (status === "paid") {
                     await Swal.fire({
                         icon: "success",
