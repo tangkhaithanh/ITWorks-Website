@@ -17,7 +17,7 @@ import { User } from '../../common/decorators/user.decorator';
 import type { Request } from 'express';
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post('login')
   async login(
@@ -38,8 +38,13 @@ export class AuthController {
   }
 
   @Get('verify-email')
-  async verifyEmail(@Query('token') token: string) {
-    return this.authService.verifyEmail(token);
+  async verifyEmail(
+    @Query('token') token: string,
+    @Res() res: Response,
+  ) {
+    await this.authService.verifyEmail(token);
+
+    return res.redirect('http://localhost:5173/login');
   }
 
   @Post('request-send')
